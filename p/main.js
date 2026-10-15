@@ -6,6 +6,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { computeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
 import { PROJECTS, EDUCATION, EXPERIENCE, ABOUT } from './content.js';
+import { T, PENDIENTE } from './i18n.js';
 import { crearIntro } from './intro.js';
 import * as Horas from './horas.js';
 import { crearEspejo } from './espejo.js';
@@ -35,7 +36,7 @@ const MARCO_ESPEJO = '#dccdb6';   // madera clara del marco del espejo (medida d
 const lineasPizarra = {};   // línea del menú -> { malla resaltada, opacidad actual y objetivo }
 const PIZARRA_GIRO = +(hash.get('piz') ?? 0.5);   // rad extra sobre el giro horneado (0,25); #piz=0 la deja como estaba
 const PIZARRA_INCL = +(hash.get('inc') ?? 0.1);   // rad que cae hacia atrás la parte de arriba (0,1 rad ≈ 6°)
-const SECTIONS = { proyectos: 'Proyectos', educacion: 'Educación', experiencia: 'Experiencia', sobremi: 'Sobre mí' };
+const SECTIONS = T.secciones;
 // zonas de la pizarra (altura relativa en la cara blanca, de abajo arriba) — igual que blender/tex.py BOARD_ITEMS
 const BOARD_ITEMS = [['proyectos', 0.60], ['educacion', 0.47], ['experiencia', 0.34]];
 
@@ -78,10 +79,10 @@ const objects = { monitor: [], libro: [], ventana: [], espejo: [], pizarra: null
 const espejos = [];
 async function loadRoom() {
   const paso = t => { const l = document.getElementById('loading'); if (l) l.textContent = t; };
-  paso('Cargando el cuarto…');
+  paso(T.cargando);
   // todo se descarga a la vez; las imágenes se descomprimen fuera del hilo principal
   const base = './assets/cuarto/', horas = Horas.cargar(base);
-  const alfombrilla = cargarTextura(base + 'alfombrilla.webp'), pizarraTexto = cargarTextura(base + 'pizarra_texto.webp');
+  const alfombrilla = cargarTextura(base + 'alfombrilla.webp'), pizarraTexto = cargarTextura(base + T.pizarraImagen);
   horas.catch(() => {}); alfombrilla.catch(() => {}); pizarraTexto.catch(() => {});
   const gltf = await new GLTFLoader().loadAsync(base + 'cuarto.gltf');
   paso('Encendiendo las luces…');
@@ -191,7 +192,7 @@ async function loadRoom() {
   // luz según la hora de Valencia (si existen los horneados de día y noche)
   const mallas = []; room.traverse(o => o.isMesh && mallas.push(o));
   objects.horas = await Horas.prepararHoras(mallas, horas, renderer);
-  paso('Colocando la pizarra…');
+  paso(T.colocando);
   // texto de la pizarra: capa nítida sobre la cara horneada (y su UV dice en qué línea se hace clic)
   if (objects.pizarra) {
     const b = objects.pizarra; b.geometry.computeBoundingBox(); const bb = b.geometry.boundingBox;
@@ -200,7 +201,7 @@ async function loadRoom() {
     face.rotation.y = -Math.PI / 2; face.position.set(bb.min.x - 0.0008, (bb.min.y + bb.max.y) / 2, (bb.min.z + bb.max.z) / 2);
     b.add(face); objects.boardFace = face;
     // resaltador: al pasar por una línea del menú se ilumina solo ese texto (marcador amarillo + el texto encima), no toda la pizarra
-    const img = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = base + 'pizarra_texto.webp'; });
+    const img = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = base + T.pizarraImagen; });
     if (img) {
       const W = img.width, H = img.height, c0 = document.createElement('canvas'); c0.width = W; c0.height = H;
       const x0 = c0.getContext('2d', { willReadFrequently: true }); x0.drawImage(img, 0, 0); const px = x0.getImageData(0, 0, W, H).data;
@@ -313,7 +314,7 @@ function setHover(h, ev) {
     contornoAnim.objetivo = sel.length ? 1 : 0; contornoSucio = true;   // la escena no cambia: basta rehacer el contorno
   }
   if (h && ev) {
-    const txt = SECTIONS[h.key] || 'Pizarra: elige un tema';
+    const txt = SECTIONS[h.key] || T.pizarraTip;
     if (tooltip.textContent !== txt) tooltip.textContent = txt;
     tooltip.style.transform = `translate(${ev.clientX + 14}px, ${ev.clientY + 14}px)`; tooltip.classList.add('on');   // transform: sin recalcular el diseño
   } else tooltip.classList.remove('on');
@@ -350,7 +351,7 @@ function flyTo(to, done, dur = 1.6, via = null) {
 }
 function goBoard() {
   state = 'pizarra'; setHover(null); hint.style.opacity = 0; panel.hidden = true; backBtn.hidden = false;
-  flyTo(VIEWS.pizarra, () => { hint.textContent = 'Pasa el ratón por la pizarra · clic en un tema'; hint.style.opacity = 1; }, 1.4);
+  flyTo(VIEWS.pizarra, () => { hint.textContent = T.hintPizarra; hint.style.opacity = 1; }, 1.4);
 }
 function irAlEspejo() {
   // sin personaje (archivado): la cámara se acerca de frente al espejo, a la altura de los ojos, y aparece "Sobre mí"
@@ -365,11 +366,11 @@ function openSection(key) {
 function goHome() {
   if (state === 'sobremi' && objects.javier) objects.javier.volverSilla();
   panel.hidden = true; backBtn.hidden = true; state = 'home'; setHover(null);
-  flyTo(VIEWS.home, () => { hint.textContent = 'Pasa el ratón por el cuarto · haz clic para curiosear'; hint.style.opacity = 1; }, 1.5);
+  flyTo(VIEWS.home, () => { hint.textContent = T.hintCuarto; hint.style.opacity = 1; }, 1.5);
 }
 
 // ---------------------------------------------------------------- paneles
-const todo = s => /pendiente/i.test(s) ? `<span class="todo">${s}</span>` : s;
+const todo = s => PENDIENTE.test(s) ? `<span class="todo">${s}</span>` : s;
 function screenRect(mesh) {
   camera.updateMatrixWorld(); mesh.updateWorldMatrix(true, false);
   mesh.geometry.computeBoundingBox(); const bb = mesh.geometry.boundingBox;
@@ -397,17 +398,17 @@ function showPanel(key) {
       <div class="win"><div class="bar">${p.title}</div><div class="body">${todo(p.blurb)}<br>${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div></div>`).join('')}</div>`);
   } else if (key === 'experiencia') {
     Object.assign(panel.style, { left: '', right: '6vw', top: '50%', transform: 'translateY(-50%)', width: 'min(460px, 40vw)', height: '' });
-    poner(key, () => `<div class="card"><h2>Experiencia</h2>${EXPERIENCE.map(e => `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`).join('')}</div>`);
+    poner(key, () => `<div class="card"><h2>${SECTIONS.experiencia}</h2>${EXPERIENCE.map(e => `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`).join('')}</div>`);
   } else if (key === 'sobremi') {
     Object.assign(panel.style, { left: '5vw', right: '', top: '50%', transform: 'translateY(-50%)', width: 'min(440px, 40vw)', height: '' });
     poner(key, () => `<div class="card"><h2>${ABOUT.name}</h2><p><b>${ABOUT.role}</b></p><p>${todo(ABOUT.bio)}</p>
       <ul>${(ABOUT.gustos || []).map(g => `<li>${g}</li>`).join('')}</ul>
-      <h3>Contacto</h3><p>${ABOUT.links.map(l => `<a href="${l.href}" target="_blank" rel="noopener">${l.label}</a>${l.todo ? ' <span class="todo">(pendiente)</span>' : ''}`).join(' · ')}</p></div>`);
+      <h3>${T.contacto}</h3><p>${ABOUT.links.map(l => `<a href="${l.href}" target="_blank" rel="noopener">${l.label}</a>${l.todo ? ' <span class="todo">' + T.pendiente + '</span>' : ''}`).join(' · ')}</p></div>`);
   } else if (key === 'educacion') {
     Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(980px, 88vw)', height: '', right: '' });
     const half = Math.ceil(EDUCATION.length / 2);
     const page = list => list.map(e => `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`).join('');
-    poner(key, () => `<div class="book"><div class="page left"><h2>Educación</h2>${page(EDUCATION.slice(0, half))}</div><div class="page right">${page(EDUCATION.slice(half))}</div></div>`);
+    poner(key, () => `<div class="book"><div class="page left"><h2>${SECTIONS.educacion}</h2>${page(EDUCATION.slice(0, half))}</div><div class="page right">${page(EDUCATION.slice(half))}</div></div>`);
   }
 }
 
@@ -705,7 +706,7 @@ function entrar() {
     cerrarAlPasar = true;                                       // se cierra al pasar (en cuanto la cámara deja libre la hoja)
     flyTo(VIEWS.home, () => {
       if (cerrarAlPasar) { cerrarAlPasar = false; puertaAnim = { t0: null, dur: 1800, de: 1, a: 0 }; }
-      intro.ocultarPasillo(); sucio = true; state = 'home'; hint.textContent = 'Pasa el ratón por el cuarto · haz clic para curiosear'; hint.style.opacity = 1;
+      intro.ocultarPasillo(); sucio = true; state = 'home'; hint.textContent = T.hintCuarto; hint.style.opacity = 1;
     }, 2.0, intro.paso);
   }, 1.6), 450);
 }
@@ -768,7 +769,7 @@ loadRoom().then(async () => {
   setCam(VIEWS.home);
   if (intro && !hash.get('go') && !hash.get('nointro')) {
     state = 'intro'; setCam(intro.vista); currentLook.copy(intro.vista.look);
-    hint.textContent = 'Toc, toc… haz clic para entrar'; hint.style.opacity = 1;
+    hint.textContent = T.hintPuerta; hint.style.opacity = 1;
     if (hash.get('autoentrar')) setTimeout(entrar, 400);
   } else if (intro) intro.ocultarPasillo();
   suave.copy(camera.position); velSuave.set(0, 0, 0);                  // el muelle de la cámara empieza donde está (no en el origen)

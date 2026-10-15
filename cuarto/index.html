@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<base href="/p/">
+<script>window.IDIOMA="es"</script>
+<link rel="alternate" hreflang="es" href="https://javiermartinez.pages.dev/cuarto/">
+<link rel="alternate" hreflang="en" href="https://javiermartinez.pages.dev/room/">
+<link rel="alternate" hreflang="x-default" href="https://javiermartinez.pages.dev/">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Javier Martínez Llinares</title>
+<meta name="description" content="Portfolio de Javier Martínez Llinares, ingeniero de IA. Pasa a mi cuarto.">
+<link rel="stylesheet" href="/p/vendor/fuentes/fuentes.css">
+<link rel="preload" href="/p/vendor/fuentes/VT323-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/p/vendor/fuentes/PixelifySans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/p/style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "/p/vendor/three/build/three.module.min.js",
+  "three/addons/": "/p/vendor/three/examples/jsm/",
+  "three-mesh-bvh": "/p/vendor/three-mesh-bvh/index.module.js"
+} }
+</script>
+<!-- three.js y three-mesh-bvh van copiados en vendor/ (0.170.0 y 0.9.15): sin depender de un CDN externo que, si se cuelga,
+     deja la página en "Abriendo la puerta…". Todos los módulos se piden a la vez, en lugar de ir descubriéndolos import a import -->
+<link rel="modulepreload" href="/p/vendor/three/build/three.module.min.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/loaders/GLTFLoader.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/utils/BufferGeometryUtils.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/objects/Reflector.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/postprocessing/EffectComposer.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/postprocessing/Pass.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/postprocessing/MaskPass.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/postprocessing/RenderPass.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/postprocessing/ShaderPass.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/postprocessing/OutlinePass.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/postprocessing/UnrealBloomPass.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/shaders/CopyShader.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/shaders/LuminosityHighPassShader.js">
+<link rel="modulepreload" href="/p/vendor/three-mesh-bvh/index.module.js">
+<link rel="modulepreload" href="/p/main.js">
+<link rel="modulepreload" href="/p/content.js">
+<link rel="modulepreload" href="/p/intro.js">
+<link rel="modulepreload" href="/p/horas.js">
+<link rel="modulepreload" href="/p/espejo.js">
+<link rel="modulepreload" href="/p/resplandor.js">
+<link rel="modulepreload" href="/p/texturas.js">
+<link rel="modulepreload" href="/p/postpro.js">
+<link rel="modulepreload" href="/p/contorno.js">
+<link rel="modulepreload" href="/p/vendor/three/examples/jsm/shaders/FXAAShader.js">
+</head>
+<body>
+<div id="stage"></div>
+<div id="ui">
+  <div id="tooltip"></div>
+  <button id="back" class="px-btn" hidden>← Volver</button>
+  <div id="hint">Pasa el ratón por el cuarto · haz clic para curiosear</div>
+  <div id="panel" hidden></div>
+  <div id="reloj"><button id="relojBtn" class="px-btn" title="Cambiar la hora">☀ --:--</button>
+    <div id="relojPanel" hidden><input id="relojSlider" type="range" min="0" max="24" step="0.25"><button id="relojReal" class="px-btn">hora real</button></div></div>
+</div>
+<div id="loading">Abriendo la puerta…</div>
+<script type="module" src="/p/main.js"></script>
+</body>
+</html>
