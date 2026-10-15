@@ -395,7 +395,7 @@ function showPanel(key) {
     const r = screenRect(objects.screen);
     Object.assign(panel.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', transform: '', right: '' });
     poner(key, () => `<div class="desktop">${PROJECTS.map(p => `
-      <div class="win"><div class="bar">${p.title}</div><div class="body">${todo(p.blurb)}<br>${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div></div>`).join('')}</div>`);
+      <div class="win"><div class="bar">${p.title}</div><div class="body">${todo(p.blurb)}<br>${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}${p.link ? `<br><a class="plink" href="${p.href}" target="_blank" rel="noopener">${p.link}</a>` : ''}</div></div>`).join('')}</div>`);
   } else if (key === 'experiencia') {
     Object.assign(panel.style, { left: '', right: '6vw', top: '50%', transform: 'translateY(-50%)', width: 'min(460px, 40vw)', height: '' });
     poner(key, () => `<div class="card"><h2>${SECTIONS.experiencia}</h2>${EXPERIENCE.map(e => `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`).join('')}</div>`);
