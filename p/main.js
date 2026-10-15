@@ -31,6 +31,9 @@ const FLEXO_POLO = (hash.get('flexo') ?? '0.18,1.075').split(',').map(Number);  
 const FLEXO_PIE = (hash.get('pie') ?? '0.02,-0.075').split(',').map(Number);   // desplazamiento (x, z) del pie respecto al palo
 const MESA_DESPLAZ = 0.03;   // m que se corre la mesa (y lo que lleva) hacia la puerta, para dejar sitio al palo del flexo
 const ESPEJO_INCL = +(hash.get('lean') ?? 0.14);   // rad que se separa de la pared por abajo (0,14 ≈ 8°; antes 0,22 ≈ 12,6°; #lean=0.22 para compararlo)
+const SOBREMI = (hash.get('sm') ?? '0.7,1.45,1.25,52').split(',').map(Number);   // vista de "Sobre mí": distancia al espejo, altura de los ojos, altura a la que mira, campo de visión (#sm=… para probar)
+const BALON_POS = (hash.get('balon') ?? '2.36,1.99').split(',').map(Number);   // x, z del balón sobre la cómoda (#balon=x,z)
+const BALON_YAW = +(hash.get('byaw') ?? -Math.PI / 4), BALON_GIRO = Math.PI / 2;   // giro del balón sobre la cómoda (rad): -45° deja el escudo mirando en diagonal hacia la puerta (desde la cómoda, la puerta queda a 45°)
 const PARED_X = 2.60;   // pared de la estantería y la cómoda (ancho del cuarto)
 const MARCO_ESPEJO = '#dccdb6';   // madera clara del marco del espejo (medida del vídeo de referencia, f_016)
 const lineasPizarra = {};   // línea del menú -> { malla resaltada, opacidad actual y objetivo }
@@ -38,7 +41,7 @@ const PIZARRA_GIRO = +(hash.get('piz') ?? 0.5);   // rad extra sobre el giro hor
 const PIZARRA_INCL = +(hash.get('inc') ?? 0.1);   // rad que cae hacia atrás la parte de arriba (0,1 rad ≈ 6°)
 const SECTIONS = T.secciones;
 // zonas de la pizarra (altura relativa en la cara blanca, de abajo arriba) — igual que blender/tex.py BOARD_ITEMS
-const BOARD_ITEMS = [['proyectos', 0.60], ['educacion', 0.47], ['experiencia', 0.34]];
+const BOARD_ITEMS = [['proyectos', 0.60], ['educacion', 0.47], ['experiencia', 0.34], ['sobremi', 0.21]];
 
 // ---------------------------------------------------------------- renderer + postprocesado (resplandor, contorno, etalonaje lofi)
 // sin MSAA ni profundidad en el lienzo: la escena se pinta en los búferes del compositor y al lienzo solo llega la pasada final
@@ -262,17 +265,54 @@ async function loadRoom() {
     // se adelanta el espejo entero lo justo para que el listón de arriba la toque por detrás sin atravesarla
     ref.updateMatrixWorld(true);
     { const top = ref.children.find(b => b.name === 'espejo_marco'), bb = new THREE.Box3().setFromObject(top); ref.position.x += (PARED_X - 0.002) - bb.max.x; ref.updateMatrixWorld(true); }
+    // fotos de Javier pegadas al cristal (copias en papel con cinta): como no hay personaje, que el espejo tenga algo de él.
+    // x, y respecto al centro del espejo (m) y giro (º); quedan en los lados para dejar libre el centro del reflejo
+    {
+      objects.espejoFotos = []; objects.matFotos = [];
+      const sitios = [[-0.085, 0.565, 5], [0.085, 0.405, -6], [-0.07, 0.2, -3]];
+      await Promise.all(sitios.map(async ([x, y, giro], i) => {
+        try {
+          const t = await cargarTextura(base + `foto_espejo_${i + 1}.webp`), w = 0.14, h = w * t.image.height / t.image.width;
+          const mat = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false }), f = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+          f.position.set(x, y, 0.0045 + i * 0.0004); f.rotation.z = THREE.MathUtils.degToRad(giro); f.name = 'espejo_foto'; f.renderOrder = 2;
+          ref.add(f); objects.espejoFotos.push(f); objects.matFotos.push(mat);
+        } catch (e) { console.warn('foto del espejo', i + 1, e); }
+      }));
+    }
     const old = room.getObjectByName('espejo001'); if (old) { old.visible = false; old.raycast = () => {}; objects.espejo = objects.espejo.filter(o => o !== old); }    // el marco horneado ya no se ve
     // la base adelantada no puede atravesar el suelo (el marco de abajo, 3 cm, se apoya en él): subir lo justo
     ref.updateMatrixWorld(); const baseY = new THREE.Vector3(0, -alto / 2 - 0.03, 0).applyMatrix4(ref.matrixWorld).y;
     if (baseY < 0.002) { ref.position.y += 0.002 - baseY; }
     objects.espejoCentro = ref.position.clone();
-    { const c = ref.position; VIEWS.sobremi = V([c.x - 1.25, 1.5, c.z], [c.x + 0.02, 0.85, c.z], 58); }   // de frente al espejo, a la altura de los ojos
+    { const c = ref.position, [d, ey, ly, fov] = SOBREMI; VIEWS.sobremi = V([c.x - d, ey, c.z], [c.x + 0.02, ly, c.z], fov); }   // de frente al espejo, a la altura de los ojos
     scene.add(ref); m.visible = false; objects.espejo.push(ref); espejos.push(ref);
     // los listones salen del espejo y cuelgan directamente de la escena: el contorno (al pasar el ratón) oculta todo lo no seleccionado, y si fueran
     // hijos del cristal este se ocultaría y se llevaría los listones con él
-    ref.updateMatrixWorld(true); for (const b of ref.children.filter(c => c.name === 'espejo_marco')) scene.attach(b);
+    ref.updateMatrixWorld(true); for (const b of ref.children.filter(c => c.name === 'espejo_marco' || c.name === 'espejo_foto')) scene.attach(b);
   }
+  // balón de San Roque (balón 2026 del club) sobre la cómoda, con el escudo hacia la puerta: modelo de revolución a tamaño real (balón del 5: 29 x 19 cm)
+  try {
+    const tex = await cargarTextura(base + 'balon.webp'), grano = await cargarTextura(base + 'balon_grano.webp', { flipY: false });
+    const L = 0.29, R = 0.095, N = 64, pts = [];
+    for (let i = 0; i <= N; i++) { const t = -1 + 2 * i / N; pts.push(new THREE.Vector2(Math.max(0.0005, R * Math.pow(Math.max(0, 1 - t * t), 0.62)), t * L / 2)); }   // punta algo más afilada que un elipsoide
+    grano.wrapS = grano.wrapT = THREE.RepeatWrapping; grano.repeat.set(34, 22);
+    const mat = new THREE.MeshStandardMaterial({ map: tex, bumpMap: grano, bumpScale: 0.9, roughness: 0.55, metalness: 0 });
+    const bola = new THREE.Mesh(new THREE.LatheGeometry(pts, 96), mat); bola.name = 'balon';
+    bola.rotation.y = -BALON_GIRO;                                  // el escudo (centro del gajo 0, u = 1/8 de vuelta) queda mirando a +z
+    const grupo = new THREE.Group(); grupo.name = 'balon_grupo'; grupo.add(bola);
+    grupo.rotation.set(0, 0, -Math.PI / 2); const pivote = new THREE.Group(); pivote.add(grupo); pivote.rotation.y = BALON_YAW;   // eje largo en x, algo girado
+    // altura de la cómoda en ese punto (rayo hacia abajo contra el cuarto)
+    scene.updateMatrixWorld(true); const rc = new THREE.Raycaster(new THREE.Vector3(BALON_POS[0], 1.6, BALON_POS[1]), new THREE.Vector3(0, -1, 0));
+    const golpe = rc.intersectObjects(scene.children, true).find(h => h.object.visible && h.object.isMesh && !h.object.name.startsWith('espejo'));
+    const sobre = golpe ? golpe.point.y : 1.04;
+    pivote.position.set(BALON_POS[0], sobre + R, BALON_POS[1]);
+    // sombra de contacto y luz solo para él (el resto del cuarto es de luz horneada)
+    const sombra = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.28), new THREE.MeshBasicMaterial({ map: (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, 'rgba(20,10,20,0.62)'); gr.addColorStop(1, 'rgba(20,10,20,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })(), transparent: true, depthWrite: false }));
+    sombra.rotation.x = -Math.PI / 2; sombra.rotation.z = BALON_YAW; sombra.position.set(BALON_POS[0], sobre + 0.002, BALON_POS[1]); sombra.raycast = () => {};
+    const hemi = new THREE.HemisphereLight(0xfff1e0, 0x8a6a5a, 1.55), sol = new THREE.DirectionalLight(0xffe2c0, 1.25); sol.position.set(-1.5, 2.2, 3.0); sol.target.position.copy(pivote.position);
+    scene.add(pivote, sombra, hemi, sol, sol.target); pivote.updateMatrixWorld(true);
+    objects.balon = { grupo: pivote, mat, hemi, sol, sombra };
+  } catch (e) { console.warn('sin balón', e); }
   // raycast acelerado (árbol de cajas por malla): pasar el ratón por el cuarto no recorre los 72.000 triángulos
   scene.traverse(o => { if (o.isMesh && o.geometry.index && o.geometry.attributes.position.count > 200) { o.geometry.computeBoundsTree = computeBoundsTree; o.geometry.computeBoundsTree({ indirect: true }); o.raycast = acceleratedRaycast; } });
 }
@@ -293,7 +333,7 @@ function hitTest(ev) {
   if (objects.monitor.includes(o)) return { key: 'proyectos' };
   if (objects.libro.includes(o)) return { key: 'educacion' };
   if (objects.ventana.includes(o)) return { key: 'experiencia' };
-  if (objects.espejo.includes(o)) return { key: 'sobremi' };
+  if (objects.espejo.includes(o) || objects.espejoFotos?.includes(o)) return { key: 'sobremi' };
   if (o === objects.boardFace || o === objects.pizarra) {
     // qué línea de la pizarra: la coordenada v de la textura en el punto tocado
     const v = o === objects.boardFace && hit.uv ? hit.uv.y : -1;
@@ -400,7 +440,7 @@ function showPanel(key) {
     Object.assign(panel.style, { left: '', right: '6vw', top: '50%', transform: 'translateY(-50%)', width: 'min(460px, 40vw)', height: '' });
     poner(key, () => `<div class="card"><h2>${SECTIONS.experiencia}</h2>${EXPERIENCE.map(e => `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`).join('')}</div>`);
   } else if (key === 'sobremi') {
-    Object.assign(panel.style, { left: '5vw', right: '', top: '50%', transform: 'translateY(-50%)', width: 'min(440px, 40vw)', height: '' });
+    Object.assign(panel.style, { left: '', right: '5vw', top: '50%', transform: 'translateY(-50%)', width: 'min(380px, 32vw)', height: '' });
     poner(key, () => `<div class="card"><h2>${ABOUT.name}</h2><p><b>${ABOUT.role}</b></p><p>${todo(ABOUT.bio)}</p>
       <ul>${(ABOUT.gustos || []).map(g => `<li>${g}</li>`).join('')}</ul>
       <h3>${T.contacto}</h3><p>${ABOUT.links.map(l => `<a href="${l.href}" target="_blank" rel="noopener">${l.label}</a>${l.todo ? ' <span class="todo">' + T.pendiente + '</span>' : ''}`).join(' · ')}</p></div>`);
@@ -679,6 +719,8 @@ function frame(now) {
     frame.ultimaHora = now; frame.horaPuesta = horaManual; const r = Horas.actualizar(horaManual ?? undefined);
     if (r.cambio || !frame.reloj) {
       sucio = true;
+      if (objects.balon) { const f = Math.min(1, 0.35 + 0.65 * (r.d + 0.9 * r.a + 0.3 * r.n)); objects.balon.hemi.intensity = 1.55 * f; objects.balon.sol.intensity = 1.25 * f * (1 - 0.7 * r.n); objects.balon.sombra.material.opacity = 0.5 + 0.4 * f; }
+      if (objects.matFotos) { const f = Math.min(1, 1.0 * r.d + 0.9 * r.a + 0.36 * r.n); for (const m of objects.matFotos) m.color.setScalar(f); }
       if (objects.marcoEspejo) { const f = 1.0 * r.d + 0.9 * r.a + 0.36 * r.n, c = new THREE.Color(MARCO_ESPEJO); for (const m of objects.marcoEspejo) m.color.copy(c).multiplyScalar(f * m.userData.k); }
       if (objects.alfombrilla) objects.alfombrilla.material.color.setRGB(0.95 * r.d + 0.85 * r.a + 0.32 * r.n, 0.93 * r.d + 0.72 * r.a + 0.30 * r.n, 0.90 * r.d + 0.68 * r.a + 0.42 * r.n);
     }
