@@ -42,7 +42,7 @@ export function crearIntro(scene, doorMesh) {
   const ancho = DOOR.x1 - DOOR.hingeX;
   const exterior = new THREE.Mesh(new THREE.PlaneGeometry(ancho, DOOR.h), new THREE.MeshBasicMaterial({ map: texMadera(), color: '#d9c2b4' }));
   exterior.position.set(ancho / 2 - 0.035, DOOR.h / 2, 0.052); exterior.scale.x = (ancho + 0.07) / ancho;   // tapa también la rendija pivot.add(exterior);
-  const peg = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.07), new THREE.MeshBasicMaterial({ map: texPegatina(), color: '#e8e2dc' }));
+  const peg = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.07), new THREE.MeshBasicMaterial({ map: texPegatina(), color: '#e8e2dc', transparent: true, alphaTest: 0.5 }));
   peg.position.set(ancho / 2, 1.52, 0.054); pivot.add(peg);   // centrada en la hoja de la puerta (eje vertical)
   const pomoMat = new THREE.MeshBasicMaterial({ color: '#b9bcc2' });
   for (const z of [0.075, -0.025]) {                       // pomo por los dos lados
@@ -70,6 +70,9 @@ export function crearIntro(scene, doorMesh) {
 
   return {
     vista: { pos: new THREE.Vector3(0.52, 1.62, 5.55), look: new THREE.Vector3(0.47, 1.30, 3.60), fov: 58 },
+    // la pegatina de la puerta, muy de cerca (clic en ella; clic fuera la suelta). La pegatina mide 5 x 7 cm y está en (0,465 · 1,52 · 3,714)
+    vistaPegatina: { pos: new THREE.Vector3(0.465, 1.52, 4.0), look: new THREE.Vector3(0.465, 1.52, 3.7), fov: 24 },
+    pegatina: peg,
     vistaDentro: { pos: new THREE.Vector3(0.50, 1.62, 3.95), look: new THREE.Vector3(0.70, 1.20, 2.40), fov: 62 },
     // de la puerta a la vista principal, en curva por el centro del hueco (en línea recta atravesaba la pared)
     paso: new THREE.Vector3(0.45, 1.70, 3.10),

@@ -366,8 +366,23 @@ renderer.domElement.addEventListener('mousemove', ev => {
   if (state === 'intro') { renderer.domElement.style.cursor = 'pointer'; return; }
   movPendiente = ev;
 });
+// pegatina de la puerta: clic en ella = zoom muy cercano; con el zoom puesto, un clic fuera la suelta (y otro clic entra, como siempre)
+let zoomPegatina = false;
+function alPegatina(ev) {
+  ndc.set((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  return !!intro?.pegatina && ray.intersectObject(intro.pegatina, false).length > 0;
+}
+function ponerZoomPegatina(on) {
+  zoomPegatina = on; hint.textContent = on ? T.hintPegatina : T.hintPuerta;
+  flyTo(on ? intro.vistaPegatina : intro.vista, null, 1.1);
+}
 renderer.domElement.addEventListener('click', ev => {
-  if (state === 'intro') return entrar();
+  if (state === 'intro') {
+    if (flight) return;
+    if (zoomPegatina) { if (!alPegatina(ev)) ponerZoomPegatina(false); return; }
+    if (alPegatina(ev)) return ponerZoomPegatina(true);
+    return entrar();
+  }
   if (flight) return;
   if (state === 'home' || state === 'pizarra') {
     const h = hitTest(ev);
@@ -376,7 +391,7 @@ renderer.domElement.addEventListener('click', ev => {
     openSection(h.key);
   } else if (!panel.contains(ev.target)) goHome();
 });
-addEventListener('keydown', e => { if (state === 'intro') return entrar();
+addEventListener('keydown', e => { if (state === 'intro') return zoomPegatina ? (!flight && ponerZoomPegatina(false)) : entrar();
   if (e.key === 'Escape' && state !== 'home' && !flight) goHome(); });
 backBtn.addEventListener('click', () => !flight && goHome());
 
@@ -692,9 +707,9 @@ function frame(now) {
     if (x >= 1) { const d = flight.done; flight = null; d && d(); }
   } else {
     // la cámara sigue al ratón con un muelle: sin saltos al acabar un vuelo ni tirones si el ratón va a trompicones
-    const enIntro = state === 'intro' || state === 'entrando', v = enIntro ? intro.vista : VIEWS[state] || VIEWS.home;   // entrando: aún en el pasillo
+    const enIntro = state === 'intro' || state === 'entrando', v = enIntro ? (zoomPegatina && state === 'intro' ? intro.vistaPegatina : intro.vista) : VIEWS[state] || VIEWS.home;   // entrando: aún en el pasillo
     // el cuarto "respira" con el ratón; con un panel abierto, quieto (el panel de Proyectos va encajado en el monitor)
-    const amp = enIntro || state === 'home' ? 1 : state === 'pizarra' ? 0.25 : 0;
+    const amp = enIntro ? (zoomPegatina ? 0.05 : 1) : state === 'home' ? 1 : state === 'pizarra' ? 0.25 : 0;
     tmp.set(mouseN.x * (enIntro ? 0.05 : 0.06) * amp, -mouseN.y * (enIntro ? 0.03 : 0.04) * amp, 0).add(v.pos);
     seguir(suave, tmp, dt / 1000);
     ponerCamara(suave, v.look, v.fov); currentLook.copy(v.look);
@@ -742,6 +757,7 @@ relojSlider.addEventListener('input', () => { horaManual = +relojSlider.value; }
 document.getElementById('relojReal').addEventListener('click', () => { horaManual = null; frame.ultimaHora = 0; relojPanel.hidden = true; });
 function entrar() {
   if (state !== 'intro' || flight) return;
+  zoomPegatina = false;
   state = 'entrando'; hint.style.opacity = 0; renderer.domElement.style.cursor = 'default';
   puertaAnim = { t0: null, dur: 1500, de: 0, a: 1 };
   setTimeout(() => flyTo(intro.vistaDentro, () => {
@@ -761,7 +777,7 @@ function reservarEspejo() {
   const tamanos = espejos.map(() => []);
   const medir = (peso = 1) => espejos.forEach((e, i) => tamanos[i].push([...e.medir(camera), peso]));
   for (const [a, b, via] of vuelos) for (let k = 0; k <= 60; k++) { poseVuelo(a, b, k / 60, via); medir(); }
-  for (const v of [H, P, ...secciones, ...(intro ? [intro.vista] : [])])
+  for (const v of [H, P, ...secciones, ...(intro ? [intro.vista, intro.vistaPegatina] : [])])
     for (const [mx, my] of [[-.5, -.5], [.5, -.5], [-.5, .5], [.5, .5], [0, 0]]) {
       camera.position.copy(v.pos).add({ x: mx * 0.06, y: -my * 0.04, z: 0 }); camera.fov = v.fov; camera.updateProjectionMatrix(); camera.lookAt(v.look); medir(30);   // en reposo: pesa más
     }
