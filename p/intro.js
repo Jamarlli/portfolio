@@ -1,6 +1,7 @@
 // Intro: pasillo frente a la puerta de Javier (cerrada, con la pegatina "PARKING PRIVADO").
 // Clic (o tecla) -> la puerta se abre hacia dentro y la cámara entra hasta la vista principal.
 import * as THREE from 'three';
+import { LANG } from './i18n.js';
 
 const DOOR = { hingeX: 0.10, x1: 0.83, z: 3.66, h: 2.02, wall: 3.78 };
 
@@ -32,7 +33,8 @@ const texPegatina = () => canvasTex(250, 350, (g, w, h) => {
   g.fillRect(50, 90, 10, 90); g.fillRect(50, 140, 150, 26); g.fillRect(190, 130, 10, 50);
   g.beginPath(); g.ellipse(84, 128, 16, 12, 0, 0, 7); g.fill(); g.fillRect(104, 118, 86, 22);
   g.fillStyle = '#ffffff'; g.font = 'bold 34px Arial, sans-serif'; g.textAlign = 'center';
-  g.fillText('PARKING', w / 2, 270); g.fillText('PRIVADO', w / 2, 306);
+  const [l1, l2] = LANG === 'en' ? ['PRIVATE', 'PARKING'] : ['PARKING', 'PRIVADO'];   // en inglés: "PRIVATE PARKING"
+  g.fillText(l1, w / 2, 270); g.fillText(l2, w / 2, 306);
 });
 
 export function crearIntro(scene, doorMesh) {
