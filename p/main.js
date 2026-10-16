@@ -155,7 +155,7 @@ function ponerManivela(s, r) {
   mesa.pivote.position.x = -0.125 * (1 - s); mesa.pivote.rotation.x = mesa.vueltas + mesa.giro;
   const z = mesa.zona, a = (v, w) => v + (w - v) * s;
   z.position.copy(mesa.zonaBase).add(new THREE.Vector3(a(-0.11, 0.07), a(-0.02, -0.04), a(-0.04, 0)));
-  z.scale.set(a(0.9, 1), a(0.4, 1), a(1.5, 1));
+  z.scale.set(a(1.1, 1.2), a(0.65, 1.15), a(1.9, 1.3));
   mesa.pivote.updateMatrixWorld(true); z.updateMatrixWorld(true); sucio = true;
 }
 function ponerMesa(u) {
