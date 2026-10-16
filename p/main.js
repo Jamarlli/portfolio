@@ -11,6 +11,7 @@ import { crearIntro } from './intro.js';
 import * as Horas from './horas.js';
 import { crearEspejo } from './espejo.js';
 import { cargarTextura } from './texturas.js';
+import { icono } from './iconos.js';
 import { crearCadena, crearPresentador, crearReproyector } from './postpro.js';
 // el personaje está archivado en archivo/personaje (web/personaje.js + assets/javier.glb); se retomará más adelante
 
@@ -561,7 +562,7 @@ function showPanel(key) {
     Object.assign(panel.style, { left: '', right: '5vw', top: '50%', transform: 'translateY(-50%)', width: 'min(380px, 32vw)', height: '' });
     poner(key, () => `<div class="card"><h2>${ABOUT.name}</h2><p><b>${ABOUT.role}</b></p><p>${todo(ABOUT.bio)}</p>
       <ul>${(ABOUT.gustos || []).map(g => `<li>${g}</li>`).join('')}</ul>
-      <h3>${T.contacto}</h3><p>${ABOUT.links.map(l => `<a href="${l.href}" target="_blank" rel="noopener">${l.label}</a>${l.todo ? ' <span class="todo">' + T.pendiente + '</span>' : ''}`).join(' · ')}</p></div>`);
+      <h3>${T.contacto}</h3><div class="contactos">${ABOUT.links.map(l => `<a class="ico" href="${l.href}" target="_blank" rel="noopener" aria-label="${l.label}">${icono(l.icon)}<span>${l.label}</span></a>`).join('')}</div></div>`);
   } else if (key === 'educacion') {
     Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(980px, 88vw)', height: '', right: '' });
     const half = Math.ceil(EDUCATION.length / 2);

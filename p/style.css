@@ -99,3 +99,11 @@ a { color: var(--accent-2); }
 #relojSlider { width: 180px; accent-color: var(--accent); }
 [hidden] { display: none !important; }
 
+
+/* contactos de "Sobre mí": iconos pixelados con la rotulación debajo */
+.contactos { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.ico { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; color: var(--ink); font-size: 18px; }
+.ico .ico-svg { width: 56px; height: 56px; padding: 8px; box-sizing: border-box; background: var(--paper-2); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--shadow); }
+.ico:hover { color: var(--accent); }
+.ico:hover .ico-svg { background: var(--glow); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--shadow); }
+.ico:active .ico-svg { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--shadow); }

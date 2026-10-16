@@ -11,10 +11,10 @@ const CONTENIDO = {
       bio: '23 años · Valencia. Me encanta aprender cosas nuevas y profundizar en las que ya sé. Busco problemas y encontrar soluciones con todas las herramientas a mi alcance.',
       gustos: ['🏉 Rugby federado y deportista de élite de la UV', '🎭 Teatro', '⛰️ Montaña', '📚 Leer', '🏕️ Monitor de tiempo libre (MAT) y primeros auxilios'],
       links: [
-        { label: 'LinkedIn', href: 'https://www.linkedin.com/in/javier-martinez-llinares/' },
-        { label: 'GitHub', href: 'https://github.com/Jamarlli' },
-        { label: 'nódicus', href: 'https://www.nodicus.com' },
-        { label: 'Email', href: 'mailto:javier.mtinez.llinares@gmail.com' },
+        { icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/javier-martinez-llinares/' },
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/Jamarlli' },
+        { icon: 'nodicus', label: 'nódicus', href: 'https://www.nodicus.com' },
+        { icon: 'email', label: 'Email', href: 'mailto:javier.mtinez.llinares@gmail.com' },
       ],
     },
     PROJECTS: [
@@ -43,10 +43,10 @@ const CONTENIDO = {
       bio: '23 years old · Valencia, Spain. I love learning new things and going deeper into the ones I already know. I look for problems and find solutions with every tool within reach.',
       gustos: ['🏉 Competitive rugby, elite athlete of the UV', '🎭 Theatre', '⛰️ Mountains', '📚 Reading', '🏕️ Youth leisure instructor (MAT) and first aid'],
       links: [
-        { label: 'LinkedIn', href: 'https://www.linkedin.com/in/javier-martinez-llinares/' },
-        { label: 'GitHub', href: 'https://github.com/Jamarlli' },
-        { label: 'nódicus', href: 'https://www.nodicus.com' },
-        { label: 'Email', href: 'mailto:javier.mtinez.llinares@gmail.com' },
+        { icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/javier-martinez-llinares/' },
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/Jamarlli' },
+        { icon: 'nodicus', label: 'nódicus', href: 'https://www.nodicus.com' },
+        { icon: 'email', label: 'Email', href: 'mailto:javier.mtinez.llinares@gmail.com' },
       ],
     },
     PROJECTS: [
