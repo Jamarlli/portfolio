@@ -139,7 +139,7 @@ function construirMesaRegulable(room) {
   // zona de clic invisible, más generosa que la varilla (el Trotten tiene una manivela de alambre muy fina); no gira
   const zona = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.15, 0.09), new THREE.MeshBasicMaterial({ visible: false }));
   zona.position.copy(bisagra.position); zona.name = 'manivela_zona'; grupo.add(zona); mesa.zona = zona;
-  mesa.zonaBase = zona.position.clone(); ponerManivela(0);   // en reposo: plegada bajo la mesa
+  mesa.zonaBase = zona.position.clone(); ponerManivela(0, 0);   // en reposo: metida bajo la mesa, brazo de lado
   // la mesa que queda fija: cajonera y pies
   base.geometry = construir(tris.resto);
   // lo que lleva encima sube con ella
@@ -148,15 +148,15 @@ function construirMesaRegulable(room) {
   }
   room.updateMatrixWorld(true);
 }
-// manivela: p = 0 plegada (cuarto de giro sobre el eje vertical, a la derecha: queda paralela al canto y pegada bajo el tablero, con el brazo hacia dentro)
-// ... p = 1 desplegada (perpendicular al canto, con el brazo colgando, lista para dar vueltas)
-function ponerManivela(p) {
-  mesa.p = p; mesa.bisagra.rotation.y = (1 - p) * Math.PI / 2; mesa.giro = (1 - p) * Math.PI / 2;
-  mesa.pivote.rotation.x = mesa.vueltas + mesa.giro;
-  const z = mesa.zona, a = (v, w) => v + (w - v) * p;
-  z.position.copy(mesa.zonaBase).add(new THREE.Vector3(a(-0.04, 0.07), a(-0.02, -0.04), a(-0.05, 0)));
-  z.scale.set(a(0.75, 1), a(0.4, 1), a(1.7, 1));
-  mesa.bisagra.updateMatrixWorld(true); z.updateMatrixWorld(true); sucio = true;
+// manivela, como la del Trotten real: en reposo está metida del todo bajo el tablero (deslizada hacia la pared) y con el brazo girado un cuarto
+// de vuelta a la derecha, horizontal, porque topa con el tablero. Para usarla: s = 1 sale deslizando hacia fuera, r = 1 baja el brazo (cuelga y puede dar vueltas)
+function ponerManivela(s, r) {
+  mesa.s = s; mesa.r = r; mesa.giro = (1 - r) * Math.PI / 2;
+  mesa.pivote.position.x = -0.125 * (1 - s); mesa.pivote.rotation.x = mesa.vueltas + mesa.giro;
+  const z = mesa.zona, a = (v, w) => v + (w - v) * s;
+  z.position.copy(mesa.zonaBase).add(new THREE.Vector3(a(-0.11, 0.07), a(-0.02, -0.04), a(-0.04, 0)));
+  z.scale.set(a(0.9, 1), a(0.4, 1), a(1.5, 1));
+  mesa.pivote.updateMatrixWorld(true); z.updateMatrixWorld(true); sucio = true;
 }
 function ponerMesa(u) {
   mesa.u = u; mesa.grupo.position.y = u * MESA_ALZ; mesa.vueltas = u * MESA_VUELTAS * 2 * Math.PI; mesa.pivote.rotation.x = mesa.vueltas + (mesa.giro ?? Math.PI / 2);
@@ -821,8 +821,9 @@ function frame(now) {
   if (mesa.anim) {                                          // mesa regulable: sube o baja girando la manivela
     const a = mesa.anim; a.t0 ??= now;
     const t = THREE.MathUtils.clamp((now - a.t0) / a.dur, 0, 1), C = THREE.MathUtils.clamp;
-    // se despliega (12 %), da las vueltas con la mesa (76 %) y se vuelve a plegar (12 %)
-    ponerManivela(ease(Math.min(C(t / 0.12, 0, 1), 1 - C((t - 0.88) / 0.12, 0, 1)))); ponerMesa(a.de + (a.a - a.de) * ease(C((t - 0.12) / 0.76, 0, 1)));
+    // el brazo baja un cuarto de vuelta (8 %), la manivela sale deslizando (10 %), da las vueltas con la mesa (64 %) y se mete y se pliega al revés
+    ponerManivela(Math.min(C((t - 0.08) / 0.10, 0, 1), 1 - C((t - 0.82) / 0.10, 0, 1)), Math.min(C(t / 0.08, 0, 1), 1 - C((t - 0.92) / 0.08, 0, 1)));
+    ponerMesa(a.de + (a.a - a.de) * ease(C((t - 0.18) / 0.64, 0, 1)));
     if (t >= 1) mesa.anim = null;
   }
   if (puertaAnim && intro) {
