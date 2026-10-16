@@ -80,6 +80,91 @@ addEventListener('resize', () => {
 // ---------------------------------------------------------------- cargar el cuarto horneado
 const objects = { monitor: [], libro: [], ventana: [], espejo: [], pizarra: null, armario: null };
 const espejos = [];
+
+// ---------------------------------------------------------------- mesa regulable (manivela)
+// La mesa horneada es una sola malla (tablero, patas, travesaño, manivela y cajonera). Se parte por triángulos: el tablero y el travesaño suben
+// con todo lo que llevan encima; las patas se rehacen telescópicas (tubo inferior más estrecho que fijo, manguito superior más ancho que sube)
+// y la manivela se modela de nuevo (eje, brazo y puño) para que gire al subir o bajar la mesa. Las texturas horneadas se reaprovechan (mismas UV).
+const MESA_ALZ = 0.36, MESA_VUELTAS = 9;           // IKEA Trotten 160x80: regula de 72 a 122 cm; aquí sube 36 cm (de 0,84 a 1,20 m, de pie) y la manivela da 9 vueltas
+const mesa = { grupo: null, manivela: [], pivote: null, u: 0, anim: null, arriba: false };
+function construirMesaRegulable(room) {
+  const base = room.getObjectByName('mesa');
+  if (!base?.isMesh) return;
+  const g = base.geometry.index ? base.geometry.toNonIndexed() : base.geometry;
+  const P = g.attributes.position, U = g.attributes.uv, tris = { tablero: [], pata: [], manivela: [], resto: [] };
+  for (let t = 0; t < P.count / 3; t++) {
+    let cx = 0, cy = 0, cz = 0;
+    for (let k = 0; k < 3; k++) { cx += P.getX(t * 3 + k) / 3; cy += P.getY(t * 3 + k) / 3; cz += P.getZ(t * 3 + k) / 3; }
+    const az = Math.abs(cz);
+    tris[cy > -0.0135 ? 'tablero'
+      : cx > -0.321 && cx < -0.259 && cy > -0.06 ? 'tablero'                                            // travesaño
+      : cx > 0.299 && cx < 0.331 && cz > 0.739 && cz < 0.771 && cy > -0.1 ? 'manivela'
+      : Math.abs(cx) < 0.041 && az > 0.688 && az < 0.752 && cy > -0.80 ? 'pata' : 'resto'].push(t);
+  }
+  const construir = (lista, f) => {
+    const pos = new Float32Array(lista.length * 9), uv = new Float32Array(lista.length * 6);
+    lista.forEach((t, i) => { for (let k = 0; k < 3; k++) {
+      const v = t * 3 + k, p = [P.getX(v), P.getY(v), P.getZ(v)], q = f ? f(p) : p;
+      pos.set(q, i * 9 + k * 3); uv.set([U.getX(v), U.getY(v)], i * 6 + k * 2);
+    } });
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    geo.computeBoundingBox(); geo.computeBoundingSphere(); return geo;
+  };
+  const nueva = (geo, nombre, padre, enLaMesa = true) => {
+    const m = new THREE.Mesh(geo, base.material.clone()); m.name = nombre; m.userData.mat = base.userData.mat;
+    if (enLaMesa) { m.position.copy(base.position); m.quaternion.copy(base.quaternion); m.scale.copy(base.scale); }
+    padre.add(m); return m;
+  };
+  const caja = (lista) => {                                          // plantilla: la cajita de la manivela original, para estirarla a otras medidas
+    const bb = construir(lista).boundingBox, c = bb.getCenter(new THREE.Vector3()), s = bb.getSize(new THREE.Vector3());
+    return (cx, cy, cz, sx, sy, sz) => construir(lista, p => [cx + (p[0] - c.x) / s.x * sx, cy + (p[1] - c.y) / s.y * sy, cz + (p[2] - c.z) / s.z * sz]);
+  };
+  const grupo = mesa.grupo = new THREE.Group(); grupo.name = 'mesa_regulable'; room.add(grupo);
+  // tablero + travesaño: suben
+  grupo.add(nueva(construir(tris.tablero), 'mesa_tablero', grupo));
+  // patas telescópicas
+  const ys = tris.pata.flatMap(t => [0, 1, 2].map(k => P.getY(t * 3 + k))), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const LOC_Y = base.position.y;                                     // la malla está centrada en y = 0,8275: y local = y del cuarto - LOC_Y
+  const mangoB = 0.84 - 0.025 - 0.50 - LOC_Y, mangoA = 0.84 - 0.025 - LOC_Y, tuboA = 0.70 - LOC_Y;
+  nueva(construir(tris.pata, p => { const cz = p[2] > 0 ? 0.72 : -0.72; return [p[0] * 0.78, mangoB + (p[1] - y0) / (y1 - y0) * (mangoA - mangoB), cz + (p[2] - cz) * 0.78]; }), 'mesa_manguito', grupo);
+  nueva(construir(tris.pata, p => { const cz = p[2] > 0 ? 0.72 : -0.72; return [p[0] * 0.66, y0 + (p[1] - y0) / (y1 - y0) * (tuboA - y0), cz + (p[2] - cz) * 0.66]; }), 'mesa_tubo', base.parent);
+  // manivela: eje bajo el canto del tablero, brazo y puño; el pivote gira sobre z
+  const pivote = mesa.pivote = new THREE.Group(); pivote.name = 'manivela_pivote'; grupo.add(pivote);
+  pivote.position.copy(base.localToWorld(new THREE.Vector3(0.375, -0.045, -0.51)));   // canto largo de delante, a la derecha según se sienta uno (hacia la ventana): a la altura del final de la alfombrilla (z = 1,38)
+  const molde = caja(tris.pata);   // misma pintura blanca que las patas (la manivela del Trotten es blanca)
+  for (const [nombre, medidas] of [['manivela_eje', [0.01, 0, 0, 0.12, 0.008, 0.008]], ['manivela_brazo', [0.066, -0.0375, 0, 0.008, 0.085, 0.010]], ['manivela_puno', [0.1, -0.0775, 0, 0.07, 0.014, 0.014]]]) {
+    const m = nueva(molde(...medidas), nombre, pivote, false); mesa.manivela.push(m); mesa[nombre.slice(9)] = m;
+  }
+  // zona de clic invisible, más generosa que la varilla (el Trotten tiene una manivela de alambre muy fina); no gira
+  const zona = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.15, 0.09), new THREE.MeshBasicMaterial({ visible: false }));
+  zona.position.copy(pivote.position); zona.name = 'manivela_zona'; grupo.add(zona); mesa.zona = zona;
+  mesa.zonaBase = zona.position.clone(); ponerManivela(0);   // en reposo, recogida bajo la mesa
+  // la mesa que queda fija: cajonera y pies
+  base.geometry = construir(tris.resto);
+  // lo que lleva encima sube con ella
+  for (const n of ['alfombrilla', 'barra_luz', 'libro', 'mesita_portatil', 'monitor', 'monitor2', 'portatil', 'raton', 'teclado_k295', 'vaso', 'vaso001']) {
+    const o = room.getObjectByName(n); if (o) grupo.attach(o);
+  }
+  room.updateMatrixWorld(true);
+}
+// manivela: e = 0 recogida (solo asoma 1,5 cm de la varilla por el canto, y ahí está la zona de clic) ... 1 desplegada
+function ponerManivela(e) {
+  mesa.e = e; mesa.eje.position.x = -0.03 * (1 - e);
+  for (const m of [mesa.brazo, mesa.puno]) { m.position.x = -0.03 * (1 - e); m.visible = e > 0.55; }
+  const z = mesa.zona, d = mesa.zonaBase;
+  if (e < 0.01) { z.position.set(d.x + 0.04, d.y, d.z); z.scale.set(0.36, 0.33, 0.55); }
+  else { z.position.set(d.x + 0.07, d.y - 0.04, d.z); z.scale.set(1, 1, 1); }
+  mesa.pivote.updateMatrixWorld(true); z.updateMatrixWorld(true); sucio = true;
+}
+function ponerMesa(u) {
+  mesa.u = u; mesa.grupo.position.y = u * MESA_ALZ; mesa.pivote.rotation.x = u * MESA_VUELTAS * 2 * Math.PI;
+  mesa.grupo.updateMatrixWorld(true); sucio = true;
+}
+if (hash.get('debug')) window.__alternarMesa = () => alternarMesa();
+function alternarMesa() {
+  if (mesa.anim || !mesa.grupo) return;
+  mesa.arriba = !mesa.arriba; mesa.anim = { t0: null, dur: 3800, de: mesa.u, a: mesa.arriba ? 1 : 0 };
+}
 async function loadRoom() {
   const paso = t => { const l = document.getElementById('loading'); if (l) l.textContent = t; };
   paso(T.cargando);
@@ -121,6 +206,7 @@ async function loadRoom() {
   const sobreMesa = new Set(['mesa', 'barra_luz', 'libro', 'mesita_portatil', 'monitor001', 'monitor_pantalla', 'monitor2001', 'monitor2_pantalla', 'portatil001', 'portatil_pantalla', 'raton', 'teclado', 'vaso', 'vaso001']);
   room.traverse(o => { if (o.isMesh && sobreMesa.has(o.name)) { const w = o.getWorldPosition(new THREE.Vector3()); w.z += MESA_DESPLAZ; o.position.copy(o.parent.worldToLocal(w)); } });
   room.updateMatrixWorld(true);
+  construirMesaRegulable(room);
   if (objects.flexo && objects.flexoPantalla) {
     const [px, pz] = FLEXO_POLO, v0 = new THREE.Vector2(0.38 - 0.90, 0.60 - 1.16), v1 = new THREE.Vector2(0.36 - px, 0.58 - pz);   // brazo de antes / hacia donde apunta
     const ang = v => Math.atan2(v.x, v.y), th = ang(v1) - ang(v0), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), th);
@@ -154,10 +240,11 @@ async function loadRoom() {
   // las piezas fijas que no se tocan (paredes, cama, mesa, teclado…) van en una sola malla: muchas menos llamadas de dibujo,
   // que en un portátil cuestan CPU en la página y en el proceso de GPU del navegador (cada una se traduce a Direct3D)
   {
-    const tocables = new Set([...objects.monitor, ...objects.libro, ...objects.ventana, ...objects.espejo, objects.pizarra, objects.armario, objects.puerta, objects.flexo]);
+    const bajoMesa = o => { for (let p = o; p; p = p.parent) if (p === mesa.grupo) return true; return false; };
+    const tocables = new Set([...objects.monitor,...objects.libro, ...objects.ventana, ...objects.espejo, objects.pizarra, objects.armario, objects.puerta, objects.flexo]);
     const fijas = [];
     room.updateMatrixWorld(true);
-    room.traverse(o => { if (o.isMesh && o.userData.mat === 'horneado' && !tocables.has(o) && !o.name.startsWith('espejo') && !o.material.transparent && o.material.map && o.geometry.index && o.geometry.attributes.uv) fijas.push(o); });
+    room.traverse(o => { if (o.isMesh && o.userData.mat === 'horneado' && !tocables.has(o) && !bajoMesa(o) &&!o.name.startsWith('espejo') && !o.material.transparent && o.material.map && o.geometry.index && o.geometry.attributes.uv) fijas.push(o); });
     if (fijas.length > 1 && !hash.get('sinfusion')) {
       const geo = mergeGeometries(fijas.map(o => {
         const g = new THREE.BufferGeometry();
@@ -190,7 +277,8 @@ async function loadRoom() {
   {
     const t = await alfombrilla;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.90, 0.35), new THREE.MeshBasicMaterial({ map: t, color: '#ffffff' }));
-    m.rotation.set(-Math.PI / 2, 0, Math.PI / 2); m.position.set(0.605, 0.8445, 1.83 + MESA_DESPLAZ); scene.add(m); objects.alfombrilla = m;
+    m.rotation.set(-Math.PI / 2, 0, Math.PI / 2); m.position.set(0.605, 0.8445, 1.83 + MESA_DESPLAZ); scene.add(m); objects.alfombrilla = m; mesa.grupo?.attach(m);
+    if (mesa.grupo && hash.get('mesa') != null) { mesa.arriba = +hash.get('mesa') > 0.5; ponerMesa(+hash.get('mesa')); }   // solo para revisar
   }
   // luz según la hora de Valencia (si existen los horneados de día y noche)
   const mallas = []; room.traverse(o => o.isMesh && mallas.push(o));
@@ -334,6 +422,7 @@ function hitTest(ev) {
   if (objects.libro.includes(o)) return { key: 'educacion' };
   if (objects.ventana.includes(o)) return { key: 'experiencia' };
   if (objects.espejo.includes(o) || objects.espejoFotos?.includes(o)) return { key: 'sobremi' };
+  if (mesa.manivela.includes(o) || o === mesa.zona) return { key: 'mesa' };
   if (o === objects.boardFace || o === objects.pizarra) {
     // qué línea de la pizarra: la coordenada v de la textura en el punto tocado
     const v = o === objects.boardFace && hit.uv ? hit.uv.y : -1;
@@ -363,9 +452,20 @@ function setHover(h, ev) {
 let movPendiente = null;          // el raycast se hace una vez por fotograma, no en cada evento del ratón (pueden llegar 500-1000 por segundo)
 renderer.domElement.addEventListener('mousemove', ev => {
   mouseN.set(ev.clientX / innerWidth - 0.5, ev.clientY / innerHeight - 0.5);
-  if (state === 'intro') { renderer.domElement.style.cursor = 'pointer'; return; }
+  if (state === 'intro') { renderer.domElement.style.cursor = 'pointer'; movPendiente = ev; return; }
   movPendiente = ev;
 });
+// en el pasillo: la puerta (o la pegatina, si se apunta a ella) se ilumina con el mismo contorno que los muebles
+function hoverPuerta(ev) {
+  ndc.set((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(intro.puerta, false)[0];
+  const sel = !hit ? [] : hit.object === intro.pegatina ? [intro.pegatina] : zoomPegatina ? [] : intro.puerta.filter(o => o !== intro.pegatina);
+  const clave = sel.length ? (sel[0] === intro.pegatina ? 'peg' : 'puerta') : '';
+  if (clave === hoverPuerta.clave) return;
+  hoverPuerta.clave = clave;
+  if (sel.length) contorno(sel);
+  contornoAnim.objetivo = sel.length ? 1 : 0; contornoSucio = true;
+}
 // pegatina de la puerta: clic en ella = zoom muy cercano; con el zoom puesto, un clic fuera la suelta (y otro clic entra, como siempre)
 let zoomPegatina = false;
 function alPegatina(ev) {
@@ -388,6 +488,7 @@ renderer.domElement.addEventListener('click', ev => {
     const h = hitTest(ev);
     if (!h) { if (state === 'pizarra') goHome(); return; }
     if (h.key === 'pizarra') { if (state !== 'pizarra') goBoard(); return; }
+    if (h.key === 'mesa') { alternarMesa(); return; }
     openSection(h.key);
   } else if (!panel.contains(ev.target)) goHome();
 });
@@ -694,7 +795,8 @@ function frame(now) {
   vigilar(dt, seMovio || !!flight);
   if (movPendiente) {
     const ev = movPendiente; movPendiente = null;
-    if (!flight && (state === 'home' || state === 'pizarra')) setHover(hitTest(ev), ev);
+    if (!flight && (state === 'home' || state === 'pizarra')) { const h = hitTest(ev); setHover(h?.key === 'mesa' ? null : h, ev); if (h?.key === 'mesa') renderer.domElement.style.cursor = 'pointer'; }   // los easter eggs (sin panel) no se iluminan ni llevan cartel, pero el cursor sí pasa a la manita
+    else if (!flight && state === 'intro' && intro && !puertaAnim) hoverPuerta(ev);
   }
   if (flight) {
     flight.t0 ??= now;
@@ -713,6 +815,13 @@ function frame(now) {
     tmp.set(mouseN.x * (enIntro ? 0.05 : 0.06) * amp, -mouseN.y * (enIntro ? 0.03 : 0.04) * amp, 0).add(v.pos);
     seguir(suave, tmp, dt / 1000);
     ponerCamara(suave, v.look, v.fov); currentLook.copy(v.look);
+  }
+  if (mesa.anim) {                                          // mesa regulable: sube o baja girando la manivela
+    const a = mesa.anim; a.t0 ??= now;
+    const t = THREE.MathUtils.clamp((now - a.t0) / a.dur, 0, 1), C = THREE.MathUtils.clamp;
+    // sale la manivela (12 %), da las vueltas con la mesa (76 %) y se vuelve a meter (12 %)
+    ponerManivela(ease(Math.min(C(t / 0.12, 0, 1), 1 - C((t - 0.88) / 0.12, 0, 1)))); ponerMesa(a.de + (a.a - a.de) * ease(C((t - 0.12) / 0.76, 0, 1)));
+    if (t >= 1) mesa.anim = null;
   }
   if (puertaAnim && intro) {
     puertaAnim.t0 ??= now;
@@ -757,7 +866,7 @@ relojSlider.addEventListener('input', () => { horaManual = +relojSlider.value; }
 document.getElementById('relojReal').addEventListener('click', () => { horaManual = null; frame.ultimaHora = 0; relojPanel.hidden = true; });
 function entrar() {
   if (state !== 'intro' || flight) return;
-  zoomPegatina = false;
+  zoomPegatina = false; hoverPuerta.clave = ''; contornoAnim.objetivo = 0; contornoSucio = true;
   state = 'entrando'; hint.style.opacity = 0; renderer.domElement.style.cursor = 'default';
   puertaAnim = { t0: null, dur: 1500, de: 0, a: 1 };
   setTimeout(() => flyTo(intro.vistaDentro, () => {
