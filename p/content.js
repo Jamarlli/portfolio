@@ -20,11 +20,11 @@ const CONTENIDO = {
     // bocadillos de las fotos del espejo (en el orden de foto_espejo_1, 2, 3); null = aún sin texto (la foto no responde al clic)
     FOTOS: [
       { title: 'Rugby', paras: [
-        'Juego al rugby desde 3º de la ESO (2017), en el Club Rugby San Roque. Soy flanker: el 6 o el 7.',
-        'Es un deporte que te enseña respeto: por el árbitro, por el entrenador, por tu equipo y por el rival. Solo el capitán habla con el árbitro; el resto le traslada lo que quiera decir.',
-        'Aquí cada persona tiene su cometido, seas como seas: los más grandes dan potencia en la melé y apoyo en las touches, los rápidos corren por las bandas, los ágiles se cuelan entre los huecos de la defensa…',
-        'Y es un deporte DE EQUIPO: una persona sola no hace nada. Los egos se quedan atrás. Nadie lleva su nombre en la camiseta: se reparte por el número de tu posición, y si sales de titular como 6, juegas con el 6.',
-        'En la universidad, dos años en la selección de rugby 7 de la UV: dos oros en el campeonato universitario de la Comunitat Valenciana (el CADU) y dos veces al Campeonato de España Universitario, con un bronce el primer año. Y en mi Erasmus jugué con el equipo de 7 de La Sapienza, en Roma, y fuimos a un torneo, el WIUC.',
+        'Una de mis pasiones es el rugby. Empecé a jugar en 3º de la ESO (en 2017) y desde entonces no he parado. Juego en el Club de Rugby San Roque, en la posición de flanker (6/7).',
+        'Una de las cosas que más me ha inculcado el rugby es el respeto: el respeto por el árbitro, el entrenador, mis compañeros y mis rivales. Por ejemplo, en el rugby los jugadores no pueden hablar con el árbitro, solo el capitán, y debe hacerlo con mucha educación porque gritar o insultar al árbitro es tarjeta directa.',
+        'Por otro lado, algo que considero fundamental del rugby es que es un deporte de equipo por excelencia. En el campo, los egos se dejan atrás y pasamos a ser una unidad. De hecho, es de los pocos deportes en los que no hay nombres ni dorsales personales: los 15 jugadores iniciales llevan los dorsales del 1 al 15 en función de la posición que ocupan. No hay estrellas, solo piezas de un engranaje común.',
+        'Además, el rugby es un deporte para cualquier persona. Da igual que seas alto o bajo, gordo o flaco, rápido y ágil o fuerte y decidido: siempre habrá un rol para ti. Los delanteros (o «gordos», apodo cariñoso para los jugadores del 1 al 8) son la potencia del equipo: placan y chocan contra los delanteros del otro equipo y generan espacios. Y luego están los 3/4 (jugadores del 9 al 15), que corren aprovechando esos espacios para superar la línea defensiva y ensayar un tanto.',
+        'El rugby también me ha acompañado en la universidad. Estuve dos años en la selección de rugby 7 de la Universitat de València y los dos años ganamos el campeonato universitario de la Comunitat Valenciana (el CADU): dos oros. En ambos años fuimos al Campeonato de España Universitario (CEU), y el primer año quedamos terceros, con el bronce. Y cuando me fui de Erasmus a Roma también jugué con el equipo de 7 de La Sapienza, con el que fuimos a un torneo, el WIUC.',
       ] },
       null,
       null,
@@ -63,11 +63,11 @@ const CONTENIDO = {
     },
     FOTOS: [
       { title: 'Rugby', paras: [
-        'I have played rugby since the third year of ESO (2017), at Club Rugby San Roque. I am a flanker: number 6 or 7.',
-        'It is a sport that teaches you respect: for the referee, for the coach, for your team and for the opponent. Only the captain talks to the referee; everyone else passes their comments through the captain.',
-        'Everyone has a role, whatever you are like: the bigger players give power in the scrum and support in the lineouts, the fast ones run down the wings, the agile ones slip through gaps in the defence…',
-        'And it is a TEAM sport: one person alone achieves nothing. Egos stay behind. Nobody has their name on the shirt: it is given by your position number, and if you start as a 6, you play in the 6.',
-        'At university I spent two years in the UV rugby sevens team: two golds at the Valencian university championship (the CADU) and twice at the Spanish University Championship, with a bronze the first year. And during my Erasmus I played for the Sapienza sevens team in Rome and we went to a tournament, the WIUC.',
+        'One of my passions is rugby. I started playing in the third year of ESO (in 2017) and I have not stopped since. I play for Club de Rugby San Roque, as a flanker (6/7).',
+        'One of the things rugby has instilled in me the most is respect: respect for the referee, the coach, my teammates and my opponents. For example, in rugby players cannot talk to the referee, only the captain can, and he has to do it very politely, because shouting at or insulting the referee means a direct card.',
+        'On the other hand, something I consider fundamental about rugby is that it is the team sport par excellence. On the pitch, egos are left behind and we become one unit. In fact, it is one of the few sports with no personal names or shirt numbers: the 15 starting players wear numbers 1 to 15 depending on the position they take. There are no stars, only pieces of a common gear.',
+        'Besides, rugby is a sport for anyone. It does not matter whether you are tall or short, heavy or thin, quick and agile or strong and determined: there will always be a role for you. The forwards (or "fatties", an affectionate nickname for the players from 1 to 8) are the power of the team: they tackle and crash into the other team\'s forwards and create space. And then come the backs (players 9 to 15), who run through that space to break the defensive line and score a try.',
+        'Rugby has also been with me at university. I spent two years in the University of Valencia rugby sevens team and we won the Valencian university championship (the CADU) both years: two golds. Both years we went to the Spanish University Championship (CEU), and the first year we finished third, with the bronze. And when I went on Erasmus to Rome I also played for the Sapienza sevens team, with which we went to a tournament, the WIUC.',
       ] },
       null,
       null,
