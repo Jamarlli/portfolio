@@ -107,3 +107,8 @@ a { color: var(--accent-2); }
 .ico:hover { color: var(--accent); }
 .ico:hover .ico-svg { background: var(--glow); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--shadow); }
 .ico:active .ico-svg { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--shadow); }
+
+/* bocadillo de las fotos del espejo: una tarjeta que sustituye al panel */
+.card.bocadillo { position: relative; max-height: 82vh; overflow-y: auto; }
+.card.bocadillo p { line-height: 1.1; margin: 7px 0; }
+.volver-sm { margin: 0 0 8px; font-size: 16px; padding: 1px 10px; }

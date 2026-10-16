@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { computeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
-import { PROJECTS, EDUCATION, EXPERIENCE, ABOUT } from './content.js';
+import { PROJECTS, EDUCATION, EXPERIENCE, ABOUT, FOTOS } from './content.js';
 import { T, PENDIENTE } from './i18n.js';
 import { crearIntro } from './intro.js';
 import * as Horas from './horas.js';
@@ -365,7 +365,7 @@ async function loadRoom() {
         try {
           const t = await cargarTextura(base + `foto_espejo_${i + 1}.webp`), w = 0.14, h = w * t.image.height / t.image.width;
           const mat = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false }), f = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
-          f.position.set(x, y, 0.0045 + i * 0.0004); f.rotation.z = THREE.MathUtils.degToRad(giro); f.name = 'espejo_foto'; f.renderOrder = 2;
+          f.position.set(x, y, 0.0045 + i * 0.0004); f.rotation.z = THREE.MathUtils.degToRad(giro); f.name = 'espejo_foto'; f.renderOrder = 2; f.userData.idx = i;
           ref.add(f); objects.espejoFotos.push(f); objects.matFotos.push(mat);
         } catch (e) { console.warn('foto del espejo', i + 1, e); }
       }));
@@ -456,6 +456,7 @@ let movPendiente = null;          // el raycast se hace una vez por fotograma, n
 renderer.domElement.addEventListener('mousemove', ev => {
   mouseN.set(ev.clientX / innerWidth - 0.5, ev.clientY / innerHeight - 0.5);
   if (state === 'intro') { renderer.domElement.style.cursor = 'pointer'; movPendiente = ev; return; }
+  if (state === 'sobremi') { renderer.domElement.style.cursor = FOTOS[fotoBajo(ev)] ? 'pointer' : 'default'; return; }
   movPendiente = ev;
 });
 // en el pasillo: la puerta (o la pegatina, si se apunta a ella) se ilumina con el mismo contorno que los muebles
@@ -493,7 +494,8 @@ renderer.domElement.addEventListener('click', ev => {
     if (h.key === 'pizarra') { if (state !== 'pizarra') goBoard(); return; }
     if (h.key === 'mesa') { alternarMesa(); return; }
     openSection(h.key);
-  } else if (!panel.contains(ev.target)) goHome();
+  } else if (state === 'sobremi' && fotoBajo(ev) >= 0 && !panel.contains(ev.target)) { mostrarFoto(fotoBajo(ev)); }
+  else if (!panel.contains(ev.target)) goHome();
 });
 addEventListener('keydown', e => { if (state === 'intro') return zoomPegatina ? (!flight && ponerZoomPegatina(false)) : entrar();
   if (e.key === 'Escape' && state !== 'home' && !flight) goHome(); });
@@ -545,6 +547,22 @@ function poner(key, html) {
   const n = panelNodos[key] ??= Object.assign(document.createElement('div'), { innerHTML: html() });
   n.style.display = 'contents'; panel.replaceChildren(n);
   for (const b of n.querySelectorAll('.book')) { b.classList.remove('opening'); requestAnimationFrame(() => b.classList.add('opening')); }   // que el libro se vuelva a abrir
+}
+// bocadillo de una foto del espejo: sustituye al panel de "Sobre mí" (con un botón para volver)
+function fotoBajo(ev) {                                           // índice de la foto bajo el ratón (-1: ninguna); las fotos son transparentes y no entran en hitTest
+  if (!objects.espejoFotos?.length) return -1;
+  ndc.set((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(objects.espejoFotos, false)[0];
+  return hit ? hit.object.userData.idx : -1;
+}
+function mostrarFoto(i) {
+  const f = FOTOS[i]; if (!f) return;
+  panel.hidden = false; panel.className = '';
+  panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = '';
+  Object.assign(panel.style, { left: '', right: '4vw', top: '50%', transform: 'translateY(-50%)', width: 'min(470px, 36vw)', height: '' });
+  panel.replaceChildren(Object.assign(document.createElement('div'), { className: 'card bocadillo',
+    innerHTML: `<button class="px-btn volver-sm" type="button">← ${SECTIONS.sobremi}</button><h2>${f.title}</h2>${f.paras.map(p => `<p>${p}</p>`).join('')}` }));
+  panel.querySelector('.volver-sm').addEventListener('click', () => showPanel('sobremi'));
 }
 function showPanel(key) {
   // la animación de entrada arranca sola al dejar de estar oculto; solo si ya se veía hay que reiniciarla

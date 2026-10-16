@@ -17,6 +17,18 @@ const CONTENIDO = {
         { icon: 'email', label: 'Email', href: 'mailto:javier.mtinez.llinares@gmail.com' },
       ],
     },
+    // bocadillos de las fotos del espejo (en el orden de foto_espejo_1, 2, 3); null = aún sin texto (la foto no responde al clic)
+    FOTOS: [
+      { title: 'Rugby', paras: [
+        'Juego al rugby desde 3º de la ESO (2017), en el Club Rugby San Roque. Soy flanker: el 6 o el 7.',
+        'Es un deporte que te enseña respeto: por el árbitro, por el entrenador, por tu equipo y por el rival. Solo el capitán habla con el árbitro; el resto le traslada lo que quiera decir.',
+        'Aquí cada persona tiene su cometido, seas como seas: los más grandes dan potencia en la melé y apoyo en las touches, los rápidos corren por las bandas, los ágiles se cuelan entre los huecos de la defensa…',
+        'Y es un deporte DE EQUIPO: una persona sola no hace nada. Los egos se quedan atrás. Nadie lleva su nombre en la camiseta: se reparte por el número de tu posición, y si sales de titular como 6, juegas con el 6.',
+        'En la universidad, dos años en la selección de rugby 7 de la UV: dos oros en el campeonato universitario de la Comunitat Valenciana (el CADU) y dos veces al Campeonato de España Universitario, con un bronce el primer año. Y en mi Erasmus jugué con el equipo de 7 de La Sapienza, en Roma, y fuimos a un torneo, el WIUC.',
+      ] },
+      null,
+      null,
+    ],
     PROJECTS: [
       { title: 'Fibrosis auricular con IA', blurb: 'Redes convolucionales que estiman el grado de fibrosis del tejido auricular a partir de electrogramas, como alternativa a la imagen médica. 225 simulaciones y más de 200.000 electrogramas: la exactitud sube del 71 % al 91 %. Artículo en CASEIB 2025.', tags: ['Deep learning', 'Señales', 'CASEIB 2025'], href: 'https://dialnet.unirioja.es/servlet/articulo?codigo=10695530', link: 'Ver el artículo (Dialnet) →' },
       { title: 'R-HDBSCAN', blurb: 'Variante recursiva de HDBSCAN para obtener clusters locales de grano fino en datos de movilidad de sensores de València y la Comunitat Valenciana (Diputació de València).', tags: ['Clustering', 'Movilidad'], href: '#' },
@@ -49,6 +61,17 @@ const CONTENIDO = {
         { icon: 'email', label: 'Email', href: 'mailto:javier.mtinez.llinares@gmail.com' },
       ],
     },
+    FOTOS: [
+      { title: 'Rugby', paras: [
+        'I have played rugby since the third year of ESO (2017), at Club Rugby San Roque. I am a flanker: number 6 or 7.',
+        'It is a sport that teaches you respect: for the referee, for the coach, for your team and for the opponent. Only the captain talks to the referee; everyone else passes their comments through the captain.',
+        'Everyone has a role, whatever you are like: the bigger players give power in the scrum and support in the lineouts, the fast ones run down the wings, the agile ones slip through gaps in the defence…',
+        'And it is a TEAM sport: one person alone achieves nothing. Egos stay behind. Nobody has their name on the shirt: it is given by your position number, and if you start as a 6, you play in the 6.',
+        'At university I spent two years in the UV rugby sevens team: two golds at the Valencian university championship (the CADU) and twice at the Spanish University Championship, with a bronze the first year. And during my Erasmus I played for the Sapienza sevens team in Rome and we went to a tournament, the WIUC.',
+      ] },
+      null,
+      null,
+    ],
     PROJECTS: [
       { title: 'Atrial fibrosis with AI', blurb: 'Convolutional networks that estimate the degree of atrial fibrosis from electrograms, as an alternative to medical imaging. 225 simulations and over 200,000 electrograms: accuracy rises from 71% to 91%. Paper at CASEIB 2025.', tags: ['Deep learning', 'Signals', 'CASEIB 2025'], href: 'https://dialnet.unirioja.es/servlet/articulo?codigo=10695530', link: 'Read the paper (Dialnet) →' },
       { title: 'R-HDBSCAN', blurb: 'A recursive variant of HDBSCAN to get fine-grained local clusters from sensor mobility data across Valencia and the Valencian Community (Diputació de València).', tags: ['Clustering', 'Mobility'], href: '#' },
@@ -70,4 +93,4 @@ const CONTENIDO = {
   },
 };
 
-export const { ABOUT, PROJECTS, EXPERIENCE, EDUCATION } = CONTENIDO[LANG];
+export const { ABOUT, PROJECTS, EXPERIENCE, EDUCATION, FOTOS } = CONTENIDO[LANG];
