@@ -17,16 +17,27 @@ const CONTENIDO = {
         { icon: 'email', label: 'Email', href: 'mailto:javier.mtinez.llinares@gmail.com' },
       ],
     },
-    // bocadillos de las fotos del espejo (en el orden de foto_espejo_1, 2, 3); null = aún sin texto (la foto no responde al clic)
+    // bocadillos de las fotos del espejo (en el orden de foto_espejo_1 rugby, 2 hackathon, 3 museo); null = aún sin texto (la foto no responde al clic)
     FOTOS: [
       { title: 'Rugby', paras: [
         'Una de mis pasiones es el rugby. Empecé a jugar en 3º de la ESO (en 2017) y desde entonces no he parado. Juego en el Club de Rugby San Roque, en la posición de flanker (6/7).',
         { h: 'Respeto', t: 'Una de las cosas que más me ha inculcado el rugby es el respeto: el respeto por el árbitro, el entrenador, mis compañeros y mis rivales. Por ejemplo, en el rugby los jugadores no pueden hablar con el árbitro, solo el capitán, y debe hacerlo con mucha educación porque gritar o insultar al árbitro es tarjeta directa.' },
         { h: 'Equipo', t: 'Por otro lado, algo que considero fundamental del rugby es que es un deporte de equipo por excelencia. En el campo, los egos se dejan atrás y pasamos a ser una unidad. De hecho, es de los pocos deportes en los que no hay nombres ni dorsales personales. Los 15 jugadores iniciales llevan los dorsales del 1 al 15 en función de la posición que ocupan. No hay estrellas, solo piezas de un engranaje común.' },
         'Además, el rugby es un deporte para cualquier persona. Da igual que seas alto o bajo, gordo o flaco, rápido y ágil o fuerte y decidido. Siempre habrá un rol para ti. Los delanteros (o «gordos», apodo cariñoso para los jugadores del 1 al 8) son la potencia del equipo. Placan y chocan contra los delanteros del otro equipo y generan espacios. Y luego están los 3/4 (jugadores del 9 al 15), que corren aprovechando esos espacios para superar la línea defensiva y ensayar un tanto.',
-        { h: 'Competiciones de sevens universitario', t: 'El rugby también me ha acompañado en la universidad. Estuve dos años en la selección de rugby 7 de la Universitat de València y los dos años ganamos el campeonato universitario de la Comunitat Valenciana (el CADU), dos oros. En ambos años fuimos al Campeonato de España Universitario (CEU), y el primer año quedamos terceros, con el bronce. Y cuando me fui de Erasmus a Roma también jugué con el equipo de 7 de La Sapienza, con el que fuimos a un torneo, el WIUC.' },
+        { h: 'Sevens Universitario', t: 'El rugby también me ha acompañado en la universidad. Estuve dos años en la selección de rugby 7 de la Universitat de València y los dos años ganamos el campeonato universitario de la Comunitat Valenciana (el CADU), dos oros. En ambos años fuimos al Campeonato de España Universitario (CEU), y el primer año quedamos terceros, con el bronce. Y cuando me fui de Erasmus a Roma también jugué con el equipo de 7 de La Sapienza, con el que fuimos a un torneo, el WIUC.' },
       ] },
-      null,
+      { title: 'Hackathones', paras: [
+        'Los hackathones me flipan. He estado en muchos y en varios me ha ido muy bien. La foto es del DataHub 2025, uno de los que más me han marcado. No ganamos premio económico, pero sí el premio a la innovación.',
+        { h: 'Lo que me flipa', t: 'Conoces a gente buena, gente maja, verdaderos cracks, y a mí me encanta moverme y conocer gente. También me encanta hacer networking, conocer empresas y entender sus problemas para plantearme cómo solucionarlos. Y me encanta enfrentarme a retos nuevos y desconocidos, pensar y retarme a mí mismo.' },
+        { h: 'Mi papel en el equipo', t: 'Se me da muy bien liderar equipos, y también adaptarme y cumplir el rol que el equipo necesita de mí, ya sea llevar las riendas, delegar o impulsar las ideas de mis compañeros. Además soy muy buen orador, y suelo hacer los pitchs finales.' },
+        { h: 'Mis hackathones', list: [
+          'LLMthon Legal (UV), ganador',
+          'Mobility Summit Hackathon, ganador',
+          'Hackathon ESG (Innova y Acción), ganador',
+          'DataHub 2025, premio a la innovación',
+          'Dream Big UPV 2025',
+        ] },
+      ] },
       null,
     ],
     PROJECTS: [
@@ -67,9 +78,20 @@ const CONTENIDO = {
         { h: 'Respect', t: 'One of the things rugby has instilled in me the most is respect: respect for the referee, the coach, my teammates and my opponents. For example, in rugby players cannot talk to the referee, only the captain can, and he has to do it very politely, because shouting at or insulting the referee means a direct card.' },
         { h: 'Team', t: 'On the other hand, something I consider fundamental about rugby is that it is the team sport par excellence. On the pitch, egos are left behind and we become one unit. In fact, it is one of the few sports with no personal names or shirt numbers. The 15 starting players wear numbers 1 to 15 depending on the position they take. There are no stars, only pieces of a common gear.' },
         'Besides, rugby is a sport for anyone. It does not matter whether you are tall or short, heavy or thin, quick and agile or strong and determined. There will always be a role for you. The forwards (or "fatties", an affectionate nickname for the players from 1 to 8) are the power of the team. They tackle and crash into the other team\'s forwards and create space. And then come the backs (players 9 to 15), who run through that space to break the defensive line and score a try.',
-        { h: 'University sevens competitions', t: 'Rugby has also been with me at university. I spent two years in the University of Valencia rugby sevens team and we won the Valencian university championship (the CADU) both years, two golds. Both years we went to the Spanish University Championship (CEU), and the first year we finished third, with the bronze. And when I went on Erasmus to Rome I also played for the Sapienza sevens team, with which we went to a tournament, the WIUC.' },
+        { h: 'University Sevens', t: 'Rugby has also been with me at university. I spent two years in the University of Valencia rugby sevens team and we won the Valencian university championship (the CADU) both years, two golds. Both years we went to the Spanish University Championship (CEU), and the first year we finished third, with the bronze. And when I went on Erasmus to Rome I also played for the Sapienza sevens team, with which we went to a tournament, the WIUC.' },
       ] },
-      null,
+      { title: 'Hackathons', paras: [
+        'I love hackathons. I have been to many and in several of them it has gone very well. The photo is from DataHub 2025, one of the ones that has marked me most. We did not win the cash prize, but we did win the innovation award.',
+        { h: 'What I love', t: 'You meet good people, nice people, real aces, and I love moving around and meeting people. I also love networking, getting to know companies and understanding their problems to work out how to solve them. And I love facing new and unknown challenges, thinking and challenging myself.' },
+        { h: 'My role in the team', t: 'I am very good at leading teams, and also at adapting and playing the role the team needs from me, whether that is taking the reins, delegating or pushing the ideas of my teammates. I am also a very good speaker, and I usually give the final pitches.' },
+        { h: 'My hackathons', list: [
+          'LLMthon Legal (UV), winner',
+          'Mobility Summit Hackathon, winner',
+          'ESG Hackathon (Innova y Acción), winner',
+          'DataHub 2025, innovation award',
+          'Dream Big UPV 2025',
+        ] },
+      ] },
       null,
     ],
     PROJECTS: [
