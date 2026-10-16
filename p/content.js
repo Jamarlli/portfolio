@@ -32,7 +32,7 @@ const CONTENIDO = {
         { h: 'Mi papel en el equipo', t: 'Se me da muy bien liderar equipos, y también adaptarme y cumplir el rol que el equipo necesita de mí, ya sea llevar las riendas, delegar o impulsar las ideas de mis compañeros. Además soy muy buen orador, y suelo hacer los pitchs finales.' },
         { h: 'Mis hackathones', list: [
           { t: 'LLMthon Legal - Grant Thornton', href: 'https://idal.uv.es/llmthon/jornada/', res: 'ganador' },
-          { t: 'Mobility Summit Hackathon', href: 'https://valenciaplaza.com/valenciaplaza/valencia/profesionales-y-jovenes-talentos-idean-soluciones-tecnologicas-para-mejorar-la-movilidad-urbana-sostenible', res: 'ganador' },
+          { t: 'Mobility Summit Hackathon 2026', href: 'https://valenciaplaza.com/valenciaplaza/comarca-y-empresa/de-pseudoautopista-a-supermanzanas-el-plan-que-transformaria-el-cami-nou-entre-benetusser-y-silla', res: 'ganador' },
           { t: 'Hackathon ESG (Innova&acción)', href: 'https://innovayaccion.com/esg-hackathon-valencia/', res: 'ganador' },
           { t: 'DataHub 2025 (Baleària)', href: 'https://marinadeempresas.es/reto-balearia-y-sngular-2/', res: 'premio a la innovación' },
           { t: 'Hackathon Schneider Electric', href: 'https://lideratupv.com/event/hackathon-en-schneider-electric-99/', res: '' },
@@ -90,7 +90,7 @@ const CONTENIDO = {
         { h: 'My role in the team', t: 'I am very good at leading teams, and also at adapting and playing the role the team needs from me, whether that is taking the reins, delegating or pushing the ideas of my teammates. I am also a very good speaker, and I usually give the final pitches.' },
         { h: 'My hackathons', list: [
           { t: 'LLMthon Legal - Grant Thornton', href: 'https://idal.uv.es/llmthon/jornada/', res: 'winner' },
-          { t: 'Mobility Summit Hackathon', href: 'https://valenciaplaza.com/valenciaplaza/valencia/profesionales-y-jovenes-talentos-idean-soluciones-tecnologicas-para-mejorar-la-movilidad-urbana-sostenible', res: 'winner' },
+          { t: 'Mobility Summit Hackathon 2026', href: 'https://valenciaplaza.com/valenciaplaza/comarca-y-empresa/de-pseudoautopista-a-supermanzanas-el-plan-que-transformaria-el-cami-nou-entre-benetusser-y-silla', res: 'winner' },
           { t: 'ESG Hackathon (Innova&acción)', href: 'https://innovayaccion.com/esg-hackathon-valencia/', res: 'winner' },
           { t: 'DataHub 2025 (Baleària)', href: 'https://marinadeempresas.es/reto-balearia-y-sngular-2/', res: 'innovation award' },
           { t: 'Schneider Electric Hackathon', href: 'https://lideratupv.com/event/hackathon-en-schneider-electric-99/', res: '' },
