@@ -561,7 +561,7 @@ function mostrarFoto(i) {
   panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = '';
   Object.assign(panel.style, { left: '', right: '4vw', top: '50%', transform: 'translateY(-50%)', width: 'min(470px, 36vw)', height: '' });
   panel.replaceChildren(Object.assign(document.createElement('div'), { className: 'card bocadillo',
-    innerHTML: `<button class="px-btn volver-sm" type="button">← ${SECTIONS.sobremi}</button><h2>${f.title}</h2>${f.paras.map(p => typeof p === 'string' ? `<p>${p}</p>` : `<h3>${p.h}</h3>${p.t ? `<p>${p.t}</p>` : ''}${p.list ? `<ul>${p.list.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}`).join('')}` }));
+    innerHTML: `<button class="px-btn volver-sm" type="button">← ${SECTIONS.sobremi}</button><h2>${f.title}</h2>${f.paras.map(p => typeof p === 'string' ? `<p>${p}</p>` : `<h3>${p.h}</h3>${p.t ? `<p>${p.t}</p>` : ''}${p.list ? `<ul>${p.list.map(x => typeof x === 'string' ? `<li>${x}</li>` : `<li><a href="${x.href}" target="_blank" rel="noopener">${x.t}</a>${x.res ? ', ' + x.res : ''}</li>`).join('')}</ul>` : ''}`).join('')}` }));
   panel.querySelector('.volver-sm').addEventListener('click', () => showPanel('sobremi'));
 }
 function showPanel(key) {
