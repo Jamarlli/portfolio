@@ -532,15 +532,18 @@ function construirPersiana(room) {
   const molde = i => lamas[i < 26 ? i : 23 + (i & 1)];
   let total = riel.v.length + barra.v.length; for (let i = 0; i < LAMAS; i++) total += molde(i).v.length;
   const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uv = new Float32Array(total * 2), idx = [];
-  const piezaNueva = (c, ini) => {
-    const loc = new Map(); c.v.forEach((vi, k) => { loc.set(vi, ini + k); pos.set([P.getX(vi), P.getY(vi), P.getZ(vi)], (ini + k) * 3); nor.set([N.getX(vi), N.getY(vi), N.getZ(vi)], (ini + k) * 3); uv.set([U.getX(vi), U.getY(vi)], (ini + k) * 2); });
+  // todas las lamas toman la luz horneada de una misma lama de referencia: así se ven igual las plegadas y las que se despliegan
+  const ref = lamas[8];
+  const piezaNueva = (c, ini, uvDe) => {
+    const u = uvDe && uvDe.v.length === c.v.length ? uvDe : c;
+    const loc = new Map(); c.v.forEach((vi, k) => { const vu = u.v[k]; loc.set(vi, ini + k); pos.set([P.getX(vi), P.getY(vi), P.getZ(vi)], (ini + k) * 3); nor.set([N.getX(vi), N.getY(vi), N.getZ(vi)], (ini + k) * 3); uv.set([U.getX(vu), U.getY(vu)], (ini + k) * 2); });
     const tri = c.f.map(vi => loc.get(vi)); return { ini, n: c.v.length, tri };
   };
   let ini = 0; const nuevas = [];
   const pr = piezaNueva(riel, ini); ini += pr.n; idx.push(...pr.tri);
   const pb = piezaNueva(barra, ini); ini += pb.n; idx.push(...pb.tri);
   const base = pos.slice();
-  for (let i = 0; i < LAMAS; i++) { const m = molde(i), q = piezaNueva(m, ini); q.cy = cy(m); ini += q.n; idx.push(...q.tri); nuevas.push(q); }
+  for (let i = 0; i < LAMAS; i++) { const m = molde(i), q = piezaNueva(m, ini, ref); q.cy = cy(m); ini += q.n; idx.push(...q.tri); nuevas.push(q); }
   const base2 = pos.slice();
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(idx); o.geometry = geo; o.frustumCulled = false; persiana.malla = o;
