@@ -442,7 +442,7 @@ function hitTest(ev) {
   if (objects.espejo.includes(o) || objects.espejoFotos?.includes(o)) return { key: 'sobremi' };
   if (mesa.manivela.includes(o) || o === mesa.zona) return { key: 'mesa' };
   if (objects.balon && o === objects.balon.bola) return { key: 'balon' };
-  if (persiana.zona && o === persiana.zona) return { key: 'persiana' };
+  const pz = persiana.estores.findIndex(e => e.zona === o); if (pz >= 0) return { key: 'persiana' + pz };
   if (lamparas.listas && (o === objects.flexo || o === objects.flexoPantalla || o.parent === objects.flexoPantalla)) return { key: 'flexo' };
   if (lamparas.listas && (o === objects.barraLuz || o.parent === objects.barraLuz)) return { key: 'barra' };
   if (o === objects.boardFace || o === objects.pizarra) {
@@ -454,12 +454,12 @@ function hitTest(ev) {
   return null;
 }
 // easter eggs: interacciones sin panel (no se iluminan ni llevan cartel; el cursor sí pasa a la manita)
-const HUEVOS = new Set(['mesa', 'balon', 'persiana', 'barra', 'flexo']);
+const HUEVOS = new Set(['mesa', 'balon', 'persiana0', 'persiana1', 'barra', 'flexo']);
 const grito = new Audio('./assets/cuarto/grito.mp3'); grito.preload = 'none';
 let gritoAnim = null;
 function huevoClic(k) {
   if (k === 'mesa') return alternarMesa();
-  if (k === 'persiana') return alternarPersiana();
+  if (k.startsWith('persiana')) return alternarPersiana(+k.slice(8));
   if (k === 'barra' || k === 'flexo') return alternarLampara(k);
   if (k === 'balon' && !gritoAnim && objects.balon) {
     grito.currentTime = 0; grito.play().catch(() => {});
@@ -510,10 +510,11 @@ function construirResplandor() {
     f.add(m); lamparas.flexo.glow = m;
   }
 }
-// persiana veneciana: el estor es un riel, 26 lamas y la barra de abajo. Se rehace la malla con las lamas que hagan falta (hasta LAMAS) y, al tocar
-// la barra, sube y baja entre tres alturas: toda abajo, la de siempre y toda arriba (las lamas se reparten por igual entre el riel y la barra)
-const LAMAS = 72, PERSIANA_Y = { abajo: 1.02, arriba: 2.075 };   // y (m, mundo) del centro de la barra con la persiana toda abajo / toda arriba
-const persiana = { malla: null, zona: null, pos: null, nivel: 1, dir: -1, anim: null, y: 0 };
+// estores enrollables (como el IKEA Tåndlundfly de día y noche): son dos, uno por hoja de la ventana. Cada uno tiene su rollo arriba, la tela a bandas
+// (opaca y translúcida, que se enrollan con ella) y la barra de abajo. Al tocar la barra de uno sube y baja entre tres alturas: toda abajo, la de siempre y toda arriba
+const PERSIANA_Y = { abajo: 1.02, arriba: 2.075 };   // y (m, mundo) del centro de la barra con el estor todo abajo / todo arriba
+const BANDA = 0.075;                                  // alto de cada banda de la tela
+const persiana = { malla: null, estores: [] };
 function construirPersiana(room) {
   const o = room.getObjectByName('estor'); if (!o) return;
   const g = o.geometry, P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv, I = g.index, n = P.count;
@@ -526,66 +527,79 @@ function construirPersiana(room) {
   for (let f = 0; f < I.count; f += 3) piezas.get(raiz(I.getX(f))).f.push(I.getX(f), I.getX(f + 1), I.getX(f + 2));
   const ps = [...piezas.values()].sort((a, b) => b.y1 - a.y1);      // riel, lamas de arriba abajo y la barra
   if (ps.length !== 28) { console.warn('persiana: piezas inesperadas', ps.length); return; }
-  const riel = ps[0], barra = ps[27], lamas = ps.slice(1, 27), cy = c => (c.y0 + c.y1) / 2;
-  const c1 = cy(lamas[0]), p0 = (c1 - cy(lamas[25])) / 25, cb0 = cy(barra), g0 = cy(lamas[25]) - cb0;
-  // geometría nueva: riel + barra + LAMAS lamas (las de más allá de la 26 copian una del medio)
-  const molde = i => lamas[i < 26 ? i : 23 + (i & 1)];
-  let total = riel.v.length + barra.v.length; for (let i = 0; i < LAMAS; i++) total += molde(i).v.length;
-  const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uv = new Float32Array(total * 2), idx = [];
-  // todas las lamas toman la luz horneada de una misma lama de referencia: así se ven igual las plegadas y las que se despliegan
-  const ref = lamas[8];
-  const piezaNueva = (c, ini, uvDe) => {
-    const u = uvDe && uvDe.v.length === c.v.length ? uvDe : c;
-    const loc = new Map(); c.v.forEach((vi, k) => { const vu = u.v[k]; loc.set(vi, ini + k); pos.set([P.getX(vi), P.getY(vi), P.getZ(vi)], (ini + k) * 3); nor.set([N.getX(vi), N.getY(vi), N.getZ(vi)], (ini + k) * 3); uv.set([U.getX(vu), U.getY(vu)], (ini + k) * 2); });
-    const tri = c.f.map(vi => loc.get(vi)); return { ini, n: c.v.length, tri };
-  };
-  let ini = 0; const nuevas = [];
-  const pr = piezaNueva(riel, ini); ini += pr.n; idx.push(...pr.tri);
-  const pb = piezaNueva(barra, ini); ini += pb.n; idx.push(...pb.tri);
-  const base = pos.slice();
-  for (let i = 0; i < LAMAS; i++) { const m = molde(i), q = piezaNueva(m, ini, ref); q.cy = cy(m); ini += q.n; idx.push(...q.tri); nuevas.push(q); }
-  const base2 = pos.slice();
-  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  geo.setIndex(idx); o.geometry = geo; o.frustumCulled = false; persiana.malla = o;
+  const riel = ps[0], barra = ps[27];
+  const caja = c => { const b = { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9, z0: 1e9, z1: -1e9 }; for (const v of c.v) { b.x0 = Math.min(b.x0, P.getX(v)); b.x1 = Math.max(b.x1, P.getX(v)); b.y0 = Math.min(b.y0, P.getY(v)); b.y1 = Math.max(b.y1, P.getY(v)); b.z0 = Math.min(b.z0, P.getZ(v)); b.z1 = Math.max(b.z1, P.getZ(v)); } return b; };
+  const bb = caja(barra), br = caja(riel), cb0 = (bb.y0 + bb.y1) / 2, bh = bb.y1 - bb.y0, zf = (bb.z0 + bb.z1) / 2, bd = Math.max(0.014, bb.z1 - bb.z0);
+  // la luz horneada se toma de un solo punto del estor (el centro del mayor triángulo de una lama que mira al cuarto): la tela queda uniforme y sigue la hora del día
+  let u = 0, w = 0, mejor = -1;
+  for (let f = 0; f < ps[9].f.length; f += 3) {
+    const [a, b, c] = [ps[9].f[f], ps[9].f[f + 1], ps[9].f[f + 2]], ux = P.getX(b) - P.getX(a), uy = P.getY(b) - P.getY(a), uz = P.getZ(b) - P.getZ(a), vx = P.getX(c) - P.getX(a), vy = P.getY(c) - P.getY(a), vz = P.getZ(c) - P.getZ(a);
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, area = Math.hypot(nx, ny, nz), q = area * (nz > 0 ? 1 : 0.2);
+    if (q > mejor) { mejor = q; u = (U.getX(a) + U.getX(b) + U.getX(c)) / 3; w = (U.getY(a) + U.getY(b) + U.getY(c)) / 3; }
+  }
+  const oy = o.position.y, yc = br.y1 - 0.026;                       // la malla está en coordenadas locales: y mundo = y local + oy; yc: eje del rollo
+  const TELA = yc - (PERSIANA_Y.abajo - oy + bh / 2) + 0.06, K = Math.ceil(TELA / BANDA) + 1, S = 18;
+  const mid = (bb.x0 + bb.x1) / 2, hojas = [[bb.x0, mid - 0.006], [mid + 0.006, bb.x1]];
+  const nR = riel.v.length, nF = K * 4, nB = 24, nC = (S + 1) * 2, porEstor = nF + nB + nC, total = nR + 2 * porEstor;
+  const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uv = new Float32Array(total * 2), col = new Float32Array(total * 4), idx = [];
+  for (let i = 0; i < total; i++) { uv[i * 2] = u; uv[i * 2 + 1] = w; col.set([1, 1, 1, 1], i * 4); nor.set([0, 0, 1], i * 3); }
+  const loc = new Map(); riel.v.forEach((vi, k) => { loc.set(vi, k); pos.set([P.getX(vi), P.getY(vi), P.getZ(vi)], k * 3); nor.set([N.getX(vi), N.getY(vi), N.getZ(vi)], k * 3); uv.set([U.getX(vi), U.getY(vi)], k * 2); });
+  for (const vi of riel.f) idx.push(loc.get(vi));
+  const cubo = [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [3, 2, 6, 7], [4, 5, 1, 0]];       // las 6 caras de la barra (cada una con sus 4 vértices)
+  const estores = hojas.map(([x0, x1], e) => {
+    const ini = nR + e * porEstor, iB = ini + nF, iC = iB + nB;
+    for (let k = 0; k < K; k++) { const a = ini + k * 4; for (let j = 0; j < 4; j++) col[(a + j) * 4 + 3] = k % 2 ? 0.38 : 1; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); }   // bandas impares: translúcidas
+    cubo.forEach((c, f) => { const a = iB + f * 4; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); });
+    for (let j = 0; j < S; j++) { const a = iC + j * 2; idx.push(a, a + 1, a + 3, a, a + 3, a + 2); }
+    const zona = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.09, 0.12), new THREE.MeshBasicMaterial({ visible: false }));
+    zona.position.set(o.position.x + (x0 + x1) / 2, oy + cb0, o.position.z + 0.04); scene.add(zona); zona.updateMatrixWorld(true);
+    return { x0, x1, ini, iB, iC, zona, nivel: 1, dir: -1, anim: null, y: 0 };
+  });
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setAttribute('color', new THREE.BufferAttribute(col, 4)); geo.setIndex(idx);
+  o.geometry = geo; o.frustumCulled = false; persiana.malla = o; persiana.estores = estores;
+  const m = o.material; m.vertexColors = true; m.transparent = true; m.side = THREE.DoubleSide; m.needsUpdate = true;
   // de noche el horneado trae el relleno azul del cielo y el estor sale azulado: se desatura y se aclara hacia el blanco (es blanco; solo le falta luz)
-  const pesos = Horas.W, m = o.material;
+  const pesos = Horas.W;
   m.onBeforeCompile = sh => {
     sh.uniforms.pesos = pesos;
     sh.fragmentShader = 'uniform vec3 pesos;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `float lum = dot(outgoingLight, vec3(.2126, .7152, .0722));
-      outgoingLight = mix(outgoingLight, vec3(clamp(.16 + lum * 1.25, .2, .5)) * vec3(.97, .98, 1.), pesos.z);   // casi plano: el horneado de noche trae manchas
+      outgoingLight = mix(outgoingLight, vec3(clamp(.16 + lum * 1.25, .2, .5)) * vec3(.97, .98, 1.), pesos.z);
       #include <opaque_fragment>`);
   };
   m.customProgramCacheKey = () => 'estor-noche';
-  const oy = o.position.y;                                           // la malla está en coordenadas locales: y mundo = y local + oy
-  const poner = yb => {                                              // yb: y (mundo) del centro de la barra
-    const cb = yb - oy, D = c1 - cb, nVis = Math.max(26, 1 + Math.round((D - g0) / p0)), paso = (D - Math.min(g0, D / nVis)) / (nVis - 1), hueco = Math.min(g0, paso);
-    const pa = geo.attributes.position.array;
-    for (let k = 0; k < pb.n; k++) pa[(pb.ini + k) * 3 + 1] = base[(pb.ini + k) * 3 + 1] + (cb - cb0);
-    nuevas.forEach((q, i) => {
-      const dy = i < nVis ? (c1 - i * (D - hueco) / (nVis - 1)) - q.cy : 0;
-      for (let k = 0; k < q.n; k++) {
-        const j = (q.ini + k) * 3;
-        if (i < nVis) { pa[j] = base2[j]; pa[j + 1] = base2[j + 1] + dy; pa[j + 2] = base2[j + 2]; } else { pa[j] = 0; pa[j + 1] = c1; pa[j + 2] = 0; }   // las que sobran se pliegan en un punto
-      }
-    });
+  const poner = (e, yb) => {                                         // yb: y (mundo) del centro de la barra de ese estor
+    const cb = yb - oy, bTop = cb + bh / 2, Lh = Math.max(0.001, yc - bTop), rolled = Math.max(0, TELA - Lh), r = Math.sqrt(0.018 * 0.018 + rolled * 0.0016 / Math.PI);
+    for (let k = 0; k < K; k++) {
+      const yA = yc - Math.min(k * BANDA, Lh), yB = yc - Math.min((k + 1) * BANDA, Lh);
+      pos.set([e.x0, yA, zf, e.x1, yA, zf, e.x1, yB, zf, e.x0, yB, zf], (e.ini + k * 4) * 3);
+    }
+    const lx = e.x0, hx = e.x1, y0 = cb - bh / 2, y1 = cb + bh / 2, z0 = zf - bd / 2, z1 = zf + bd / 2;
+    const v = [[lx, y1, z1], [hx, y1, z1], [hx, y0, z1], [lx, y0, z1], [lx, y1, z0], [hx, y1, z0], [hx, y0, z0], [lx, y0, z0]];
+    cubo.forEach((c, f) => { for (let j = 0; j < 4; j++) pos.set(v[c[j]], (e.iB + f * 4 + j) * 3); });
+    for (let j = 0; j <= S; j++) {
+      const ang = j / S * Math.PI * 2, yy = yc + r * Math.cos(ang), zz = zf - r + r * Math.sin(ang);
+      pos.set([e.x0, yy, zz, e.x1, yy, zz], (e.iC + j * 2) * 3);
+    }
     geo.attributes.position.needsUpdate = true; geo.computeBoundingSphere(); geo.computeBoundingBox();
-    persiana.y = yb; persiana.zona.position.y = yb; persiana.zona.updateMatrixWorld(true); o.updateMatrixWorld(true); sucio = true;
+    e.y = yb; e.zona.position.y = yb; e.zona.updateMatrixWorld(true); o.updateMatrixWorld(true); sucio = true;
   };
-  const zona = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.09, 0.12), new THREE.MeshBasicMaterial({ visible: false }));
-  zona.position.set(o.position.x, oy + cb0, o.position.z + 0.04); scene.add(zona); zona.updateMatrixWorld(true); persiana.zona = zona;
   persiana.poner = poner; persiana.niveles = [PERSIANA_Y.abajo, oy + cb0, PERSIANA_Y.arriba];
-  poner(persiana.niveles[1]);
-  if (hash.get('persiana') != null) poner(persiana.niveles[+hash.get('persiana')]);   // solo para revisar (0 abajo, 1 actual, 2 arriba)
+  estores.forEach(e => poner(e, persiana.niveles[1]));
+  const prueba = (hash.get('persiana') || '').split(',');            // solo para revisar (0 abajo, 1 actual, 2 arriba); "0,2" = uno de cada
+  if (prueba[0] !== '') estores.forEach((e, i) => poner(e, persiana.niveles[+(prueba[i] ?? prueba[0])]));
 }
-function alternarPersiana() {
-  if (persiana.anim || !persiana.poner) return;
-  const nuevo = persiana.nivel + persiana.dir; persiana.anim = { t0: null, de: persiana.y, a: persiana.niveles[nuevo], dur: 1500 };
-  persiana.nivel = nuevo; if (nuevo === 0) persiana.dir = 1; else if (nuevo === 2) persiana.dir = -1;
+function alternarPersiana(i) {
+  const e = persiana.estores[i]; if (!e || e.anim) return;
+  const nuevo = e.nivel + e.dir; e.anim = { t0: null, de: e.y, a: persiana.niveles[nuevo], dur: 1500 };
+  e.nivel = nuevo; if (nuevo === 0) e.dir = 1; else if (nuevo === 2) e.dir = -1;
 }
 function animarPersiana(now) {
-  const a = persiana.anim; if (a.t0 == null) a.t0 = now;
-  const t = Math.min(1, (now - a.t0) / a.dur), e = t * t * (3 - 2 * t);
-  persiana.poner(a.de + (a.a - a.de) * e); if (t >= 1) persiana.anim = null;
+  for (const e of persiana.estores) {
+    const a = e.anim; if (!a) continue; if (a.t0 == null) a.t0 = now;
+    const t = Math.min(1, (now - a.t0) / a.dur), ease = t * t * (3 - 2 * t);
+    persiana.poner(e, a.de + (a.a - a.de) * ease); if (t >= 1) e.anim = null;
+  }
 }
 function setHover(h, ev) {
   hoverKey = h ? h.key : null;
@@ -968,7 +982,7 @@ function frame(now) {
   const dt = prevNow == null ? 1000 / 60 : Math.min(100, now - prevNow); prevNow = now;
   vigilar(dt, seMovio || !!flight);
   if (gritoAnim) animarGrito(now);
-  if (persiana.anim) animarPersiana(now);
+  if (persiana.estores.some(e => e.anim)) animarPersiana(now);
   animarLamparas(dt);
   if (movPendiente) {
     const ev = movPendiente; movPendiente = null;
