@@ -513,7 +513,7 @@ function construirResplandor() {
 // estores enrollables (como el IKEA Tåndlundfly de día y noche): son dos, uno por hoja de la ventana. Cada uno tiene su rollo arriba, la tela a bandas
 // (opaca y translúcida, que se enrollan con ella) y la barra de abajo. Al tocar la barra de uno sube y baja entre tres alturas: toda abajo, la de siempre y toda arriba
 const PERSIANA_Y = { abajo: 1.02, arriba: 2.075 };   // y (m, mundo) del centro de la barra con el estor todo abajo / todo arriba
-const BANDA = 0.075;                                  // alto de cada banda de la tela
+const BANDA = 0.022;                                  // alto de cada banda de la tela con el estor estirado (encogen hasta un 25 % al recogerlo)
 const persiana = { malla: null, estores: [] };
 function construirPersiana(room) {
   const o = room.getObjectByName('estor'); if (!o) return;
@@ -538,7 +538,7 @@ function construirPersiana(room) {
     if (q > mejor) { mejor = q; u = (U.getX(a) + U.getX(b) + U.getX(c)) / 3; w = (U.getY(a) + U.getY(b) + U.getY(c)) / 3; }
   }
   const oy = o.position.y, yc = br.y1 - 0.026;                       // la malla está en coordenadas locales: y mundo = y local + oy; yc: eje del rollo
-  const TELA = yc - (PERSIANA_Y.abajo - oy + bh / 2) + 0.06, K = Math.ceil(TELA / BANDA) + 1, S = 18;
+  const TELA = yc - (PERSIANA_Y.abajo - oy + bh / 2) + 0.06, K = Math.ceil(TELA / (BANDA * 0.75)) + 1, S = 18;
   const mid = (bb.x0 + bb.x1) / 2, hojas = [[bb.x0, mid - 0.006], [mid + 0.006, bb.x1]];
   const nR = riel.v.length, nF = K * 4, nB = 24, nC = (S + 1) * 2, porEstor = nF + nB + nC, total = nR + 2 * porEstor;
   const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uv = new Float32Array(total * 2), col = new Float32Array(total * 4), idx = [];
@@ -548,7 +548,7 @@ function construirPersiana(room) {
   const cubo = [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [3, 2, 6, 7], [4, 5, 1, 0]];       // las 6 caras de la barra (cada una con sus 4 vértices)
   const estores = hojas.map(([x0, x1], e) => {
     const ini = nR + e * porEstor, iB = ini + nF, iC = iB + nB;
-    for (let k = 0; k < K; k++) { const a = ini + k * 4; for (let j = 0; j < 4; j++) col[(a + j) * 4 + 3] = k % 2 ? 0.38 : 1; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); }   // bandas impares: translúcidas
+    for (let k = 0; k < K; k++) { const a = ini + k * 4; for (let j = 0; j < 4; j++) col[(a + j) * 4 + 3] = k % 2 ? 0.8 : 1; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); }   // bandas impares: algo translúcidas (se notan sobre todo con luz)
     cubo.forEach((c, f) => { const a = iB + f * 4; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); });
     for (let j = 0; j < S; j++) { const a = iC + j * 2; idx.push(a, a + 1, a + 3, a, a + 3, a + 2); }
     const zona = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.09, 0.12), new THREE.MeshBasicMaterial({ visible: false }));
@@ -569,9 +569,9 @@ function construirPersiana(room) {
   };
   m.customProgramCacheKey = () => 'estor-noche';
   const poner = (e, yb) => {                                         // yb: y (mundo) del centro de la barra de ese estor
-    const cb = yb - oy, bTop = cb + bh / 2, Lh = Math.max(0.001, yc - bTop), rolled = Math.max(0, TELA - Lh), r = Math.sqrt(0.018 * 0.018 + rolled * 0.0016 / Math.PI);
+    const cb = yb - oy, bTop = cb + bh / 2, Lh = Math.max(0.001, yc - bTop), rolled = Math.max(0, TELA - Lh), banda = BANDA * (0.75 + 0.25 * Math.min(1, Lh / (TELA - 0.06))), r = Math.sqrt(0.018 * 0.018 + rolled * 0.0016 / Math.PI);
     for (let k = 0; k < K; k++) {
-      const yA = yc - Math.min(k * BANDA, Lh), yB = yc - Math.min((k + 1) * BANDA, Lh);
+      const yA = yc - Math.min(k * banda, Lh), yB = yc - Math.min((k + 1) * banda, Lh);
       pos.set([e.x0, yA, zf, e.x1, yA, zf, e.x1, yB, zf, e.x0, yB, zf], (e.ini + k * 4) * 3);
     }
     const lx = e.x0, hx = e.x1, y0 = cb - bh / 2, y1 = cb + bh / 2, z0 = zf - bd / 2, z1 = zf + bd / 2;
