@@ -294,6 +294,13 @@ async function loadRoom() {
     const mapa = new THREE.Mesh(new THREE.PlaneGeometry(0.158, 0.236), new THREE.MeshBasicMaterial({ map: portada, color: '#ffffff' }));
     mapa.rotation.x = -Math.PI / 2;   // la portada se lee desde la puerta (el lado largo del libro va a lo largo de z, y su parte de arriba mira hacia la ventana)
     mapa.position.set(c.x, bb.max.y + 0.0007, c.z); lb.add(mapa); objects.libro.push(mapa); objects.portada = mapa;
+    // el canto del libro: las páginas se ven blancas (con sus hojas) por tres lados; el lomo, a la izquierda de la portada, sigue siendo de la tapa
+    const cv = document.createElement('canvas'); cv.width = 4; cv.height = 64; const cx = cv.getContext('2d');
+    cx.fillStyle = '#bdb7a8'; cx.fillRect(0, 0, 4, 64); cx.fillStyle = '#9d978a'; for (let y = 3; y < 64; y += 4) cx.fillRect(0, y, 4, 1);
+    const tp = new THREE.CanvasTexture(cv); tp.colorSpace = THREE.SRGBColorSpace; tp.magFilter = THREE.NearestFilter; tp.minFilter = THREE.NearestFilter;
+    const eps = 0.0006, tapa = 0.0045, lomo = 0.012;
+    const paginas = new THREE.Mesh(new THREE.BoxGeometry(bb.max.x - bb.min.x - lomo + eps, bb.max.y - bb.min.y - 2 * tapa, bb.max.z - bb.min.z + 2 * eps), new THREE.MeshBasicMaterial({ map: tp, color: '#ffffff' }));
+    paginas.position.set((bb.min.x + lomo + bb.max.x + eps) / 2, (bb.min.y + bb.max.y) / 2, c.z); lb.add(paginas); objects.libro.push(paginas); objects.paginas = paginas;
     lb.rotation.y = LIBRO_GIRO; lb.position.add(c.clone().sub(c.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), LIBRO_GIRO)));
     lb.updateMatrixWorld(true);
   } catch (e) { console.warn('sin portada', e); }
@@ -751,7 +758,7 @@ function showPanel(key) {
   } else if (key === 'educacion') {
     Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(94vw, 124vh)', height: '', right: '' });   // el libro abierto son dos A4 (420 x 297): ancho = 1,414 x alto
     const half = Math.ceil(EDUCATION.length / 2);
-    const page = list => list.map(e => `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`).join('');
+    const page = list => list.map(e => e.items ? `<h3>${todo(e.what)}</h3><ul>${e.items.map(i => `<li>${todo(i)}</li>`).join('')}</ul>` : `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`).join('');
     poner(key, () => `<div class="book"><div class="page left"><h2>${SECTIONS.educacion}</h2>${page(EDUCATION.slice(0, half))}</div><div class="page right">${page(EDUCATION.slice(half))}</div></div>`);
   }
 }
@@ -1038,7 +1045,7 @@ function frame(now) {
       if (objects.balon) { const f = Math.min(1, 0.35 + 0.65 * (r.d + 0.9 * r.a + 0.3 * r.n)); objects.balon.hemi.intensity = 1.55 * f; objects.balon.sol.intensity = 1.25 * f * (1 - 0.7 * r.n); objects.balon.sombra.material.opacity = 0.5 + 0.4 * f; }
       if (objects.matFotos) { const f = Math.min(1, 1.0 * r.d + 0.9 * r.a + 0.36 * r.n); for (const m of objects.matFotos) m.color.setScalar(f); }
       if (objects.marcoEspejo) { const f = 1.0 * r.d + 0.9 * r.a + 0.36 * r.n, c = new THREE.Color(MARCO_ESPEJO); for (const m of objects.marcoEspejo) m.color.copy(c).multiplyScalar(f * m.userData.k); }
-      for (const m of [objects.alfombrilla, objects.portada]) if (m) m.material.color.setRGB(0.95 * r.d + 0.85 * r.a + 0.32 * r.n, 0.93 * r.d + 0.72 * r.a + 0.30 * r.n, 0.90 * r.d + 0.68 * r.a + 0.42 * r.n);
+      for (const m of [objects.alfombrilla, objects.portada, objects.paginas]) if (m) m.material.color.setRGB(0.95 * r.d + 0.85 * r.a + 0.32 * r.n, 0.93 * r.d + 0.72 * r.a + 0.30 * r.n, 0.90 * r.d + 0.68 * r.a + 0.42 * r.n);
     }
     const hh = Math.floor(r.h) % 24, mm = Math.round((r.h % 1) * 60) % 60;
     const txt = `${r.n > 0.5 ? '☾' : r.a > 0.5 ? '◐' : '☀'} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${horaManual != null ? ' *' : ''}`;

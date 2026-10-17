@@ -61,8 +61,8 @@ const CONTENIDO = {
     EDUCATION: [
       { when: '2025 – 2026', what: 'Máster en IA, Reconocimiento de Formas e Imagen Digital · UPV', detail: 'Universitat Politècnica de València. Nota media: 9,21.' },
       { when: '2021 – 2025', what: 'Grado en Ciencia de Datos · Universitat de València', detail: 'Nota media: 9,01 con 6 matrículas de honor. Delegado de la promoción y deportista de élite de la UV (rugby).' },
-      { when: '2023 – 2024', what: 'Erasmus · Sapienza Università di Roma', detail: 'Ciencia de datos.' },
-      { when: 'Cambridge English First (B2) · Valencià C1', what: 'Idiomas y certificados', detail: 'Francés A2 e italiano de nivel medio. Hackathon Dream Big UPV 2025 y Hackathon Movilidad (Mobility Summit).' },
+      { when: '2023 – 2024', what: 'Erasmus · Sapienza Università di Roma', detail: 'Ciencia de datos. 10 asignaturas con la misma carga en créditos y nota media de 8,64 (9,4 · 8,2 · 9,5 · 9,7 · 9 · 7,5 · 9 · 9,7 · 7 · 7,4), con una matrícula de honor.' },
+      { what: 'Idiomas', items: ['Inglés: Cambridge English First (B2)', 'Valenciano: C1', 'Francés: A2', 'Italiano: nivel medio'] },
     ],
   },
   en: {
@@ -121,8 +121,8 @@ const CONTENIDO = {
     EDUCATION: [
       { when: '2025 – 2026', what: 'MSc in AI, Pattern Recognition and Digital Imaging · UPV', detail: 'Universitat Politècnica de València. GPA: 9.21.' },
       { when: '2021 – 2025', what: 'BSc in Data Science · Universitat de València', detail: 'GPA: 9.01 with 6 honours distinctions. Class representative and UV elite athlete (rugby).' },
-      { when: '2023 – 2024', what: 'Erasmus · Sapienza Università di Roma', detail: 'Data science.' },
-      { when: 'Cambridge English First (B2) · Valencian C1', what: 'Languages and certificates', detail: 'French A2 and intermediate Italian. Hackathon Dream Big UPV 2025 and Mobility Summit Hackathon.' },
+      { when: '2023 – 2024', what: 'Erasmus · Sapienza Università di Roma', detail: 'Data science. 10 courses with equal credit weight and an average grade of 8.64 (9.4 · 8.2 · 9.5 · 9.7 · 9 · 7.5 · 9 · 9.7 · 7 · 7.4), with one honours distinction.' },
+      { what: 'Languages', items: ['English: Cambridge English First (B2)', 'Valencian: C1', 'French: A2', 'Italian: intermediate'] },
     ],
   },
 };
