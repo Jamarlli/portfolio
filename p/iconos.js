@@ -1,4 +1,4 @@
-// Iconos pixelados (rejillas de píxeles, dibujadas como SVG sin suavizado) para los contactos de "Sobre mí".
+// Iconos de contacto. El de nódicus es su logo real; el resto, pixelados (rejillas de píxeles, dibujadas como SVG sin suavizado) para los contactos de "Sobre mí".
 // '#' = píxel pintado (color del texto: cambia al pasar el ratón), '.' = vacío.
 const cuadricula = (w, h, pinta) => Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => (pinta(x, y) ? '#' : '.')).join(''));
 
@@ -19,16 +19,6 @@ const github = cuadricula(14, 14, (x, y) => {
   return !gato || ojos;
 });
 
-const nodicus = (() => {                                                                  // tres nodos unidos (grafo)
-  const nodos = [[2, 2], [11, 3], [6, 11]], g = Array.from({ length: 14 }, () => Array(14).fill('.'));
-  for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) {
-    const [x0, y0] = nodos[a], [x1, y1] = nodos[b], n = 20;
-    for (let i = 0; i <= n; i++) g[Math.round(y0 + (y1 - y0) * i / n)][Math.round(x0 + (x1 - x0) * i / n)] = '#';
-  }
-  for (const [x, y] of nodos) for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) g[y + j][x + i] = '#';
-  return g.map(f => f.join(''));
-})();
-
 const email = cuadricula(14, 14, (x, y) => {
   if (y < 2 || y > 11) return false;
   const borde = y === 2 || y === 11 || x === 0 || x === 13;
@@ -36,9 +26,10 @@ const email = cuadricula(14, 14, (x, y) => {
   return borde || solapa;
 });
 
-const ICONOS = { linkedin, github, nodicus, email };
+const ICONOS = { linkedin, github, email };
 
 export function icono(nombre) {
+  if (nombre === 'nodicus') return '<img class="ico-svg" src="./assets/cuarto/nodicus_logo.webp" alt="" aria-hidden="true">';   // el logo real (favicon de nodicus.com)
   const filas = ICONOS[nombre];
   if (!filas) return '';
   let rects = '';

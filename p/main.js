@@ -201,6 +201,7 @@ async function loadRoom() {
     if (n === 'puerta') objects.puerta = o;
     if (n === 'flexo') objects.flexo = o;
     if (n === 'flexo_pantalla') objects.flexoPantalla = o;
+    if (n === 'barra_luz') objects.barraLuz = o;
     if (n === 'monitor_pantalla') objects.screen = o;
   });
   // el flexo azul de pie va pegado a la pared izquierda, en el hueco entre la mesa y la cama (en Blender está junto a la mesa, en x = 0,90 y z = 1,16):
@@ -299,6 +300,7 @@ async function loadRoom() {
   // luz según la hora de Valencia (si existen los horneados de día y noche)
   const mallas = []; room.traverse(o => o.isMesh && mallas.push(o));
   objects.horas = await Horas.prepararHoras(mallas, horas, renderer);
+  if (Horas.hayLamparas()) { lamparas.listas = true; construirResplandor(); }
   paso(T.colocando);
   // texto de la pizarra: capa nítida sobre la cara horneada (y su UV dice en qué línea se hace clic)
   if (objects.pizarra) {
@@ -411,7 +413,7 @@ async function loadRoom() {
     const sobre = golpe ? golpe.point.y : 1.04;
     pivote.position.set(BALON_POS[0], sobre + R, BALON_POS[1]);
     // sombra de contacto y luz solo para él (el resto del cuarto es de luz horneada)
-    const sombra = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.28), new THREE.MeshBasicMaterial({ map: (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, 'rgba(20,10,20,0.62)'); gr.addColorStop(1, 'rgba(20,10,20,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })(), transparent: true, depthWrite: false }));
+    const sombra = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.22), new THREE.MeshBasicMaterial({ map: (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, 'rgba(22,9,2,0.7)'); gr.addColorStop(0.5, 'rgba(22,9,2,0.32)'); gr.addColorStop(1, 'rgba(22,9,2,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })(), transparent: true, depthWrite: false }));
     sombra.rotation.x = -Math.PI / 2; sombra.rotation.z = BALON_YAW; sombra.position.set(BALON_POS[0], sobre + 0.002, BALON_POS[1]); sombra.raycast = () => {};
     const hemi = new THREE.HemisphereLight(0xfff1e0, 0x8a6a5a, 1.55), sol = new THREE.DirectionalLight(0xffe2c0, 1.25); sol.position.set(-1.5, 2.2, 3.0); sol.target.position.copy(pivote.position);
     scene.add(pivote, sombra, hemi, sol, sol.target); pivote.updateMatrixWorld(true);
@@ -441,6 +443,8 @@ function hitTest(ev) {
   if (mesa.manivela.includes(o) || o === mesa.zona) return { key: 'mesa' };
   if (objects.balon && o === objects.balon.bola) return { key: 'balon' };
   if (persiana.zona && o === persiana.zona) return { key: 'persiana' };
+  if (lamparas.listas && (o === objects.flexo || o === objects.flexoPantalla || o.parent === objects.flexoPantalla)) return { key: 'flexo' };
+  if (lamparas.listas && (o === objects.barraLuz || o.parent === objects.barraLuz)) return { key: 'barra' };
   if (o === objects.boardFace || o === objects.pizarra) {
     // qué línea de la pizarra: la coordenada v de la textura en el punto tocado
     const v = o === objects.boardFace && hit.uv ? hit.uv.y : -1;
@@ -450,12 +454,13 @@ function hitTest(ev) {
   return null;
 }
 // easter eggs: interacciones sin panel (no se iluminan ni llevan cartel; el cursor sí pasa a la manita)
-const HUEVOS = new Set(['mesa', 'balon', 'persiana']);
+const HUEVOS = new Set(['mesa', 'balon', 'persiana', 'barra', 'flexo']);
 const grito = new Audio('./assets/cuarto/grito.mp3'); grito.preload = 'none';
 let gritoAnim = null;
 function huevoClic(k) {
   if (k === 'mesa') return alternarMesa();
   if (k === 'persiana') return alternarPersiana();
+  if (k === 'barra' || k === 'flexo') return alternarLampara(k);
   if (k === 'balon' && !gritoAnim && objects.balon) {
     grito.currentTime = 0; grito.play().catch(() => {});
     gritoAnim = { t0: null, y0: objects.balon.grupo.position.y };
@@ -466,6 +471,44 @@ function animarGrito(now) {                                        // el balón 
   const t = (now - g.t0) / 1700, fin = t >= 1, e = fin ? 0 : (1 - t);
   b.position.y = g.y0 + Math.abs(Math.sin(t * Math.PI * 3)) * 0.035 * e; b.rotation.z = Math.sin(t * Math.PI * 9) * 0.06 * e;
   b.updateMatrixWorld(true); sucio = true; if (fin) gritoAnim = null;
+}
+// lámparas (barra de luz del monitor y flexo): un clic las enciende o las apaga. 'auto' sigue la hora (encendidas al atardecer y de noche, como están
+// horneadas); al hacer clic pasan a 'on' u 'off'. La luz del cuarto se mezcla en horas.js con el horneado sin lámparas; aquí solo el resplandor propio
+const lamparas = { listas: false, barra: { modo: 'auto', luz: 1, brillo: 0, glow: null }, flexo: { modo: 'auto', luz: 1, brillo: 0, glow: null } };
+function brilloLampara(k) {
+  const l = lamparas[k]; if (l.modo !== 'auto') return l.modo === 'on' ? 1 : 0;
+  const w = Horas.W.value; return k === 'barra' ? Math.min(1, w.y + w.z) : w.z;
+}
+function alternarLampara(k) { lamparas[k].modo = brilloLampara(k) > 0.5 ? 'off' : 'on'; }
+function animarLamparas(dt) {
+  let cambia = false;
+  if (!lamparas.listas) return;
+  for (const k of ['barra', 'flexo']) {
+    const l = lamparas[k], luz = l.modo === 'off' ? 0 : 1, b = brilloLampara(k);
+    const nl = l.luz + Math.sign(luz - l.luz) * Math.min(Math.abs(luz - l.luz), dt / 300), nb = l.brillo + Math.sign(b - l.brillo) * Math.min(Math.abs(b - l.brillo), dt / 300);
+    if (nl !== l.luz || nb !== l.brillo) {
+      l.luz = nl; l.brillo = nb; cambia = true;
+      if (l.glow) { l.glow.visible = nb > 0.01; l.glow.material.color.setRGB(2.6 * nb, 2.1 * nb, 1.5 * nb); }
+    }
+  }
+  if (cambia) { Horas.fijarLamparas(lamparas.barra.luz, lamparas.flexo.luz); sucio = true; }
+}
+function construirResplandor() {
+  const glow = (r, geo, padre, pos) => {
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false, side: THREE.DoubleSide }));
+    m.rotation.x = Math.PI / 2; m.position.copy(pos); m.visible = false; m.raycast = () => {}; padre.add(m); lamparas[r].glow = m;
+  };
+  const b = objects.barraLuz;                                        // la barra: una tira cálida en su cara de abajo, hacia la mesa
+  if (b) { b.geometry.computeBoundingBox(); const bb = b.geometry.boundingBox, c = bb.getCenter(new THREE.Vector3()); glow('barra', new THREE.PlaneGeometry(0.05, 0.46), b, new THREE.Vector3(c.x, bb.min.y - 0.0006, c.z)); }
+  const f = objects.flexoPantalla;                                   // el flexo: el hueco de la pantalla (el lado ancho del cono, que mira a la cama)
+  if (f) {
+    const P = f.geometry.attributes.position; let sA = 0, nA = 0, sB = 0, nB = 0;
+    for (let i = 0; i < P.count; i++) { const r = Math.hypot(P.getX(i), P.getZ(i)); if (P.getY(i) < 0) { sA += r; nA++; } else { sB += r; nB++; } }
+    const lado = sA / nA > sB / nB ? -1 : 1; f.geometry.computeBoundingBox(); const bb = f.geometry.boundingBox;
+    const m = new THREE.Mesh(new THREE.CircleGeometry(0.066, 28), new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false, side: THREE.DoubleSide }));
+    m.rotation.x = Math.PI / 2; m.position.set((bb.min.x + bb.max.x) / 2, lado < 0 ? bb.min.y - 0.0006 : bb.max.y + 0.0006, (bb.min.z + bb.max.z) / 2); m.visible = false; m.raycast = () => {};
+    f.add(m); lamparas.flexo.glow = m;
+  }
 }
 // persiana veneciana: el estor es un riel, 26 lamas y la barra de abajo. Se rehace la malla con las lamas que hagan falta (hasta LAMAS) y, al tocar
 // la barra, sube y baja entre tres alturas: toda abajo, la de siempre y toda arriba (las lamas se reparten por igual entre el riel y la barra)
@@ -501,6 +544,15 @@ function construirPersiana(room) {
   const base2 = pos.slice();
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(idx); o.geometry = geo; o.frustumCulled = false; persiana.malla = o;
+  // de noche el horneado trae el relleno azul del cielo y el estor sale azulado: se desatura y se aclara hacia el blanco (es blanco; solo le falta luz)
+  const pesos = Horas.W, m = o.material;
+  m.onBeforeCompile = sh => {
+    sh.uniforms.pesos = pesos;
+    sh.fragmentShader = 'uniform vec3 pesos;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `float lum = dot(outgoingLight, vec3(.2126, .7152, .0722));
+      outgoingLight = mix(outgoingLight, vec3(clamp(.16 + lum * 1.25, .2, .5)) * vec3(.97, .98, 1.), pesos.z);   // casi plano: el horneado de noche trae manchas
+      #include <opaque_fragment>`);
+  };
+  m.customProgramCacheKey = () => 'estor-noche';
   const oy = o.position.y;                                           // la malla está en coordenadas locales: y mundo = y local + oy
   const poner = yb => {                                              // yb: y (mundo) del centro de la barra
     const cb = yb - oy, D = c1 - cb, nVis = Math.max(26, 1 + Math.round((D - g0) / p0)), paso = (D - Math.min(g0, D / nVis)) / (nVis - 1), hueco = Math.min(g0, paso);
@@ -680,7 +732,7 @@ function showPanel(key) {
       <ul>${(ABOUT.gustos || []).map(g => `<li>${g}</li>`).join('')}</ul>
       <h3>${T.contacto}</h3><div class="contactos">${ABOUT.links.map(l => `<a class="ico" href="${l.href}" target="_blank" rel="noopener" aria-label="${l.label}">${icono(l.icon)}<span>${l.label}</span></a>`).join('')}</div></div>`);
   } else if (key === 'educacion') {
-    Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(980px, 88vw)', height: '', right: '' });
+    Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(94vw, 124vh)', height: '', right: '' });   // el libro abierto son dos A4 (420 x 297): ancho = 1,414 x alto
     const half = Math.ceil(EDUCATION.length / 2);
     const page = list => list.map(e => `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`).join('');
     poner(key, () => `<div class="book"><div class="page left"><h2>${SECTIONS.educacion}</h2>${page(EDUCATION.slice(0, half))}</div><div class="page right">${page(EDUCATION.slice(half))}</div></div>`);
@@ -914,6 +966,7 @@ function frame(now) {
   vigilar(dt, seMovio || !!flight);
   if (gritoAnim) animarGrito(now);
   if (persiana.anim) animarPersiana(now);
+  animarLamparas(dt);
   if (movPendiente) {
     const ev = movPendiente; movPendiente = null;
     if (!flight && (state === 'home' || state === 'pizarra')) { const h = hitTest(ev), huevo = HUEVOS.has(h?.key); setHover(huevo ? null : h, ev); if (huevo) renderer.domElement.style.cursor = 'pointer'; }   // los easter eggs (sin panel) no se iluminan ni llevan cartel, pero el cursor sí pasa a la manita

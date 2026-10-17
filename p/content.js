@@ -40,7 +40,7 @@ const CONTENIDO = {
           { t: 'MissionZero 2026 - Jeanologia', href: 'https://casadelalumno.blogs.upv.es/hackathon-missionzero/', res: '' },
           { t: 'BioLynx Open Innovation Competition 2026', href: 'https://www.biolynx.es/open-innovation-competition-valencia/', res: '' },
           { t: 'Quédate 2025 (UPV)', href: 'https://www.upv.es/noticias-upv/noticia-15542-quedate-2025-en.html', res: '' },
-        ] },,
+        ] },
       ] },
       null,
     ],
@@ -48,6 +48,8 @@ const CONTENIDO = {
       { title: 'Fibrosis auricular con IA', blurb: 'Redes convolucionales que estiman el grado de fibrosis del tejido auricular a partir de electrogramas, como alternativa a la imagen médica. 225 simulaciones y más de 200.000 electrogramas: la exactitud sube del 71 % al 91 %. Artículo en CASEIB 2025.', tags: ['Deep learning', 'Señales', 'CASEIB 2025'], href: 'https://dialnet.unirioja.es/servlet/articulo?codigo=10695530', link: 'Ver el artículo (Dialnet) →' },
       { title: 'R-HDBSCAN', blurb: 'Variante recursiva de HDBSCAN para obtener clusters locales de grano fino en datos de movilidad de sensores de València y la Comunitat Valenciana (Diputació de València).', tags: ['Clustering', 'Movilidad'], href: '#' },
       { title: 'nódicus', blurb: 'IA, datos y automatización a medida: clasificación automática de averías de camiones (menos de 0,10 € por avería y un 500 % más rápido), informes de visitas comerciales (30 h al mes ahorradas) y visión por computador en farmacia hospitalaria.', tags: ['IA', 'Visión', 'Automatización'], href: 'https://www.nodicus.com', link: 'nodicus.com →' },
+      { title: 'Tesla Runner', blurb: 'El juego del dinosaurio de Chrome, pero con un Tesla Roadster propulsado por gas frío. Un solo archivo HTML sin dependencias: rampas gigantes, flips, barrel rolls, leaderboard y controles táctiles.', tags: ['JavaScript', 'Juego', 'Pixel art'], href: 'https://jamarlli.github.io/tesla-runner/', link: 'Jugar →' },
+      { title: 'Gaviota 3D', blurb: 'Videojuego en three.js para Gráficos por Computador (máster IARFID, UPV). Una gaviota sobrevuela una ciudad con el único objetivo de hacerle la vida imposible a los peatones.', tags: ['three.js', 'Juego', 'UPV'], href: 'https://proyecto-gpc.vercel.app', link: 'Jugar →' },
       { title: 'Este cuarto', blurb: 'Mi cuarto modelado por código en Blender con medidas reales, luz de atardecer horneada y three.js.', tags: ['Blender', 'three.js'], href: 'https://github.com/Jamarlli/portfolio', link: 'Código en GitHub →' },
     ],
     EXPERIENCE: [
@@ -68,7 +70,7 @@ const CONTENIDO = {
       name: 'Javier Martínez Llinares',
       role: 'AI engineer and data scientist · co-founder of nódicus',
       bio: '23 years old · Valencia, Spain. I love learning new things and going deeper into the ones I already know. I look for problems and find solutions with every tool within reach.',
-      gustos: ['🏉 Competitive rugby, elite athlete of the UV', '🎭 Theatre', '⛰️ Mountains', '📚 Reading', '🏕️ Youth leisure instructor (MAT) and first aid'],
+      gustos: ['🏉 Competitive rugby, UV elite athlete', '🎭 Theatre', '⛰️ Mountains', '📚 Reading', '🏕️ Youth leisure monitor (MAT) and first aid'],
       links: [
         { icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/javier-martinez-llinares/' },
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Jamarlli' },
@@ -85,8 +87,8 @@ const CONTENIDO = {
         { h: 'University Sevens', t: 'Rugby has also been with me at university. I spent two years in the University of Valencia rugby sevens team and we won the Valencian university championship (the CADU) both years, two golds. Both years we went to the Spanish University Championship (CEU), and the first year we finished third, with the bronze. And when I went on Erasmus to Rome I also played for the Sapienza sevens team, with which we went to a tournament, the WIUC.' },
       ] },
       { title: 'Hackathons', paras: [
-        'I love hackathons. I have been to many and in several of them it has gone very well.',
-        { h: 'What I love', t: 'You meet good people, nice people, real aces, and I love moving around and meeting people. I also love networking, getting to know companies and understanding their problems to work out how to solve them. And I love facing new and unknown challenges, thinking and challenging myself.' },
+        'I love hackathons. I have been to many, and in several of them it went very well.',
+        { h: 'What I love', t: 'You meet good people, nice people, real stars, and I love moving around and meeting people. I also love networking, getting to know companies and understanding their problems to work out how to solve them. And I love facing new and unknown challenges, thinking and challenging myself.' },
         { h: 'My role in the team', t: 'I am very good at leading teams, and also at adapting and playing the role the team needs from me, whether that is taking the reins, delegating or pushing the ideas of my teammates. I am also a very good speaker, and I usually give the final pitches.' },
         { h: 'My hackathons', list: [
           { t: 'LLMthon Legal - Grant Thornton', href: 'https://idal.uv.es/llmthon/jornada/', res: 'winner' },
@@ -98,7 +100,7 @@ const CONTENIDO = {
           { t: 'MissionZero 2026 - Jeanologia', href: 'https://casadelalumno.blogs.upv.es/hackathon-missionzero/', res: '' },
           { t: 'BioLynx Open Innovation Competition 2026', href: 'https://www.biolynx.es/open-innovation-competition-valencia/', res: '' },
           { t: 'Quédate 2025 (UPV)', href: 'https://www.upv.es/noticias-upv/noticia-15542-quedate-2025-en.html', res: '' },
-        ] },,
+        ] },
       ] },
       null,
     ],
@@ -106,6 +108,8 @@ const CONTENIDO = {
       { title: 'Atrial fibrosis with AI', blurb: 'Convolutional networks that estimate the degree of atrial fibrosis from electrograms, as an alternative to medical imaging. 225 simulations and over 200,000 electrograms: accuracy rises from 71% to 91%. Paper at CASEIB 2025.', tags: ['Deep learning', 'Signals', 'CASEIB 2025'], href: 'https://dialnet.unirioja.es/servlet/articulo?codigo=10695530', link: 'Read the paper (Dialnet) →' },
       { title: 'R-HDBSCAN', blurb: 'A recursive variant of HDBSCAN to get fine-grained local clusters from sensor mobility data across Valencia and the Valencian Community (Diputació de València).', tags: ['Clustering', 'Mobility'], href: '#' },
       { title: 'nódicus', blurb: 'Custom AI, data and automation: automatic classification of truck faults (under €0.10 per fault and 500% faster), sales visit reports (30 hours a month saved) and computer vision in hospital pharmacy.', tags: ['AI', 'Vision', 'Automation'], href: 'https://www.nodicus.com', link: 'nodicus.com →' },
+      { title: 'Tesla Runner', blurb: 'The Chrome dinosaur game, but with a Tesla Roadster running on cold-gas thrusters. A single dependency-free HTML file: giant ramps, flips, barrel rolls, a leaderboard and touch controls.', tags: ['JavaScript', 'Game', 'Pixel art'], href: 'https://jamarlli.github.io/tesla-runner/', link: 'Play →' },
+      { title: 'Seagull 3D', blurb: 'A three.js game for Computer Graphics (IARFID master, UPV). A seagull flies over a city with one goal: making life impossible for the pedestrians.', tags: ['three.js', 'Game', 'UPV'], href: 'https://proyecto-gpc.vercel.app', link: 'Play →' },
       { title: 'This room', blurb: 'My room, modelled in code in Blender with real measurements, baked sunset light and three.js.', tags: ['Blender', 'three.js'], href: 'https://github.com/Jamarlli/portfolio', link: 'Code on GitHub →' },
     ],
     EXPERIENCE: [
@@ -116,7 +120,7 @@ const CONTENIDO = {
     ],
     EDUCATION: [
       { when: '2025 – 2026', what: 'MSc in AI, Pattern Recognition and Digital Imaging · UPV', detail: 'Universitat Politècnica de València. GPA: 9.21.' },
-      { when: '2021 – 2025', what: 'BSc in Data Science · Universitat de València', detail: 'GPA: 9.01 with 6 honours distinctions. Class representative and elite athlete of the UV (rugby).' },
+      { when: '2021 – 2025', what: 'BSc in Data Science · Universitat de València', detail: 'GPA: 9.01 with 6 honours distinctions. Class representative and UV elite athlete (rugby).' },
       { when: '2023 – 2024', what: 'Erasmus · Sapienza Università di Roma', detail: 'Data science.' },
       { when: 'Cambridge English First (B2) · Valencian C1', what: 'Languages and certificates', detail: 'French A2 and intermediate Italian. Hackathon Dream Big UPV 2025 and Mobility Summit Hackathon.' },
     ],
