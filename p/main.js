@@ -30,6 +30,7 @@ const VIEWS = {
 };
 const FLEXO_POLO = (hash.get('flexo') ?? '0.18,1.075').split(',').map(Number);   // x, z del palo del flexo (#flexo=x,z para probar otra posición)
 const FLEXO_PIE = (hash.get('pie') ?? '0.02,-0.075').split(',').map(Number);   // desplazamiento (x, z) del pie respecto al palo
+const LIBRO_GIRO = +(hash.get('lg') ?? 0.3);   // rad que se tuerce el libro sobre la mesa (#lg=0 lo deja recto)
 const MESA_DESPLAZ = 0.03;   // m que se corre la mesa (y lo que lleva) hacia la puerta, para dejar sitio al palo del flexo
 const ESPEJO_INCL = +(hash.get('lean') ?? 0.14);   // rad que se separa de la pared por abajo (0,14 ≈ 8°; antes 0,22 ≈ 12,6°; #lean=0.22 para compararlo)
 const SOBREMI = (hash.get('sm') ?? '0.7,1.45,1.25,52').split(',').map(Number);   // vista de "Sobre mí": distancia al espejo, altura de los ojos, altura a la que mira, campo de visión (#sm=… para probar)
@@ -164,6 +165,7 @@ function ponerMesa(u) {
   mesa.grupo.updateMatrixWorld(true); sucio = true;
 }
 if (hash.get('debug')) window.__alternarMesa = () => alternarMesa();
+if (hash.get('debug')) window.__dbg = { camera, scene, objects, huevoClic: k => huevoClic(k) };   // para las pruebas automáticas
 function alternarMesa() {
   if (mesa.anim || !mesa.grupo) return;
   mesa.arriba = !mesa.arriba; mesa.anim = { t0: null, dur: 3800, de: mesa.u, a: mesa.arriba ? 1 : 0 };
@@ -283,6 +285,17 @@ async function loadRoom() {
     m.rotation.set(-Math.PI / 2, 0, Math.PI / 2); m.position.set(0.605, 0.8445, 1.83 + MESA_DESPLAZ); scene.add(m); objects.alfombrilla = m; mesa.grupo?.attach(m);
     if (mesa.grupo && hash.get('mesa') != null) { mesa.arriba = +hash.get('mesa') > 0.5; ponerMesa(+hash.get('mesa')); }   // solo para revisar
   }
+  construirPersiana(room);
+  // libro (Educación): algo torcido sobre la mesa y con la portada del que estoy leyendo (Crónica del rey pasmado)
+  try {
+    const lb = room.getObjectByName('libro'), portada = await cargarTextura(base + 'libro_portada.webp');
+    lb.geometry.computeBoundingBox(); const bb = lb.geometry.boundingBox, c = bb.getCenter(new THREE.Vector3());
+    const mapa = new THREE.Mesh(new THREE.PlaneGeometry(0.158, 0.236), new THREE.MeshBasicMaterial({ map: portada, color: '#ffffff' }));
+    mapa.rotation.x = -Math.PI / 2;   // la portada se lee desde la puerta (el lado largo del libro va a lo largo de z, y su parte de arriba mira hacia la ventana)
+    mapa.position.set(c.x, bb.max.y + 0.0007, c.z); lb.add(mapa); objects.libro.push(mapa); objects.portada = mapa;
+    lb.rotation.y = LIBRO_GIRO; lb.position.add(c.clone().sub(c.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), LIBRO_GIRO)));
+    lb.updateMatrixWorld(true);
+  } catch (e) { console.warn('sin portada', e); }
   // luz según la hora de Valencia (si existen los horneados de día y noche)
   const mallas = []; room.traverse(o => o.isMesh && mallas.push(o));
   objects.horas = await Horas.prepararHoras(mallas, horas, renderer);
@@ -385,7 +398,7 @@ async function loadRoom() {
   try {
     const tex = await cargarTextura(base + 'balon.webp'), grano = await cargarTextura(base + 'balon_grano.webp', { flipY: false });
     const L = 0.29, R = 0.095, N = 64, pts = [];
-    for (let i = 0; i <= N; i++) { const t = -1 + 2 * i / N; pts.push(new THREE.Vector2(Math.max(0.0005, R * Math.pow(Math.max(0, 1 - t * t), 0.62)), t * L / 2)); }   // punta algo más afilada que un elipsoide
+    for (let i = 0; i <= N; i++) { const t = -1 + 2 * i / N; pts.push(new THREE.Vector2(Math.max(0.0005, R * Math.pow(Math.max(0, 1 - t * t), 0.5)), t * L / 2)); }   // elipsoide: las puntas del balón real (fotos) son romas, no afiladas
     grano.wrapS = grano.wrapT = THREE.RepeatWrapping; grano.repeat.set(34, 22);
     const mat = new THREE.MeshStandardMaterial({ map: tex, bumpMap: grano, bumpScale: 0.9, roughness: 0.55, metalness: 0 });
     const bola = new THREE.Mesh(new THREE.LatheGeometry(pts, 96), mat); bola.name = 'balon';
@@ -402,10 +415,10 @@ async function loadRoom() {
     sombra.rotation.x = -Math.PI / 2; sombra.rotation.z = BALON_YAW; sombra.position.set(BALON_POS[0], sobre + 0.002, BALON_POS[1]); sombra.raycast = () => {};
     const hemi = new THREE.HemisphereLight(0xfff1e0, 0x8a6a5a, 1.55), sol = new THREE.DirectionalLight(0xffe2c0, 1.25); sol.position.set(-1.5, 2.2, 3.0); sol.target.position.copy(pivote.position);
     scene.add(pivote, sombra, hemi, sol, sol.target); pivote.updateMatrixWorld(true);
-    objects.balon = { grupo: pivote, mat, hemi, sol, sombra };
+    objects.balon = { grupo: pivote, bola, mat, hemi, sol, sombra };
   } catch (e) { console.warn('sin balón', e); }
   // raycast acelerado (árbol de cajas por malla): pasar el ratón por el cuarto no recorre los 72.000 triángulos
-  scene.traverse(o => { if (o.isMesh && o.geometry.index && o.geometry.attributes.position.count > 200) { o.geometry.computeBoundsTree = computeBoundsTree; o.geometry.computeBoundsTree({ indirect: true }); o.raycast = acceleratedRaycast; } });
+  scene.traverse(o => { if (o.isMesh && o !== persiana.malla && o.geometry.index && o.geometry.attributes.position.count > 200) { o.geometry.computeBoundsTree = computeBoundsTree; o.geometry.computeBoundsTree({ indirect: true }); o.raycast = acceleratedRaycast; } });
 }
 
 // ---------------------------------------------------------------- interacción
@@ -426,6 +439,8 @@ function hitTest(ev) {
   if (objects.ventana.includes(o)) return { key: 'experiencia' };
   if (objects.espejo.includes(o) || objects.espejoFotos?.includes(o)) return { key: 'sobremi' };
   if (mesa.manivela.includes(o) || o === mesa.zona) return { key: 'mesa' };
+  if (objects.balon && o === objects.balon.bola) return { key: 'balon' };
+  if (persiana.zona && o === persiana.zona) return { key: 'persiana' };
   if (o === objects.boardFace || o === objects.pizarra) {
     // qué línea de la pizarra: la coordenada v de la textura en el punto tocado
     const v = o === objects.boardFace && hit.uv ? hit.uv.y : -1;
@@ -433,6 +448,89 @@ function hitTest(ev) {
     return item ? { key: item[0], viaBoard: true } : { key: 'pizarra' };
   }
   return null;
+}
+// easter eggs: interacciones sin panel (no se iluminan ni llevan cartel; el cursor sí pasa a la manita)
+const HUEVOS = new Set(['mesa', 'balon', 'persiana']);
+const grito = new Audio('./assets/cuarto/grito.mp3'); grito.preload = 'none';
+let gritoAnim = null;
+function huevoClic(k) {
+  if (k === 'mesa') return alternarMesa();
+  if (k === 'persiana') return alternarPersiana();
+  if (k === 'balon' && !gritoAnim && objects.balon) {
+    grito.currentTime = 0; grito.play().catch(() => {});
+    gritoAnim = { t0: null, y0: objects.balon.grupo.position.y };
+  }
+}
+function animarGrito(now) {                                        // el balón da botecitos y se menea mientras suena el grito
+  const g = gritoAnim, b = objects.balon.grupo; if (g.t0 == null) g.t0 = now;
+  const t = (now - g.t0) / 1700, fin = t >= 1, e = fin ? 0 : (1 - t);
+  b.position.y = g.y0 + Math.abs(Math.sin(t * Math.PI * 3)) * 0.035 * e; b.rotation.z = Math.sin(t * Math.PI * 9) * 0.06 * e;
+  b.updateMatrixWorld(true); sucio = true; if (fin) gritoAnim = null;
+}
+// persiana veneciana: el estor es un riel, 26 lamas y la barra de abajo. Se rehace la malla con las lamas que hagan falta (hasta LAMAS) y, al tocar
+// la barra, sube y baja entre tres alturas: toda abajo, la de siempre y toda arriba (las lamas se reparten por igual entre el riel y la barra)
+const LAMAS = 72, PERSIANA_Y = { abajo: 1.02, arriba: 2.075 };   // y (m, mundo) del centro de la barra con la persiana toda abajo / toda arriba
+const persiana = { malla: null, zona: null, pos: null, nivel: 1, dir: -1, anim: null, y: 0 };
+function construirPersiana(room) {
+  const o = room.getObjectByName('estor'); if (!o) return;
+  const g = o.geometry, P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv, I = g.index, n = P.count;
+  const par = Array.from({ length: n }, (_, i) => i), raiz = x => { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; };
+  const ids = new Map();
+  for (let i = 0; i < n; i++) { const k = `${Math.round(P.getX(i) * 1e4)},${Math.round(P.getY(i) * 1e4)},${Math.round(P.getZ(i) * 1e4)}`; if (ids.has(k)) par[raiz(i)] = raiz(ids.get(k)); else ids.set(k, i); }
+  for (let f = 0; f < I.count; f += 3) { par[raiz(I.getX(f))] = raiz(I.getX(f + 1)); par[raiz(I.getX(f + 1))] = raiz(I.getX(f + 2)); }
+  const piezas = new Map();
+  for (let i = 0; i < n; i++) { const r = raiz(i); if (!piezas.has(r)) piezas.set(r, { v: [], f: [], y0: 1e9, y1: -1e9 }); const c = piezas.get(r); c.v.push(i); c.y0 = Math.min(c.y0, P.getY(i)); c.y1 = Math.max(c.y1, P.getY(i)); }
+  for (let f = 0; f < I.count; f += 3) piezas.get(raiz(I.getX(f))).f.push(I.getX(f), I.getX(f + 1), I.getX(f + 2));
+  const ps = [...piezas.values()].sort((a, b) => b.y1 - a.y1);      // riel, lamas de arriba abajo y la barra
+  if (ps.length !== 28) { console.warn('persiana: piezas inesperadas', ps.length); return; }
+  const riel = ps[0], barra = ps[27], lamas = ps.slice(1, 27), cy = c => (c.y0 + c.y1) / 2;
+  const c1 = cy(lamas[0]), p0 = (c1 - cy(lamas[25])) / 25, cb0 = cy(barra), g0 = cy(lamas[25]) - cb0;
+  // geometría nueva: riel + barra + LAMAS lamas (las de más allá de la 26 copian una del medio)
+  const molde = i => lamas[i < 26 ? i : 23 + (i & 1)];
+  let total = riel.v.length + barra.v.length; for (let i = 0; i < LAMAS; i++) total += molde(i).v.length;
+  const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uv = new Float32Array(total * 2), idx = [];
+  const piezaNueva = (c, ini) => {
+    const loc = new Map(); c.v.forEach((vi, k) => { loc.set(vi, ini + k); pos.set([P.getX(vi), P.getY(vi), P.getZ(vi)], (ini + k) * 3); nor.set([N.getX(vi), N.getY(vi), N.getZ(vi)], (ini + k) * 3); uv.set([U.getX(vi), U.getY(vi)], (ini + k) * 2); });
+    const tri = c.f.map(vi => loc.get(vi)); return { ini, n: c.v.length, tri };
+  };
+  let ini = 0; const nuevas = [];
+  const pr = piezaNueva(riel, ini); ini += pr.n; idx.push(...pr.tri);
+  const pb = piezaNueva(barra, ini); ini += pb.n; idx.push(...pb.tri);
+  const base = pos.slice();
+  for (let i = 0; i < LAMAS; i++) { const m = molde(i), q = piezaNueva(m, ini); q.cy = cy(m); ini += q.n; idx.push(...q.tri); nuevas.push(q); }
+  const base2 = pos.slice();
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.setIndex(idx); o.geometry = geo; o.frustumCulled = false; persiana.malla = o;
+  const oy = o.position.y;                                           // la malla está en coordenadas locales: y mundo = y local + oy
+  const poner = yb => {                                              // yb: y (mundo) del centro de la barra
+    const cb = yb - oy, D = c1 - cb, nVis = Math.max(26, 1 + Math.round((D - g0) / p0)), paso = (D - Math.min(g0, D / nVis)) / (nVis - 1), hueco = Math.min(g0, paso);
+    const pa = geo.attributes.position.array;
+    for (let k = 0; k < pb.n; k++) pa[(pb.ini + k) * 3 + 1] = base[(pb.ini + k) * 3 + 1] + (cb - cb0);
+    nuevas.forEach((q, i) => {
+      const dy = i < nVis ? (c1 - i * (D - hueco) / (nVis - 1)) - q.cy : 0;
+      for (let k = 0; k < q.n; k++) {
+        const j = (q.ini + k) * 3;
+        if (i < nVis) { pa[j] = base2[j]; pa[j + 1] = base2[j + 1] + dy; pa[j + 2] = base2[j + 2]; } else { pa[j] = 0; pa[j + 1] = c1; pa[j + 2] = 0; }   // las que sobran se pliegan en un punto
+      }
+    });
+    geo.attributes.position.needsUpdate = true; geo.computeBoundingSphere(); geo.computeBoundingBox();
+    persiana.y = yb; persiana.zona.position.y = yb; persiana.zona.updateMatrixWorld(true); o.updateMatrixWorld(true); sucio = true;
+  };
+  const zona = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.09, 0.12), new THREE.MeshBasicMaterial({ visible: false }));
+  zona.position.set(o.position.x, oy + cb0, o.position.z + 0.04); scene.add(zona); zona.updateMatrixWorld(true); persiana.zona = zona;
+  persiana.poner = poner; persiana.niveles = [PERSIANA_Y.abajo, oy + cb0, PERSIANA_Y.arriba];
+  poner(persiana.niveles[1]);
+  if (hash.get('persiana') != null) poner(persiana.niveles[+hash.get('persiana')]);   // solo para revisar (0 abajo, 1 actual, 2 arriba)
+}
+function alternarPersiana() {
+  if (persiana.anim || !persiana.poner) return;
+  const nuevo = persiana.nivel + persiana.dir; persiana.anim = { t0: null, de: persiana.y, a: persiana.niveles[nuevo], dur: 1500 };
+  persiana.nivel = nuevo; if (nuevo === 0) persiana.dir = 1; else if (nuevo === 2) persiana.dir = -1;
+}
+function animarPersiana(now) {
+  const a = persiana.anim; if (a.t0 == null) a.t0 = now;
+  const t = Math.min(1, (now - a.t0) / a.dur), e = t * t * (3 - 2 * t);
+  persiana.poner(a.de + (a.a - a.de) * e); if (t >= 1) persiana.anim = null;
 }
 function setHover(h, ev) {
   hoverKey = h ? h.key : null;
@@ -492,7 +590,7 @@ renderer.domElement.addEventListener('click', ev => {
     const h = hitTest(ev);
     if (!h) { if (state === 'pizarra') goHome(); return; }
     if (h.key === 'pizarra') { if (state !== 'pizarra') goBoard(); return; }
-    if (h.key === 'mesa') { alternarMesa(); return; }
+    if (HUEVOS.has(h.key)) { huevoClic(h.key); return; }
     openSection(h.key);
   } else if (state === 'sobremi' && fotoBajo(ev) >= 0 && !panel.contains(ev.target)) { mostrarFoto(fotoBajo(ev)); }
   else if (!panel.contains(ev.target)) goHome();
@@ -814,9 +912,11 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = prevNow == null ? 1000 / 60 : Math.min(100, now - prevNow); prevNow = now;
   vigilar(dt, seMovio || !!flight);
+  if (gritoAnim) animarGrito(now);
+  if (persiana.anim) animarPersiana(now);
   if (movPendiente) {
     const ev = movPendiente; movPendiente = null;
-    if (!flight && (state === 'home' || state === 'pizarra')) { const h = hitTest(ev); setHover(h?.key === 'mesa' ? null : h, ev); if (h?.key === 'mesa') renderer.domElement.style.cursor = 'pointer'; }   // los easter eggs (sin panel) no se iluminan ni llevan cartel, pero el cursor sí pasa a la manita
+    if (!flight && (state === 'home' || state === 'pizarra')) { const h = hitTest(ev), huevo = HUEVOS.has(h?.key); setHover(huevo ? null : h, ev); if (huevo) renderer.domElement.style.cursor = 'pointer'; }   // los easter eggs (sin panel) no se iluminan ni llevan cartel, pero el cursor sí pasa a la manita
     else if (!flight && state === 'intro' && intro && !puertaAnim) hoverPuerta(ev);
   }
   if (flight) {
@@ -868,7 +968,7 @@ function frame(now) {
       if (objects.balon) { const f = Math.min(1, 0.35 + 0.65 * (r.d + 0.9 * r.a + 0.3 * r.n)); objects.balon.hemi.intensity = 1.55 * f; objects.balon.sol.intensity = 1.25 * f * (1 - 0.7 * r.n); objects.balon.sombra.material.opacity = 0.5 + 0.4 * f; }
       if (objects.matFotos) { const f = Math.min(1, 1.0 * r.d + 0.9 * r.a + 0.36 * r.n); for (const m of objects.matFotos) m.color.setScalar(f); }
       if (objects.marcoEspejo) { const f = 1.0 * r.d + 0.9 * r.a + 0.36 * r.n, c = new THREE.Color(MARCO_ESPEJO); for (const m of objects.marcoEspejo) m.color.copy(c).multiplyScalar(f * m.userData.k); }
-      if (objects.alfombrilla) objects.alfombrilla.material.color.setRGB(0.95 * r.d + 0.85 * r.a + 0.32 * r.n, 0.93 * r.d + 0.72 * r.a + 0.30 * r.n, 0.90 * r.d + 0.68 * r.a + 0.42 * r.n);
+      for (const m of [objects.alfombrilla, objects.portada]) if (m) m.material.color.setRGB(0.95 * r.d + 0.85 * r.a + 0.32 * r.n, 0.93 * r.d + 0.72 * r.a + 0.30 * r.n, 0.90 * r.d + 0.68 * r.a + 0.42 * r.n);
     }
     const hh = Math.floor(r.h) % 24, mm = Math.round((r.h % 1) * 60) % 60;
     const txt = `${r.n > 0.5 ? '☾' : r.a > 0.5 ? '◐' : '☀'} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${horaManual != null ? ' *' : ''}`;
