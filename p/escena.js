@@ -4,7 +4,8 @@ import { zoomPara } from './movil.js';
 
 export const hash = new URLSearchParams(location.hash.slice(1));
 // estado.sucio: la escena cambió y hay que repintarla; estado.solSucio: un estor o la mesa se movieron y las sombras del sol hay que rehacerlas
-export const estado = { sucio: true, solSucio: false };
+// lluviaSola: lo único que cambió es la lluvia (cámara quieta): el reflejo del espejo y el resplandor se reutilizan
+export const estado = { _s: true, solSucio: false, lluviaSola: false, get sucio() { return this._s; }, set sucio(v) { this._s = v; if (v) this.lluviaSola = false; } };   // cualquier otro cambio anula lluviaSola
 export const objects = { monitor: [], libro: [], ventana: [], espejo: [], cristales: [], pizarra: null, armario: null };
 export const espejos = [];
 

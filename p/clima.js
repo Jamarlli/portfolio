@@ -55,10 +55,10 @@ setInterval(() => { if (!hash.get('clima')) cargarObservado(); }, 5 * 60000);   
 
 // ---- radar de lluvia (RainViewer: composición de radares, imagen nueva cada 10 min, gratis, permite CORS). Se mira el píxel (~1 km) de mi ventana y sus vecinos
 const ZOOM = 7, mercator = (() => { const n = 2 ** ZOOM, x = (LON + 180) / 360 * n, y = (1 - Math.asinh(Math.tan(LAT * Math.PI / 180)) / Math.PI) / 2 * n; return { tx: Math.floor(x), ty: Math.floor(y), px: Math.floor((x % 1) * 256), py: Math.floor((y % 1) * 256) }; })();
-// la paleta del radar no trae mm: de translúcido (eco flojo) a azul claro (llovizna), azul oscuro (lluvia), amarillo (aguacero)
+// la paleta del radar no trae mm: de translúcido (eco flojo, se ignora) a azul claro (llovizna), azul oscuro (lluvia), amarillo (aguacero)
 function mmDeColor(r, g, b, a) {
   if (a === 0) return 0;
-  if (a < 255) return 0.02 + 0.25 * Math.min(1, Math.max(0, (a - 36) / 154));
+  if (a < 255) return 0;                                                                      // los ecos translúcidos son lluvia muy débil o ruido (suelo, mar): no cuentan
   if (r > 200) return 20 + 40 * Math.min(1, Math.max(0, (238 - g) / 89));                     // amarillo/naranja
   return 0.5 + 9.5 * Math.pow(Math.min(1, Math.max(0, (221 - g) / 150)), 1.5);               // azules
 }

@@ -21,6 +21,8 @@ body { font-family: 'VT323', monospace; color: var(--ink); font-size: 22px; }
   left: 0; top: 0; pointer-events: none; opacity: 0; transition: opacity .12s; white-space: nowrap; will-change: transform;
 }
 #tooltip.on { opacity: 1; }
+#diag { position: fixed; left: 8px; top: 8px; margin: 0; padding: 6px 8px; font: 12px/1.35 ui-monospace, Consolas, monospace; color: #cfe9d3; background: rgba(10, 14, 12, .78); border-radius: 4px; pointer-events: none; z-index: 50; white-space: pre; }
+#diag.mal { color: #ffd0c8; }
 #hint {
   position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); color: var(--glow);
   text-shadow: 2px 2px 0 var(--shadow); font-size: 22px; pointer-events: none; transition: opacity .4s;

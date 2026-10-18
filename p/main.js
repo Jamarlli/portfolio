@@ -798,8 +798,12 @@ function anotarTiempo(i, ms) {
 }
 // la nítida entera, en este fotograma
 function pintarEntera() {
+  // solo la lluvia se anima y la cámara no se ha movido: el espejo y el resplandor (difuso) de la última imagen siguen valiendo, y se ahorran ~2 ms de GPU
+  const reusar = estado.lluviaSola && lista.cadena === nitida && lista.cam.equals(camera.matrixWorld);
+  nitida.bloom.reutilizar = reusar; for (const e of espejos) e.reutilizar = reusar;
   prepararEspejos(1); medida(0, componer, nitida); usar('entera');
-  lista.cadena = nitida; anotarCamara(lista); obra.cadena = null; estado.sucio = false;
+  nitida.bloom.reutilizar = false; for (const e of espejos) e.reutilizar = false;
+  lista.cadena = nitida; anotarCamara(lista); obra.cadena = null; estado.sucio = false; estado.lluviaSola = false;
 }
 // un trozo de la nítida en obras (la otra cadena nítida, para no tocar la que se está mostrando), todos con la cámara de
 // cuando empezó (aunque el ratón siga). En 2 trozos (espejo y escena; contorno, resplandor y etalonaje) o, si la GPU va
@@ -957,11 +961,35 @@ function vigilar(dt, enMovimiento) {
   } else calidad.margen = Math.min(1, calidad.margen * 1.001);          // en reposo también se recupera, despacio
   elegirNivel();
 }
+// diagnóstico (tecla F o #fps=1): qué GPU usa el navegador, a cuántos fotogramas va y qué nivel de calidad ha elegido. Sirve para ver en cada equipo por qué va como va
+const diag = (() => {
+  const el = document.getElementById('diag'), gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const gpu = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'desconocida', software = /swiftshader|basic render|llvmpipe|software|softpipe/i.test(gpu);
+  const e = { fotogramas: 0, desde: 0, dts: [] };
+  const mostrar = v => { el.hidden = !v; };
+  addEventListener('keydown', ev => { if (ev.key === 'f' || ev.key === 'F') { if (!/^(INPUT|TEXTAREA)$/.test(ev.target.tagName)) mostrar(el.hidden); } });
+  if (hash.get('fps')) mostrar(true);
+  e.paso = (now, dt) => {
+    if (el.hidden) return;
+    e.dts.push(dt); if (e.dts.length > 120) e.dts.shift();
+    if (now - e.desde < 500) return; e.desde = now;
+    const s = [...e.dts].sort((a, b) => a - b), media = e.dts.reduce((a, b) => a + b, 0) / e.dts.length, p95 = s[Math.floor(s.length * 0.95)];
+    const b = renderer.getDrawingBufferSize(new THREE.Vector2());
+    el.classList.toggle('mal', software || media > 24);
+    el.textContent = [`GPU: ${gpu}${software ? '  ← SIN ACELERACIÓN (va por software)' : ''}`,
+      `pantalla ${innerWidth}×${innerHeight} · píxeles ${b.x}×${b.y} (×${renderer.getPixelRatio()})`,
+      `${(1000 / media).toFixed(0)} fps · fotograma ${media.toFixed(1)} ms (p95 ${p95.toFixed(1)})`,
+      `GPU ${calidad.gpuUlt != null ? calidad.gpuUlt.toFixed(1) + ' ms' : '–'} · CPU ${calidad.cpu.toFixed(1)} ms · calidad nivel ${calidad.nivel} · margen ${calidad.margen.toFixed(2)}`,
+      `lluvia ${Clima.clima.lluvia.toFixed(1)} mm/h (${Clima.clima.origen.lluvia}) · viento ${Math.round(Clima.clima.viento)} km/h`].join('\n');
+  };
+  return e;
+})();
 let prevNow = null, seMovio = false;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = prevNow == null ? 1000 / 60 : Math.min(100, now - prevNow); prevNow = now;
   const girando = esMovil && pasoGiro(dt);
+  diag.paso(now, dt);
   vigilar(dt, seMovio || !!flight || girando);
   if (gritoAnim) animarGrito(now);
   if (persiana.estores.some(e => e.anim)) animarPersiana(now);
@@ -1050,7 +1078,7 @@ function frame(now) {
     const txt = `${r.n > 0.5 ? '☾' : r.a > 0.5 ? '◐' : '☀'} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${horaManual != null ? ' *' : ''}${resumen.icono || resumen.temp ? ' · ' + resumen.icono + resumen.temp : ''}`;
     if (frame.reloj !== txt) relojBtn.textContent = frame.reloj = txt;
   }
-  if (objects.lluvia && objects.lluvia.actualizar(Clima.clima, Clima.intensidadLluvia(Clima.clima.lluvia), now)) estado.sucio = true;
+  if (objects.lluvia && objects.lluvia.actualizar(Clima.clima, Clima.intensidadLluvia(Clima.clima.lluvia), now)) { const limpio = !estado.sucio; estado.sucio = true; estado.lluviaSola = limpio; }
   if (hash.get('debug')) hint.style.opacity = 1, hint.textContent = `${state} ${flight ? 'volando' : ''} cam ${camera.position.toArray().map(v => v.toFixed(2))} fov:${camera.fov.toFixed(0)} nivel ${calidad.nivel} gpu≈${calidad.equiv?.toFixed(1)} cpu ${calidad.cpu.toFixed(1)}`;
   seMovio = pintar(dt);
 }
