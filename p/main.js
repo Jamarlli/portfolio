@@ -6,7 +6,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { computeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
 import { PROJECTS, EDUCATION, EXPERIENCE, ABOUT, FOTOS } from './content.js';
-import { T, PENDIENTE } from './i18n.js';
+import { T, PENDIENTE, LANG } from './i18n.js';
 import { crearIntro } from './intro.js';
 import * as Horas from './horas.js';
 import * as Sol from './sol.js';
@@ -1012,6 +1012,7 @@ function frame(now) {
     frame.ultimaHora = now; frame.horaPuesta = horaManual; frame.climaPuesto = climaManual;
     const ms = horaManual != null ? Sol.fechaValencia(horaManual) : Date.now(), sol = Sol.posicionSol(ms), elg = sol.el * 180 / Math.PI;
     const tiempo = Clima.ponerClima(ms, climaManual);
+    if (!relojPanel.hidden) infoClima();
     const r = Horas.actualizar(horaManual ?? undefined, Sol.pesosSol(elg)), li = Clima.intensidadLluvia(tiempo.lluvia);
     // el sol directo (si hay horneados sin sol): entra por la ventana solo con el sol a más de 0,5° y dentro de ±90° del sudoeste, y las nubes y la lluvia lo apagan
     const dirSol = new THREE.Vector3(...(hash.get('sundir') ? hash.get('sundir').split(',').map(Number) : Sol.direccionSol(sol.az, sol.el))).normalize(), solI = Sol.intensidadSol(elg) * Math.pow(1 - tiempo.nubes, 1.7) * (1 - 0.8 * li), entra = dirSol.z < -0.02 && solI > 0.004;
@@ -1053,22 +1054,36 @@ let intro = null, puertaAnim = null, cerrarAlPasar = false;
 // ---------------------------------------------------------------- reloj (hora real de Valencia o elegida a mano)
 let horaManual = hash.get('hora') != null ? +hash.get('hora') : null, climaManual = null;   // climaManual: null = el real; si no, uno de Clima.PRESETS
 const relojBtn = document.getElementById('relojBtn'), relojPanel = document.getElementById('relojPanel'), relojSlider = document.getElementById('relojSlider');
-relojBtn.addEventListener('click', () => { relojPanel.hidden = !relojPanel.hidden; relojSlider.value = horaManual ?? Horas.horaValencia(); sincronizarAjuste(); });
+relojBtn.addEventListener('click', () => { relojPanel.hidden = !relojPanel.hidden; relojSlider.value = horaManual ?? Horas.horaValencia(); sincronizarAjuste(); infoClima(); });
 relojSlider.addEventListener('input', () => { horaManual = +relojSlider.value; });
 document.getElementById('relojReal').addEventListener('click', () => { horaManual = null; climaManual = null; frame.ultimaHora = 0; relojPanel.hidden = true; marcarClima(); });
 const marcarClima = () => document.querySelectorAll('#climaSel button').forEach(b => b.classList.toggle('on', (b.dataset.clima || null) === climaManual));
 // ajuste fino: los deslizadores muestran el tiempo de ahora (el real o un preset) y al tocarlos pasa a ser uno a medida
 const ajustes = [...document.querySelectorAll('#climaAjuste input')], bTormenta = document.getElementById('ajTormenta');
-const aValor = (k, v) => k === 'lluvia' ? 20 * (v / 100) ** 2 : k === 'viento' ? v : v / 100, deValor = (k, x) => k === 'lluvia' ? 100 * Math.sqrt(x / 20) : k === 'viento' ? x : x * 100;
+const lineal = k => k === 'viento' || k === 'dir';
+const aValor = (k, v) => k === 'lluvia' ? 20 * (v / 100) ** 2 : lineal(k) ? v : v / 100, deValor = (k, x) => k === 'lluvia' ? 100 * Math.sqrt(x / 20) : lineal(k) ? x : x * 100;
 function sincronizarAjuste() {
   const c = Clima.clima;
   for (const i of ajustes) i.value = Math.round(deValor(i.dataset.aj, c[i.dataset.aj] ?? 0));
   bTormenta.classList.toggle('on', !!c.tormenta);
 }
+// de dónde sale lo que se ve por la ventana y cuándo se renueva
+const PUNTOS = LANG === 'en' ? ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] : ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'], climaInfo = document.getElementById('climaInfo');
+function infoClima() {
+  const c = Clima.clima, en = LANG === 'en', f = Clima.fuentes(), min = t => Math.max(0, Math.round((Date.now() - t) / 60000));
+  const ori = s => en ? { modelo: 'forecast model', simulado: 'simulated', estaciones: 'stations', radar: 'radar', 'radar+estaciones': 'radar + stations' }[s] ?? s : s.replace('+', ' + ');
+  const viento = `${en ? 'Wind' : 'Viento'}: ${PUNTOS[Math.round(((c.dir ?? 0) % 360) / 45) % 8]} ${Math.round(c.viento)} km/h (${ori(c.origen.viento)})`;
+  if (c.fuente === 'simulado') { climaInfo.textContent = (en ? 'Simulated weather. ' : 'Tiempo simulado. ') + viento; return; }
+  const l = [`${en ? 'Rain' : 'Lluvia'}: ${c.lluvia < 0.05 ? (en ? 'none' : 'no llueve') : c.lluvia.toFixed(1) + ' mm/h'} (${ori(c.origen.lluvia)})`, viento];
+  if (f.rad) l.push(`${en ? 'Radar' : 'Radar'}: ${f.rad.mm.toFixed(1)} mm/h, ${en ? 'image from' : 'imagen de hace'} ${min(f.rad.hora)} min`);
+  if (f.est) { const m = f.est.estaciones?.[0]; l.push(`${en ? 'Stations' : 'Estaciones'}: ${f.est.estaciones?.length ?? 0}${m ? `, ${en ? 'nearest' : 'la más cercana'} ${m.km} km (${m.nombre.replace(/ \(.*/, '')})` : ''}`); }
+  l.push(en ? 'Updates every 5 min (radar, stations) and 15 min (forecast)' : 'Se renueva cada 5 min (radar, estaciones) y 15 min (previsión)');
+  climaInfo.textContent = l.join('\n');
+}
 function aMedida() { if (climaManual !== 'a-medida') { Object.assign(Clima.personalizado, Clima.clima); climaManual = 'a-medida'; marcarClima(); } }
 for (const i of ajustes) i.addEventListener('input', () => { aMedida(); Clima.personalizado[i.dataset.aj] = aValor(i.dataset.aj, +i.value); frame.ultimaHora = 0; });
 bTormenta.addEventListener('click', () => { aMedida(); Clima.personalizado.tormenta = !Clima.personalizado.tormenta; bTormenta.classList.toggle('on', Clima.personalizado.tormenta); frame.ultimaHora = 0; });
-document.getElementById('climaSel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; climaManual = b.dataset.clima || null; frame.ultimaHora = 0; marcarClima(); setTimeout(sincronizarAjuste, 50); });
+document.getElementById('climaSel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; climaManual = b.dataset.clima || null; frame.ultimaHora = 0; marcarClima(); setTimeout(() => { sincronizarAjuste(); infoClima(); }, 50); });
 marcarClima();
 function entrar() {
   if (state !== 'intro' || flight) return;

@@ -109,6 +109,7 @@ a { color: var(--accent-2); }
 #climaAjuste label { display: flex; align-items: center; gap: 4px; font-size: 16px; }
 #climaAjuste input { width: 100%; min-width: 0; accent-color: var(--accent); }
 #ajTormenta { padding: 0 6px; font-size: 16px; justify-self: start; }
+#climaInfo { width: 100%; font-size: 14px; line-height: 1.25; opacity: .8; white-space: pre-line; }
 [hidden] { display: none !important; }
 
 

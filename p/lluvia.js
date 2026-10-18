@@ -1,8 +1,24 @@
 // Lo que se ve del tiempo desde dentro: la lluvia cayendo tras el cristal, las gotas resbalando por él, el cielo gris o con niebla y los relámpagos.
 // Todo se anima en el sombreador (la CPU solo avisa de cuándo repintar) y solo existe si llueve y la ventana está a la vista.
 import * as THREE from 'three';
+import { FACHADA } from './sol.js';
 
 const GOTAS = 7000;
+// el balcón de la ventana: 112 cm de fondo y, encima, un techo (el balcón de arriba) del mismo fondo. La lluvia vertical cae fuera del borde y no toca la ventana;
+// solo entra la que lleva el viento hacia ella, y la que llega choca contra el cristal en una franja cuya altura depende de lo inclinada que caiga
+const BALCON = { fondo: 1.12, cristal: 0.035, antepecho: 1.03, techo: 2.54, cristalBajo: 0.95 };      // metros (el cristal está a 3,5 cm de la pared de la ventana)
+const BORDE = BALCON.cristal + BALCON.fondo, DEG = Math.PI / 180;
+// el viento en el cuarto: sopla DESDE `dir` (grados, norte = 0); devuelve cuánto empuja hacia la ventana (un) y a lo largo de ella, hacia la derecha mirando fuera (ux), en m/s
+function vientoEnVentana(kmh, dir) {
+  const v = kmh / 3.6, a = (dir + 180) * DEG, e = v * Math.sin(a), n = v * Math.cos(a);              // hacia dónde va (este, norte)
+  return { un: -(e * Math.sin(FACHADA) + n * Math.cos(FACHADA)), ux: e * Math.sin(FACHADA + Math.PI / 2) + n * Math.cos(FACHADA + Math.PI / 2) };
+}
+// franja del cristal (alturas del mundo) que moja la lluvia con una inclinación rn (desplazamiento horizontal hacia la ventana por metro de caída)
+function franja(rn) {
+  if (rn < 0.03) return new THREE.Vector3(9, -9, 0);
+  const k = BALCON.fondo / rn;                                                                        // lo que cae una gota mientras cruza el balcón
+  return new THREE.Vector3(BALCON.antepecho - k, BALCON.techo - k, Math.min(1, rn * 2.2));
+}
 
 // lluvia: cada gota es un rectángulo fino que se estira por pantalla siguiendo su caída (el ancho es en píxeles, no en metros)
 function crearGotas() {
@@ -17,14 +33,20 @@ function crearGotas() {
   }
   g.setAttribute('aPos', new THREE.InstancedBufferAttribute(pos, 3)); g.setAttribute('aRnd', new THREE.InstancedBufferAttribute(rnd, 2));
   g.instanceCount = GOTAS;
-  const u = { uTime: { value: 0 }, uInt: { value: 0 }, uSpeed: { value: 13 }, uLen: { value: 1.0 }, uWind: { value: 0.1 }, uRes: { value: new THREE.Vector2(1, 1) }, uPx: { value: 1.4 }, uAlfa: { value: 0.4 } };
+  const u = { uTime: { value: 0 }, uInt: { value: 0 }, uSpeed: { value: 13 }, uLen: { value: 1.0 }, uRx: { value: 0 }, uRn: { value: 0 }, uBal: { value: new THREE.Vector4(BORDE, BALCON.antepecho, BALCON.techo, BALCON.cristal) }, uRes: { value: new THREE.Vector2(1, 1) }, uPx: { value: 1.4 }, uAlfa: { value: 0.4 } };
   const m = new THREE.ShaderMaterial({
     uniforms: u, transparent: true, depthWrite: false,
-    vertexShader: `attribute vec3 aPos; attribute vec2 aRnd; uniform float uTime, uInt, uSpeed, uLen, uWind, uPx; uniform vec2 uRes; varying float vA, vSide;
+    vertexShader: `attribute vec3 aPos; attribute vec2 aRnd; uniform float uTime, uInt, uSpeed, uLen, uRx, uRn, uPx; uniform vec4 uBal; uniform vec2 uRes; varying float vA, vSide;
       void main() {
         if (aRnd.y > uInt) { gl_Position = vec4(2., 2., 2., 1.); return; }
         float H = 5. + 0.5 * -aPos.z, y = mod(aPos.y - uTime * uSpeed * (0.85 + 0.3 * aRnd.x), H) - 0.8;
-        vec3 head = vec3(aPos.x + uWind * y, y, aPos.z), dir = normalize(vec3(uWind, -1., 0.)), tail = head - dir * uLen * (0.7 + 0.6 * aRnd.x);
+        vec3 head = vec3(aPos.x - uRx * y, y, aPos.z - uRn * y), dir = normalize(vec3(uRx, -1., uRn)), tail = head - dir * uLen * (0.7 + 0.6 * aRnd.x);
+        float zd = -head.z;
+        if (zd < uBal.w) { gl_Position = vec4(2., 2., 2., 1.); return; }                  // ya ha chocado con el cristal
+        if (zd < uBal.x) {                                                                // bajo el techo del balcón: solo las que entraron por el hueco entre la barandilla y el techo
+          float ye = y + (uBal.x - zd) / max(uRn, 1e-3);
+          if (uRn < 0.02 || ye > uBal.z || ye < uBal.y) { gl_Position = vec4(2., 2., 2., 1.); return; }
+        }
         vec4 c0 = projectionMatrix * viewMatrix * vec4(head, 1.), c1 = projectionMatrix * viewMatrix * vec4(tail, 1.);
         vec4 c = mix(c0, c1, position.y);
         c.x += position.x * uPx * 2. / uRes.x * c.w;                    // la caída es casi vertical: basta ensanchar en horizontal
@@ -70,13 +92,15 @@ const GLSL_GOTAS = `
     return S(.3, 0., d) * fract(n.z * 10.) * fade;
   }`;
 function crearCristal() {
-  const u = { uTime: { value: 0 }, uInt: { value: 0 } };
+  const u = { uTime: { value: 0 }, uInt: { value: 0 }, uBA: { value: new THREE.Vector3(9, -9, 0) }, uBB: { value: new THREE.Vector3(9, -9, 0) } };
   const m = new THREE.ShaderMaterial({
     uniforms: u, transparent: true, depthWrite: false,
     vertexShader: 'varying vec2 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.); vW = w.xy; gl_Position = projectionMatrix * viewMatrix * w; }',
-    fragmentShader: `uniform float uTime, uInt; varying vec2 vW; ${GLSL_GOTAS}
+    fragmentShader: `uniform float uTime, uInt; uniform vec3 uBA, uBB; varying vec2 vW; ${GLSL_GOTAS}
+      // cuánta agua llega a esta altura del cristal: la franja que alcanza la lluvia empujada por el viento (b = bajo, alto, fuerza) y, hacia abajo, lo que resbala
+      float banda(vec3 b, float y) { return b.z * (1. - S(b.y - .04, b.y + .04, y)) * mix(.55, 1., S(b.x - .1, b.x + .1, y)); }
       void main() {
-        vec2 uv = vW * 1.7; float t = uTime * .25, lluvia = uInt;
+        vec2 uv = vW * 1.7; float t = uTime * .25, lluvia = uInt * max(banda(uBA, vW.y), banda(uBB, vW.y));
         float c = 2. * S(0., 1., lluvia) * GotasQuietas(uv, t);
         vec2 l1 = CapaGotas(uv, t) * S(.25, .75, lluvia), l2 = CapaGotas(uv * 1.85 + 3.7, t) * S(.0, .5, lluvia);
         c += l1.x + l2.x * .8; float rastro = clamp(l1.y + l2.y * .8, 0., 1.);
@@ -149,7 +173,12 @@ export function crearLluvia({ scene, camera, renderer, cristales, paisajes }) {
     if (dibujar) {
       renderer.getDrawingBufferSize(v2); gotas.u.uRes.value.copy(v2);
       gotas.u.uInt.value = Math.min(1, 0.03 + 0.7 * Math.pow(intensidad, 1.25));
-      gotas.u.uSpeed.value = 11 + 7 * intensidad; gotas.u.uWind.value = Math.min(0.35, clima.viento * 0.009);
+      // el viento a la altura del balcón (algo menos que a 10 m) con rachas que lo suben y bajan; la gota cae a 4–9 m/s según su tamaño
+      const s = now / 1000, racha = 0.5 + 0.5 * Math.sin(s * 0.7 + 1.7 * Math.sin(s * 0.31)), base = clima.viento * 0.85, fuerte = Math.max(clima.racha ?? 0, clima.viento) * 0.85;
+      const vf = 4 + 5 * intensidad, a = vientoEnVentana(base + (fuerte - base) * racha * 0.7, clima.dir ?? 225), b = vientoEnVentana(fuerte, clima.dir ?? 225);
+      const rn = THREE.MathUtils.clamp(a.un / vf, -1.2, 1.2), rx = THREE.MathUtils.clamp(a.ux / vf, -1.2, 1.2);
+      gotas.u.uSpeed.value = 11 + 7 * intensidad; gotas.u.uRx.value = rx; gotas.u.uRn.value = rn;
+      cristal.u.uBA.value.copy(franja(rn)); cristal.u.uBB.value.copy(franja(THREE.MathUtils.clamp(b.un / vf, -1.2, 1.2))); cristal.u.uBB.value.z *= 0.45;      // y las rachas más fuertes mojan más arriba, pero menos
       gotas.u.uAlfa.value = 0.22 + 0.28 * intensidad; gotas.u.uPx.value = dpr * (1.1 + 0.7 * intensidad);
       gotas.u.uTime.value = cristal.u.uTime.value = now / 1000; cristal.u.uInt.value = intensidad;
     } else cristal.u.uInt.value = 0;
