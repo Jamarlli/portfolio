@@ -1053,11 +1053,22 @@ let intro = null, puertaAnim = null, cerrarAlPasar = false;
 // ---------------------------------------------------------------- reloj (hora real de Valencia o elegida a mano)
 let horaManual = hash.get('hora') != null ? +hash.get('hora') : null, climaManual = null;   // climaManual: null = el real; si no, uno de Clima.PRESETS
 const relojBtn = document.getElementById('relojBtn'), relojPanel = document.getElementById('relojPanel'), relojSlider = document.getElementById('relojSlider');
-relojBtn.addEventListener('click', () => { relojPanel.hidden = !relojPanel.hidden; relojSlider.value = horaManual ?? Horas.horaValencia(); });
+relojBtn.addEventListener('click', () => { relojPanel.hidden = !relojPanel.hidden; relojSlider.value = horaManual ?? Horas.horaValencia(); sincronizarAjuste(); });
 relojSlider.addEventListener('input', () => { horaManual = +relojSlider.value; });
 document.getElementById('relojReal').addEventListener('click', () => { horaManual = null; climaManual = null; frame.ultimaHora = 0; relojPanel.hidden = true; marcarClima(); });
 const marcarClima = () => document.querySelectorAll('#climaSel button').forEach(b => b.classList.toggle('on', (b.dataset.clima || null) === climaManual));
-document.getElementById('climaSel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; climaManual = b.dataset.clima || null; frame.ultimaHora = 0; marcarClima(); });
+// ajuste fino: los deslizadores muestran el tiempo de ahora (el real o un preset) y al tocarlos pasa a ser uno a medida
+const ajustes = [...document.querySelectorAll('#climaAjuste input')], bTormenta = document.getElementById('ajTormenta');
+const aValor = (k, v) => k === 'lluvia' ? 20 * (v / 100) ** 2 : k === 'viento' ? v : v / 100, deValor = (k, x) => k === 'lluvia' ? 100 * Math.sqrt(x / 20) : k === 'viento' ? x : x * 100;
+function sincronizarAjuste() {
+  const c = Clima.clima;
+  for (const i of ajustes) i.value = Math.round(deValor(i.dataset.aj, c[i.dataset.aj] ?? 0));
+  bTormenta.classList.toggle('on', !!c.tormenta);
+}
+function aMedida() { if (climaManual !== 'a-medida') { Object.assign(Clima.personalizado, Clima.clima); climaManual = 'a-medida'; marcarClima(); } }
+for (const i of ajustes) i.addEventListener('input', () => { aMedida(); Clima.personalizado[i.dataset.aj] = aValor(i.dataset.aj, +i.value); frame.ultimaHora = 0; });
+bTormenta.addEventListener('click', () => { aMedida(); Clima.personalizado.tormenta = !Clima.personalizado.tormenta; bTormenta.classList.toggle('on', Clima.personalizado.tormenta); frame.ultimaHora = 0; });
+document.getElementById('climaSel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; climaManual = b.dataset.clima || null; frame.ultimaHora = 0; marcarClima(); setTimeout(sincronizarAjuste, 50); });
 marcarClima();
 function entrar() {
   if (state !== 'intro' || flight) return;

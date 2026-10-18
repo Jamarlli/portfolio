@@ -67,7 +67,14 @@
   <div id="panel" hidden></div>
   <div id="reloj"><button id="relojBtn" class="px-btn" title="Change the time of day">☀ --:--</button>
     <div id="relojPanel" hidden><input id="relojSlider" type="range" min="0" max="24" step="0.25"><button id="relojReal" class="px-btn">real time</button>
-      <div id="climaSel"><button data-clima="" class="px-btn on" title="Tiempo real">real</button><button data-clima="sol" class="px-btn" title="Soleado">☀</button><button data-clima="nubes" class="px-btn" title="Nubes">⛅</button><button data-clima="nublado" class="px-btn" title="Nublado">☁</button><button data-clima="llovizna" class="px-btn" title="Llovizna">🌦</button><button data-clima="lluvia" class="px-btn" title="Lluvia">🌧</button><button data-clima="fuerte" class="px-btn" title="Aguacero">🌧🌧</button><button data-clima="tormenta" class="px-btn" title="Tormenta">⛈</button><button data-clima="niebla" class="px-btn" title="Niebla">🌫</button></div></div></div>
+      <div id="climaSel"><button data-clima="" class="px-btn on" title="Tiempo real">real</button><button data-clima="sol" class="px-btn" title="Soleado">☀</button><button data-clima="nubes" class="px-btn" title="Nubes">⛅</button><button data-clima="nublado" class="px-btn" title="Nublado">☁</button><button data-clima="llovizna" class="px-btn" title="Llovizna">🌦</button><button data-clima="lluvia" class="px-btn" title="Lluvia">🌧</button><button data-clima="fuerte" class="px-btn" title="Aguacero">🌧🌧</button><button data-clima="tormenta" class="px-btn" title="Tormenta">⛈</button><button data-clima="niebla" class="px-btn" title="Niebla">🌫</button></div>
+      <div id="climaAjuste">
+        <label title="Nubes">☁<input type="range" data-aj="nubes" min="0" max="100" step="1"></label>
+        <label title="Lluvia">🌧<input type="range" data-aj="lluvia" min="0" max="100" step="1"></label>
+        <label title="Niebla">🌫<input type="range" data-aj="niebla" min="0" max="100" step="1"></label>
+        <label title="Viento">💨<input type="range" data-aj="viento" min="0" max="50" step="1"></label>
+        <button id="ajTormenta" class="px-btn" title="Tormenta (rayos)">⚡</button>
+      </div></div></div>
 </div>
 <div id="loading">Opening the door…</div>
 <script type="module" src="/p/main.js"></script>

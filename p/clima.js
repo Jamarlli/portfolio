@@ -17,6 +17,8 @@ export const PRESETS = {
 // qué se ve por la ventana en cada momento; lo lee quien pinta (lluvia.js) y quien mezcla la luz (horas.js)
 export const clima = { lluvia: 0, nubes: 0.04, niebla: 0, tormenta: false, viento: 6, temp: null, fuente: 'ninguna', forzado: null };
 
+// el tiempo a medida: lo que se ajusta con los deslizadores del reloj (empieza como un preset y se toca a gusto)
+export const personalizado = { ...PRESETS.sol, temp: 20 };
 const datos = { hora: null, ahora: null, cargado: 0 };
 const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&timezone=Europe%2FMadrid&past_days=1&forecast_days=3&wind_speed_unit=kmh`
   + '&current=temperature_2m,precipitation,cloud_cover,weather_code,wind_speed_10m'
@@ -50,7 +52,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 // el tiempo en el instante `ms` (Unix): de los datos por hora (interpolando) o, si es ahora mismo, de la medida actual
 export function ponerClima(ms, preset = null) {
   const forzado = preset || hash.get('clima');
-  if (forzado && PRESETS[forzado]) { Object.assign(clima, PRESETS[forzado], { fuente: 'simulado', forzado }); }
+  if (forzado && (PRESETS[forzado] || forzado === 'a-medida')) { Object.assign(clima, forzado === 'a-medida' ? personalizado : PRESETS[forzado], { fuente: 'simulado', forzado }); }
   else if (datos.hora) {
     const h = datos.hora, tiempo = h.time.map(s => Date.parse(s + ':00' + offsetMadrid(s)));
     let i = tiempo.findIndex(t => t > ms) - 1; if (i < 0) i = ms < tiempo[0] ? 0 : tiempo.length - 2;

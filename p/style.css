@@ -104,7 +104,11 @@ a { color: var(--accent-2); }
 #relojPanel { flex-wrap: wrap; max-width: min(92vw, 330px); justify-content: flex-end; }
 #climaSel { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
 #climaSel button { padding: 0 6px; font-size: 16px; }
-#climaSel button.on { background: var(--accent); color: #fff; }
+#climaSel button.on, #ajTormenta.on { background: var(--accent); color: #fff; }
+#climaAjuste { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; width: 100%; align-items: center; }
+#climaAjuste label { display: flex; align-items: center; gap: 4px; font-size: 16px; }
+#climaAjuste input { width: 100%; min-width: 0; accent-color: var(--accent); }
+#ajTormenta { padding: 0 6px; font-size: 16px; justify-self: start; }
 [hidden] { display: none !important; }
 
 
