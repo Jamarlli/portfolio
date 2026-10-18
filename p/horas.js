@@ -29,8 +29,8 @@ export function horaValencia() {
 }
 
 export const W = { value: new THREE.Vector3(0, 1, 0) };          // pesos (día, atardecer, noche) de la hora actual
-// lámparas del escritorio (interruptores): 1 = como están horneadas a esa hora, 0 = apagadas. x = barra de luz, y = flexo
-export const LAMP = { value: new THREE.Vector2(1, 1) };
+// lámparas del escritorio: cuánta luz ponen (1 = encendida del todo, 0 = apagada), a cualquier hora. x = barra de luz, y = flexo
+export const LAMP = { value: new THREE.Vector2(0, 0) };
 // el cielo del momento: color e intensidad del sol directo (rgb), cuánta luz de cielo queda con nubes (amb), cuánto color (sat), cuánto rebota el sol (reb) y la escala (k)
 export const CIELO = { sol: { value: new THREE.Vector3(0, 0, 0) }, amb: { value: 1 }, sat: { value: 1 }, reb: { value: 0.3 }, k: { value: 1 } };
 
@@ -41,15 +41,16 @@ const mezcla = new FullScreenQuad(new THREE.ShaderMaterial({
   uniforms: { tD: { value: null }, tA: { value: null }, tN: { value: null }, tAo: { value: null }, tNo: { value: null }, tSh: { value: null }, tAlb: { value: null }, tSun: { value: null },
     w: W, lamp: LAMP, usarLamp: { value: 0 }, usarSol: { value: 0 }, solRGB: CIELO.sol, amb: CIELO.amb, sat: CIELO.sat, reb: CIELO.reb, kSol: CIELO.k },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
-  // con las lámparas apagadas se mezcla el horneado con luces (tA, tN) y el horneado sin ellas (tAo, tNo) según cuánta luz de ese texel viene de cada una
+  // la luz = el horneado sin lámparas (tAo, tNo) + lo que añaden las lámparas (el horneado con ellas menos sin ellas), en la cantidad que se les pida (lamp)
   // (tSh: parte que pone la barra de luz de noche; al atardecer solo hay barra)
   fragmentShader: `uniform sampler2D tD, tA, tN, tAo, tNo, tSh, tAlb, tSun; uniform vec3 w, solRGB; uniform vec2 lamp; uniform float usarLamp, usarSol, amb, sat, reb, kSol; varying vec2 vUv;
     void main(){
       vec4 d = texture2D(tD, vUv), on = d * w.x + texture2D(tA, vUv) * w.y + texture2D(tN, vUv) * w.z, c = on;
       if (usarLamp > .5) {
-        vec4 off = d * w.x + texture2D(tAo, vUv) * w.y + texture2D(tNo, vUv) * w.z;
-        float s = (w.y + w.z * texture2D(tSh, vUv).r) / max(w.y + w.z, 1e-4);
-        c = mix(off, on, clamp(lamp.x * s + lamp.y * (1. - s), 0., 1.));
+        vec4 ao = texture2D(tAo, vUv), no = texture2D(tNo, vUv), na = texture2D(tA, vUv), nn = texture2D(tN, vUv);
+        float ww = w.y + w.z + .02, sh = texture2D(tSh, vUv).r, s = (w.y + (w.z + .02) * sh) / ww;
+        vec4 luz = max((max(na - ao, 0.) * w.y + max(nn - no, 0.) * (w.z + .02)) / ww, 0.);      // la luz de las lámparas a esa hora (de día, la de noche)
+        c = d * w.x + ao * w.y + no * w.z + luz * clamp(lamp.x * s + lamp.y * (1. - s), 0., 1.);
       }
       if (usarSol > .5) {                                  // luz de cielo (con nubes) + sol directo y su rebote, por el color propio de cada material
         float directa = texture2D(tSun, vUv).r, rebote = textureLod(tSun, vUv, 4.).r;
@@ -95,16 +96,15 @@ export async function prepararHoras(meshes, cargando, rend) {
 }
 
 // pone en los materiales la luz del estado actual; devuelve true si ha cambiado algo
-let lampAplicada = new THREE.Vector2(1, 1), cieloAplicado = '';
+let lampAplicada = new THREE.Vector2(0, 0), cieloAplicado = '';
 function aplicar(forzar = false) {
   const w = W.value, cielo = `${CIELO.sol.value.toArray()}|${CIELO.amb.value}|${CIELO.sat.value}|${CIELO.reb.value}|${CIELO.k.value}`;
   if (!forzar && aplicados && aplicados.equals(w) && lampAplicada.equals(LAMP.value) && cielo === cieloAplicado) return false;
   aplicados = w.clone(); lampAplicada.copy(LAMP.value); cieloAplicado = cielo;
   const pura = [w.x, w.y, w.z].indexOf(1), anterior = renderer.getRenderTarget(), u = mezcla.material.uniforms;
-  const apagada = (LAMP.value.x < 1 || LAMP.value.y < 1) && w.x < 1;      // de día las lámparas no pintan nada en el horneado
   for (const j of juegos) {
-    const lamp = apagada && j.ext, sol = j.sol && sunTex;
-    let t = pura >= 0 && !(lamp && pura > 0) && !j.sol ? j.tex[pura] : null;
+    const lamp = j.ext, sol = j.sol && sunTex;
+    let t = pura >= 0 && !lamp && !j.sol ? j.tex[pura] : null;
     if (!t) {
       [u.tD.value, u.tA.value, u.tN.value] = j.tex; [u.tAo.value, u.tNo.value, u.tSh.value] = lamp ? j.ext : [j.tex[1], j.tex[2], j.tex[2]]; u.usarLamp.value = lamp ? 1 : 0;
       u.usarSol.value = sol ? 1 : 0; u.tSun.value = sunTex;

@@ -8,6 +8,9 @@ const GOTAS = 7000;
 // solo entra la que lleva el viento hacia ella, y la que llega choca contra el cristal en una franja cuya altura depende de lo inclinada que caiga
 const BALCON = { fondo: 1.12, cristal: 0.035, antepecho: 1.03, techo: 2.54, cristalBajo: 0.95 };      // metros (el cristal está a 3,5 cm de la pared de la ventana)
 const BORDE = BALCON.cristal + BALCON.fondo, DEG = Math.PI / 180;
+// el edificio tiene 7 plantas y la ventana está en la 5.ª: el viento que da de frente contra la fachada se frena y se desvía hacia arriba y a los lados, así que dentro del hueco del balcón
+// la lluvia lleva solo una parte de la inclinación que traía fuera (y la gota ya no cambia de dirección hasta chocar con el cristal)
+const ABRIGO = 0.55;
 // el viento en el cuarto: sopla DESDE `dir` (grados, norte = 0); devuelve cuánto empuja hacia la ventana (un) y a lo largo de ella, hacia la derecha mirando fuera (ux), en m/s
 function vientoEnVentana(kmh, dir) {
   const v = kmh / 3.6, a = (dir + 180) * DEG, e = v * Math.sin(a), n = v * Math.cos(a);              // hacia dónde va (este, norte)
@@ -16,6 +19,7 @@ function vientoEnVentana(kmh, dir) {
 // franja del cristal (alturas del mundo) que moja la lluvia con una inclinación rn (desplazamiento horizontal hacia la ventana por metro de caída)
 function franja(rn) {
   if (rn < 0.03) return new THREE.Vector3(9, -9, 0);
+  rn *= ABRIGO;
   const k = BALCON.fondo / rn;                                                                        // lo que cae una gota mientras cruza el balcón
   return new THREE.Vector3(BALCON.antepecho - k, BALCON.techo - k, Math.min(1, rn * 2.2));
 }
@@ -40,13 +44,16 @@ function crearGotas() {
       void main() {
         if (aRnd.y > uInt) { gl_Position = vec4(2., 2., 2., 1.); return; }
         float H = 5. + 0.5 * -aPos.z, y = mod(aPos.y - uTime * uSpeed * (0.85 + 0.3 * aRnd.x), H) - 0.8;
-        vec3 head = vec3(aPos.x - uRx * y, y, aPos.z - uRn * y), dir = normalize(vec3(uRx, -1., uRn)), tail = head - dir * uLen * (0.7 + 0.6 * aRnd.x);
+        vec3 head = vec3(aPos.x - uRx * y, y, aPos.z - uRn * y), dir = normalize(vec3(uRx, -1., uRn)), tail;
         float zd = -head.z;
-        if (zd < uBal.w) { gl_Position = vec4(2., 2., 2., 1.); return; }                  // ya ha chocado con el cristal
-        if (zd < uBal.x) {                                                                // bajo el techo del balcón: solo las que entraron por el hueco entre la barandilla y el techo
+        if (zd < uBal.x) {                                                                // en el hueco del balcón: solo las que entraron por entre la barandilla y el techo (el resto da contra el edificio)
           float ye = y + (uBal.x - zd) / max(uRn, 1e-3);
-          if (uRn < 0.02 || ye > uBal.z || ye < uBal.y) { gl_Position = vec4(2., 2., 2., 1.); return; }
+          if (uRn < 0.02 || ye > uBal.z || ye < uBal.y || y < 0.) { gl_Position = vec4(2., 2., 2., 1.); return; }
+          head = vec3(aPos.x - uRx * ye - ${ABRIGO} * uRx * (y - ye), y, -uBal.x - ${ABRIGO} * uRn * (y - ye));      // dentro, abrigada del viento: menos inclinación desde el borde
+          dir = normalize(vec3(${ABRIGO} * uRx, -1., ${ABRIGO} * uRn)); zd = -head.z;
+          if (zd < uBal.w) { gl_Position = vec4(2., 2., 2., 1.); return; }                // ya ha chocado con el cristal
         }
+        tail = head - dir * uLen * (0.7 + 0.6 * aRnd.x);
         vec4 c0 = projectionMatrix * viewMatrix * vec4(head, 1.), c1 = projectionMatrix * viewMatrix * vec4(tail, 1.);
         vec4 c = mix(c0, c1, position.y);
         c.x += position.x * uPx * 2. / uRes.x * c.w;                    // la caída es casi vertical: basta ensanchar en horizontal

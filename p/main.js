@@ -444,16 +444,18 @@ function animarLamparas(dt) {
   let cambia = false;
   if (!lamparas.listas) return;
   for (const k of ['barra', 'flexo']) {
-    const l = lamparas[k], luz = l.modo === 'off' ? 0 : 1, b = brilloLampara(k);
-    const nl = l.luz + Math.sign(luz - l.luz) * Math.min(Math.abs(luz - l.luz), dt / 300), nb = l.brillo + Math.sign(b - l.brillo) * Math.min(Math.abs(b - l.brillo), dt / 300);
-    if (nl !== l.luz || nb !== l.brillo) {
-      l.luz = nl; l.brillo = nb; cambia = true;
+    const l = lamparas[k], b = brilloLampara(k);
+    const nb = l.brillo + Math.sign(b - l.brillo) * Math.min(Math.abs(b - l.brillo), dt / 300);
+    if (nb !== l.brillo) {
+      l.luz = l.brillo = nb; cambia = true;
       if (l.glow) { l.glow.visible = nb > 0.01; l.glow.material.color.setRGB(2.6 * nb, 2.1 * nb, 1.5 * nb); }
     }
   }
   if (cambia) { Horas.fijarLamparas(lamparas.barra.luz, lamparas.flexo.luz); estado.sucio = true; }
 }
 function construirResplandor() {
+  for (const k of ['barra', 'flexo']) lamparas[k].luz = lamparas[k].brillo = brilloLampara(k);
+  Horas.fijarLamparas(lamparas.barra.luz, lamparas.flexo.luz);
   const glow = (r, geo, padre, pos) => {
     const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x000000, toneMapped: false, side: THREE.DoubleSide }));
     m.rotation.x = Math.PI / 2; m.position.copy(pos); m.visible = false; m.raycast = () => {}; padre.add(m); lamparas[r].glow = m;
