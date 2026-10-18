@@ -1,5 +1,5 @@
 // Versión móvil: en pantallas táctiles (o con #movil=1) se mira alrededor deslizando el dedo, y en vertical la vista se abre para que quepa más cuarto.
-//  - deslizar a izquierda/derecha gira la cámara (hasta ±62°) para ver la habitación entera; arriba/abajo, un poco (±16°); al soltar, sigue con inercia y se queda donde la dejes
+//  - deslizar gira la cámara, pero solo hasta cubrir lo que se ve en un ordenador (16:9) con esa misma vista: más allá están los lados sin modelar del cuarto; al soltar, sigue con inercia y se queda donde la dejes
 //  - tocar sin arrastrar es un clic de siempre (se ignora el clic que sigue a un arrastre)
 //  - en vertical, el campo de visión horizontal no baja de unos 55° (camera.zoom < 1), que de otro modo solo cabría una rendija
 import * as THREE from 'three';
@@ -8,7 +8,13 @@ const hash = new URLSearchParams(location.hash.slice(1));
 export const esMovil = hash.get('movil') === '1' || (matchMedia('(pointer: coarse)').matches && !hash.get('movil'));
 if (esMovil) document.documentElement.classList.add('movil');
 
-const DEG = Math.PI / 180, YAW_MAX = 62 * DEG, PITCH_MAX = 16 * DEG;
+const DEG = Math.PI / 180;
+let camaraMovil = null;
+// cuánto se puede girar: la diferencia entre lo que abarca una pantalla de ordenador (16:9, zoom 1) y lo que abarca esta, en horizontal y en vertical
+export function limites() {
+  const c = camaraMovil, t = Math.tan(c.fov * DEG / 2);
+  return { yaw: Math.max(0, Math.atan(t * 16 / 9) - Math.atan(t * c.aspect / c.zoom)), pitch: Math.max(0, c.fov * DEG / 2 - Math.atan(t / c.zoom)) };
+}
 export const giro = { yaw: 0, pitch: 0, vyaw: 0, vpitch: 0, arrastrando: false, arrastro: false, activo: false };
 
 // zoom de la cámara según la forma de la pantalla: 1 en horizontal; en vertical se ensancha el campo vertical para que el horizontal no quede en una rendija
@@ -16,6 +22,7 @@ export function zoomPara(aspecto) { return aspecto >= 1.3 ? 1 : Math.min(1, Math
 
 export function iniciarMovil({ lienzo, camera, puedeGirar, alMover }) {
   if (!esMovil) return;
+  camaraMovil = camera;
   let ultimo = null, inicio = null, t0 = 0, vx = 0, vy = 0;
   const pxARad = () => (2 * Math.atan(Math.tan(camera.fov * DEG / 2) * camera.aspect / camera.zoom)) / innerWidth;     // lo que gira la cámara por píxel: el dedo arrastra la escena
   lienzo.style.touchAction = 'none';
@@ -31,7 +38,7 @@ export function iniciarMovil({ lienzo, camera, puedeGirar, alMover }) {
     if (!giro.arrastro && Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 9) giro.arrastro = true;
     if (!giro.arrastro) return;
     const ahora = performance.now(), dt = Math.max(1, ahora - t0); t0 = ahora;
-    giro.yaw = THREE.MathUtils.clamp(giro.yaw + dx * k, -YAW_MAX, YAW_MAX); giro.pitch = THREE.MathUtils.clamp(giro.pitch + dy * k * 0.7, -PITCH_MAX, PITCH_MAX);
+    const L = limites(); giro.yaw = THREE.MathUtils.clamp(giro.yaw + dx * k, -L.yaw, L.yaw); giro.pitch = THREE.MathUtils.clamp(giro.pitch + dy * k * 0.7, -L.pitch, L.pitch);
     vx = 0.8 * vx + 0.2 * (dx * k / dt); vy = 0.8 * vy + 0.2 * (dy * k * 0.7 / dt);
     ultimo = { x: e.clientX, y: e.clientY }; giro.activo = true; alMover();
   });
@@ -42,10 +49,11 @@ export function iniciarMovil({ lienzo, camera, puedeGirar, alMover }) {
 // un paso por fotograma: la inercia frena sola. Devuelve true si la cámara sigue moviéndose
 export function pasoGiro(dt) {
   if (!giro.activo || giro.arrastrando) return giro.arrastrando;
-  const f = Math.exp(-dt / 280);
-  giro.yaw = THREE.MathUtils.clamp(giro.yaw + giro.vyaw * dt / 1000, -YAW_MAX, YAW_MAX); giro.pitch = THREE.MathUtils.clamp(giro.pitch + giro.vpitch * dt / 1000, -PITCH_MAX, PITCH_MAX);
+  const f = Math.exp(-dt / 280), L = limites();
+  giro.yaw = THREE.MathUtils.clamp(giro.yaw + giro.vyaw * dt / 1000, -L.yaw, L.yaw); giro.pitch = THREE.MathUtils.clamp(giro.pitch + giro.vpitch * dt / 1000, -L.pitch, L.pitch);
   giro.vyaw *= f; giro.vpitch *= f;
-  if (Math.abs(giro.yaw) >= YAW_MAX) giro.vyaw = 0;
+  if (Math.abs(giro.yaw) >= L.yaw) giro.vyaw = 0;
+  if (Math.abs(giro.pitch) >= L.pitch) giro.vpitch = 0;
   if (Math.abs(giro.vyaw) < 0.01 && Math.abs(giro.vpitch) < 0.01) { giro.vyaw = giro.vpitch = 0; return false; }
   return true;
 }

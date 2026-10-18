@@ -31,6 +31,7 @@ body { font-family: 'VT323', monospace; color: var(--ink); font-size: 22px; }
 }
 .px-btn:hover { background: var(--glow); transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--shadow); }
 #back { position: fixed; top: 18px; left: 18px; }
+#plegar { position: fixed; top: 12px; right: 10px; display: none; }
 #loading {
   position: fixed; inset: 0; display: grid; place-items: center; background: #1c1322; color: var(--glow);
   font-size: 30px; transition: opacity .6s;
@@ -144,6 +145,9 @@ html.movil #stage canvas { touch-action: none; }
   .book.opening .page.right { animation: none; }
   #hint { font-size: 19px; bottom: 76px; width: 86vw; text-align: center; }
   #back { top: 12px; left: 10px; }
+  #plegar:not([hidden]) { display: block; }
+  #panel.plegado { display: none !important; }
+  #panel.plegado ~ #reloj { display: flex; }
   #reloj { right: 10px; bottom: 12px; }
   #panel:not([hidden]) ~ #reloj { display: none; }
   .card.bocadillo { max-height: none; }

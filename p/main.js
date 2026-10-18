@@ -388,7 +388,7 @@ const tooltip = document.getElementById('tooltip'), hint = document.getElementBy
 const backBtn = document.getElementById('back'), panel = document.getElementById('panel');
 let state = 'home', flight = null, hoverKey = null;
 const currentLook = VIEWS.home.look.clone(), mouseN = new THREE.Vector2(), miradaV = new THREE.Vector3();
-iniciarMovil({ lienzo: renderer.domElement, camera, puedeGirar: () => !flight && (state === 'home' || state === 'pizarra'), alMover: () => { estado.sucio = true; } });
+iniciarMovil({ lienzo: renderer.domElement, camera, puedeGirar: () => !flight && state !== 'intro' && state !== 'entrando' && (state === 'home' || state === 'pizarra' || plegado), alMover: () => { estado.sucio = true; } });
 
 function hitTest(ev) {
   ndc.set((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
@@ -636,7 +636,7 @@ renderer.domElement.addEventListener('click', ev => {
     if (HUEVOS.has(h.key)) { huevoClic(h.key); return; }
     openSection(h.key);
   } else if (state === 'sobremi' && fotoBajo(ev) >= 0 && !panel.contains(ev.target)) { mostrarFoto(fotoBajo(ev)); }
-  else if (!panel.contains(ev.target)) goHome();
+  else if (!panel.contains(ev.target) && !esMovil) goHome();          // en el móvil se sale con «Volver»: un toque en la escena con el panel minimizado no debe sacarte
 });
 addEventListener('keydown', e => { if (state === 'intro') return zoomPegatina ? (!flight && ponerZoomPegatina(false)) : entrar();
   if (e.key === 'Escape' && state !== 'home' && !flight) goHome(); });
@@ -673,6 +673,12 @@ function goHome() {
 }
 
 // ---------------------------------------------------------------- paneles
+// en pantallas estrechas el panel ocupa todo: un botón lo minimiza para tocar y mover la escena (el espejo y sus fotos, el monitor, el libro) y lo vuelve a abrir
+const plegarBtn = document.getElementById('plegar');
+let plegado = false;
+function ponerPlegado(v) { plegado = v; panel.classList.toggle('plegado', v); plegarBtn.textContent = v ? T.abrir : T.plegar; estado.sucio = true; }
+plegarBtn.addEventListener('click', () => ponerPlegado(!plegado));
+new MutationObserver(() => { plegarBtn.hidden = panel.hidden; if (panel.hidden) ponerPlegado(false); }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
 const todo = s => PENDIENTE.test(s) ? `<span class="todo">${s}</span>` : s;
 function screenRect(mesh) {
   camera.updateMatrixWorld(); mesh.updateWorldMatrix(true, false);
@@ -699,7 +705,7 @@ function fotoBajo(ev) {                                           // índice de 
 }
 function mostrarFoto(i) {
   const f = FOTOS[i]; if (!f) return;
-  panel.hidden = false; panel.className = '';
+  panel.hidden = false; panel.className = ''; ponerPlegado(false);
   panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = '';
   Object.assign(panel.style, { left: '', right: '4vw', top: '50%', transform: 'translateY(-50%)', width: 'min(470px, 36vw)', height: '' });
   panel.replaceChildren(Object.assign(document.createElement('div'), { className: 'card bocadillo',
@@ -709,7 +715,7 @@ function mostrarFoto(i) {
 function showPanel(key) {
   // la animación de entrada arranca sola al dejar de estar oculto; solo si ya se veía hay que reiniciarla
   if (!panel.hidden) { panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = ''; }
-  backBtn.hidden = false; panel.hidden = false; panel.className = '';
+  backBtn.hidden = false; panel.hidden = false; panel.className = ''; ponerPlegado(false);
   if (key === 'proyectos') {
     const r = screenRect(objects.screen);
     Object.assign(panel.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', transform: '', right: '' });
@@ -981,7 +987,7 @@ function frame(now) {
     const amp = enIntro ? (zoomPegatina ? 0.05 : 1) : state === 'home' ? 1 : state === 'pizarra' ? 0.25 : 0;
     tmp.set(mouseN.x * (enIntro ? 0.05 : 0.06) * amp, -mouseN.y * (enIntro ? 0.03 : 0.04) * amp, 0).add(v.pos);
     seguir(suave, tmp, dt / 1000);
-    const mira = esMovil && giro.activo && (state === 'home' || state === 'pizarra') ? mirada(v.pos, v.look, suave, miradaV) : v.look;
+    const mira = esMovil && giro.activo && !enIntro ? mirada(v.pos, v.look, suave, miradaV) : v.look;
     ponerCamara(suave, mira, v.fov); currentLook.copy(v.look);
   }
   if (mesa.anim) {                                          // mesa regulable: sube o baja girando la manivela
