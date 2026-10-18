@@ -129,7 +129,7 @@ function construirMesaRegulable(room) {
   // la mesa que queda fija: cajonera y pies
   base.geometry = construir(tris.resto);
   // lo que lleva encima sube con ella
-  for (const n of ['alfombrilla', 'barra_luz', 'libro', 'mesita_portatil', 'monitor', 'monitor2', 'portatil', 'raton', 'teclado_k295', 'vaso', 'vaso001']) {
+  for (const n of ['alfombrilla', 'barra_luz', 'mando_luz', 'libro', 'mesita_portatil', 'monitor', 'monitor2', 'portatil', 'raton', 'teclado_k295', 'vaso', 'vaso001']) {
     const o = room.getObjectByName(n); if (o) grupo.attach(o);
   }
   room.updateMatrixWorld(true);
@@ -186,6 +186,7 @@ async function loadRoom() {
     if (n === 'flexo') objects.flexo = o;
     if (n === 'flexo_pantalla') objects.flexoPantalla = o;
     if (n === 'barra_luz') objects.barraLuz = o;
+    if (n === 'mando_luz') objects.mandoLuz = o;
     if (n === 'monitor_pantalla') objects.screen = o;
   });
   // la mesa corrida 3 cm, el flexo en su hueco, la pizarra y el libro torcidos ya vienen así del horneado (blender/cuarto.py)
@@ -404,7 +405,7 @@ function hitTest(ev) {
   if (objects.balon && o === objects.balon.bola) return { key: 'balon' };
   const pz = persiana.estores.findIndex(e => e.zona === o); if (pz >= 0) return { key: 'persiana' + pz };
   if (lamparas.listas && (o === objects.flexo || o === objects.flexoPantalla || o.parent === objects.flexoPantalla)) return { key: 'flexo' };
-  if (lamparas.listas && (o === objects.barraLuz || o.parent === objects.barraLuz)) return { key: 'barra' };
+  if (lamparas.listas && (o === objects.barraLuz || o.parent === objects.barraLuz || o === objects.mandoLuz)) return { key: 'barra' };
   if (o === objects.boardFace || o === objects.pizarra) {
     // qué línea de la pizarra: la coordenada v de la textura en el punto tocado
     const v = o === objects.boardFace && hit.uv ? hit.uv.y : -1;
@@ -461,7 +462,7 @@ function construirResplandor() {
     m.rotation.x = Math.PI / 2; m.position.copy(pos); m.visible = false; m.raycast = () => {}; padre.add(m); lamparas[r].glow = m;
   };
   const b = objects.barraLuz;                                        // la barra: una tira cálida en su cara de abajo, hacia la mesa
-  if (b) { b.geometry.computeBoundingBox(); const bb = b.geometry.boundingBox, c = bb.getCenter(new THREE.Vector3()); glow('barra', new THREE.PlaneGeometry(0.05, 0.46), b, new THREE.Vector3(c.x, bb.min.y - 0.0006, c.z)); }
+  if (b) { b.geometry.computeBoundingBox(); const bb = b.geometry.boundingBox, c = bb.getCenter(new THREE.Vector3()); glow('barra', new THREE.PlaneGeometry(0.02, 0.40), b, new THREE.Vector3(bb.max.x - 0.012, bb.min.y - 0.0006, c.z)); }
   const f = objects.flexoPantalla;                                   // el flexo: el hueco de la pantalla (el lado ancho del cono, que mira a la cama)
   if (f) {
     const P = f.geometry.attributes.position; let sA = 0, nA = 0, sB = 0, nB = 0;
