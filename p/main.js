@@ -28,11 +28,6 @@ const VIEWS = {
   experiencia: V([1.06, 1.50, 2.30], [1.06, 1.25, -2.0], 52),
   espejoTercera: V([1.30, 1.70, 3.30], [1.90, 0.95, 2.30], 62),
 };
-const FLEXO_POLO = (hash.get('flexo') ?? '0.18,1.075').split(',').map(Number);   // x, z del palo del flexo (#flexo=x,z para probar otra posición)
-const FLEXO_PIE = (hash.get('pie') ?? '0.02,-0.075').split(',').map(Number);   // desplazamiento (x, z) del pie respecto al palo
-const LIBRO_GIRO = +(hash.get('lg') ?? 0.3);   // rad que se tuerce el libro sobre la mesa (#lg=0 lo deja recto)
-const RETOQUES = hash.get('retoques') === '1';   // solo para comparar: aplica en JS lo que ya viene horneado (mesa corrida, flexo, pizarra y libro) y vale con el horneado viejo
-const MESA_DESPLAZ = 0.03;   // m que se corre la mesa (y lo que lleva) hacia la puerta, para dejar sitio al palo del flexo
 const ESPEJO_INCL = +(hash.get('lean') ?? 0.14);   // rad que se separa de la pared por abajo (0,14 ≈ 8°; antes 0,22 ≈ 12,6°; #lean=0.22 para compararlo)
 const SOBREMI = (hash.get('sm') ?? '0.7,1.45,1.25,52').split(',').map(Number);   // vista de "Sobre mí": distancia al espejo, altura de los ojos, altura a la que mira, campo de visión (#sm=… para probar)
 const BALON_POS = (hash.get('balon') ?? '2.36,1.99').split(',').map(Number);   // x, z del balón sobre la cómoda (#balon=x,z)
@@ -40,8 +35,6 @@ const BALON_YAW = +(hash.get('byaw') ?? -Math.PI / 4), BALON_GIRO = Math.PI / 2;
 const PARED_X = 2.60;   // pared de la estantería y la cómoda (ancho del cuarto)
 const MARCO_ESPEJO = '#dccdb6';   // madera clara del marco del espejo (medida del vídeo de referencia, f_016)
 const lineasPizarra = {};   // línea del menú -> { malla resaltada, opacidad actual y objetivo }
-const PIZARRA_GIRO = +(hash.get('piz') ?? 0.5);   // rad extra sobre el giro horneado (0,25); #piz=0 la deja como estaba
-const PIZARRA_INCL = +(hash.get('inc') ?? 0.1);   // rad que cae hacia atrás la parte de arriba (0,1 rad ≈ 6°)
 const SECTIONS = T.secciones;
 // zonas de la pizarra (altura relativa en la cara blanca, de abajo arriba) — igual que blender/tex.py BOARD_ITEMS
 const BOARD_ITEMS = [['proyectos', 0.60], ['educacion', 0.47], ['experiencia', 0.34], ['sobremi', 0.21]];
@@ -205,45 +198,9 @@ async function loadRoom() {
     if (n === 'barra_luz') objects.barraLuz = o;
     if (n === 'monitor_pantalla') objects.screen = o;
   });
-  // el flexo azul de pie va pegado a la pared izquierda, en el hueco entre la mesa y la cama (en Blender está junto a la mesa, en x = 0,90 y z = 1,16):
-  // se lleva allí entero (base, palo, brazo y pantalla) girándolo sobre su base para que el brazo siga apuntando a la cama como antes
-  // en el modelo la cama (hasta z = 1,06) y la mesa (desde z = 1,06) se tocan y no cabe el palo del flexo: la mesa, con todo lo que lleva encima
-  // o debajo, se corre 3 cm hacia la puerta (la cama y las medidas reales no se tocan) y queda la rendija de 3 cm por donde pasa el palo
-  room.updateMatrixWorld(true);
-  const sobreMesa = new Set(['mesa', 'barra_luz', 'libro', 'mesita_portatil', 'monitor001', 'monitor_pantalla', 'monitor2001', 'monitor2_pantalla', 'portatil001', 'portatil_pantalla', 'raton', 'teclado', 'vaso', 'vaso001']);
-  if (RETOQUES) room.traverse(o => { if (o.isMesh && sobreMesa.has(o.name)) { const w = o.getWorldPosition(new THREE.Vector3()); w.z += MESA_DESPLAZ; o.position.copy(o.parent.worldToLocal(w)); } });
+  // la mesa corrida 3 cm, el flexo en su hueco, la pizarra y el libro torcidos ya vienen así del horneado (blender/cuarto.py)
   room.updateMatrixWorld(true);
   construirMesaRegulable(room);
-  if (RETOQUES && objects.flexo && objects.flexoPantalla) {
-    const [px, pz] = FLEXO_POLO, v0 = new THREE.Vector2(0.38 - 0.90, 0.60 - 1.16), v1 = new THREE.Vector2(0.36 - px, 0.58 - pz);   // brazo de antes / hacia donde apunta
-    const ang = v => Math.atan2(v.x, v.y), th = ang(v1) - ang(v0), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), th);
-    const base0 = objects.flexo.position.clone(), base1 = new THREE.Vector3(px, base0.y, pz);
-    // el pie (disco de 12 cm) se descentra hacia la cama, bajo el somier: en el otro lado hay un larguero de la mesa en el suelo y el rodapié, y el palo
-    // queda en la rendija. Los vértices del pie son los que están a ras de suelo (y local -0,0125 y 0,0125); el palo empieza en y = -0,0025
-    {
-      const g = objects.flexo.geometry, pos = g.attributes.position, d = new THREE.Vector3(FLEXO_PIE[0], 0, FLEXO_PIE[1]).applyQuaternion(q.clone().invert());
-      g.setAttribute('position', pos.clone()); const P = g.attributes.position;
-      for (let i = 0; i < P.count; i++) { const y = P.getY(i); if (y < -0.01 || Math.abs(y - 0.0125) < 0.003) P.setXYZ(i, P.getX(i) + d.x, y, P.getZ(i) + d.z); }
-      P.needsUpdate = true; g.computeBoundingBox(); g.computeBoundingSphere();
-    }
-    for (const o of [objects.flexo, objects.flexoPantalla]) {
-      o.position.copy(o.position.clone().sub(base0).applyQuaternion(q).add(base1)); o.quaternion.premultiply(q); o.updateMatrix(); o.updateMatrixWorld(true);
-    }
-  }
-  // la pizarra se gira un poco más hacia el escritorio y se inclina hacia atrás (la parte de arriba), apoyada por detrás en la KALLAX
-  // y rozando la esquina de la cama; se coloca calculando sus esquinas para que no atraviese nada (ni la cómoda): el borde de arriba
-  // que más sobresale toca la cara de la KALLAX (x = 2,21) y el borde de abajo del lado de la cama, la cama (z = 1,06)
-  if (RETOQUES && objects.pizarra?.parent) {
-    const piz = objects.pizarra.parent, Y = new THREE.Vector3(0, 1, 0);
-    const n0 = new THREE.Vector3(-1, 0, 0).applyQuaternion(piz.quaternion), giro = Math.atan2(n0.z, -n0.x) + PIZARRA_GIRO;   // giro horneado + el extra
-    piz.quaternion.setFromAxisAngle(Y, giro).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -PIZARRA_INCL));
-    const P = (x, y, z) => new THREE.Vector3(x, y, z).applyQuaternion(piz.quaternion);
-    const esq = [], bajo = [];
-    for (const x of [-0.0125, 0.0125]) for (const y of [0, 0.95]) for (const z of [-0.33, 0.33]) esq.push(P(x, y, z));
-    for (const x of [-0.0125, 0.0125]) for (const y of [0, 0.669]) bajo.push(P(x, y, -0.33));     // la parte que queda a la altura de la cama
-    piz.position.set(2.205 - Math.max(...esq.map(v => v.x)), -Math.min(...esq.map(v => v.y)), 1.065 - Math.min(...bajo.map(v => v.z)));
-    piz.updateMatrixWorld(true);
-  }
   // las piezas fijas que no se tocan (paredes, cama, mesa, teclado…) van en una sola malla: muchas menos llamadas de dibujo,
   // que en un portátil cuestan CPU en la página y en el proceso de GPU del navegador (cada una se traduce a Direct3D)
   {
@@ -284,7 +241,7 @@ async function loadRoom() {
   {
     const t = await alfombrilla;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.90, 0.35), new THREE.MeshBasicMaterial({ map: t, color: '#ffffff' }));
-    m.rotation.set(-Math.PI / 2, 0, Math.PI / 2); m.position.set(0.605, 0.8445, 1.83 + MESA_DESPLAZ); scene.add(m); objects.alfombrilla = m; mesa.grupo?.attach(m);
+    m.rotation.set(-Math.PI / 2, 0, Math.PI / 2); m.position.set(0.605, 0.8445, 1.86); scene.add(m); objects.alfombrilla = m; mesa.grupo?.attach(m);
     if (mesa.grupo && hash.get('mesa') != null) { mesa.arriba = +hash.get('mesa') > 0.5; ponerMesa(+hash.get('mesa')); }   // solo para revisar
   }
   construirPersiana(room);
@@ -292,7 +249,7 @@ async function loadRoom() {
   try {
     const lb = room.getObjectByName('libro'), portada = await cargarTextura(base + 'libro_portada.webp');
     lb.geometry.computeBoundingBox(); const bb = lb.geometry.boundingBox, c = bb.getCenter(new THREE.Vector3());
-    const mapa = new THREE.Mesh(new THREE.PlaneGeometry(0.158, 0.236), new THREE.MeshBasicMaterial({ map: portada, color: '#ffffff' }));
+    const mapa = new THREE.Mesh(new THREE.PlaneGeometry(bb.max.x - bb.min.x, bb.max.z - bb.min.z), new THREE.MeshBasicMaterial({ map: portada, color: '#ffffff' }));
     mapa.rotation.x = -Math.PI / 2;   // la portada se lee desde la puerta (el lado largo del libro va a lo largo de z, y su parte de arriba mira hacia la ventana)
     mapa.position.set(c.x, bb.max.y + 0.0007, c.z); lb.add(mapa); objects.libro.push(mapa); objects.portada = mapa;
     // el canto del libro: las páginas se ven blancas (con sus hojas) por tres lados; el lomo, a la izquierda de la portada, sigue siendo de la tapa
@@ -302,7 +259,6 @@ async function loadRoom() {
     const eps = 0.0006, tapa = 0.0045, lomo = 0.012;
     const paginas = new THREE.Mesh(new THREE.BoxGeometry(bb.max.x - bb.min.x - lomo + eps, bb.max.y - bb.min.y - 2 * tapa, bb.max.z - bb.min.z + 2 * eps), new THREE.MeshBasicMaterial({ map: tp, color: '#ffffff' }));
     paginas.position.set((bb.min.x + lomo + bb.max.x + eps) / 2, (bb.min.y + bb.max.y) / 2, c.z); lb.add(paginas); objects.libro.push(paginas); objects.paginas = paginas;
-    if (RETOQUES) { lb.rotation.y = LIBRO_GIRO; lb.position.add(c.clone().sub(c.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), LIBRO_GIRO))); }
     lb.updateMatrixWorld(true);
   } catch (e) { console.warn('sin portada', e); }
   // luz según la hora de Valencia (si existen los horneados de día y noche)
@@ -759,7 +715,7 @@ function showPanel(key) {
   } else if (key === 'educacion') {
     Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(94vw, 124vh)', height: '', right: '' });   // el libro abierto son dos A4 (420 x 297): ancho = 1,414 x alto
     const half = Math.ceil(EDUCATION.length / 2);
-    const page = list => list.map(e => e.items ? `<h3>${todo(e.what)}</h3><ul>${e.items.map(i => `<li>${todo(i)}</li>`).join('')}</ul>` : `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`).join('');
+    const page = list => list.map(e => e.items ? `<h3>${todo(e.what)}</h3><ul>${e.items.map(i => `<li>${todo(i)}</li>`).join('')}</ul>` : `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>${e.honores ? `<p>${e.honores.label}:</p><ul>${e.honores.items.map(i => `<li><a href="${i.href}" target="_blank" rel="noopener">${i.t}</a></li>`).join('')}</ul>` : ''}`).join('');
     poner(key, () => `<div class="book"><div class="page left"><h2>${SECTIONS.educacion}</h2>${page(EDUCATION.slice(0, half))}</div><div class="page right">${page(EDUCATION.slice(half))}</div></div>`);
   }
 }
