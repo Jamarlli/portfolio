@@ -1,7 +1,6 @@
-// Versión móvil: en pantallas táctiles (o con #movil=1) se mira alrededor deslizando el dedo, y en vertical la vista se abre para que quepa más cuarto.
+// Versión móvil: en pantallas táctiles (o con #movil=1) se mira alrededor deslizando el dedo. Las vistas son las mismas que en el ordenador (mismo encuadre y mismo zoom); lo que no cabe en el ancho de la pantalla se ve girando.
 //  - deslizar gira la cámara, pero solo hasta cubrir lo que se ve en un ordenador (16:9) con esa misma vista: más allá están los lados sin modelar del cuarto; al soltar, sigue con inercia y se queda donde la dejes
 //  - tocar sin arrastrar es un clic de siempre (se ignora el clic que sigue a un arrastre)
-//  - en vertical, el campo de visión horizontal no baja de unos 55° (camera.zoom < 1), que de otro modo solo cabría una rendija
 import * as THREE from 'three';
 
 const hash = new URLSearchParams(location.hash.slice(1));
@@ -17,8 +16,8 @@ export function limites() {
 }
 export const giro = { yaw: 0, pitch: 0, vyaw: 0, vpitch: 0, arrastrando: false, arrastro: false, activo: false };
 
-// zoom de la cámara según la forma de la pantalla: 1 en horizontal; en vertical se ensancha el campo vertical para que el horizontal no quede en una rendija
-export function zoomPara(aspecto) { return aspecto >= 1.3 ? 1 : Math.min(1, Math.max(0.62, Math.pow(aspecto / 1.3, 0.7))); }
+// zoom de la cámara: siempre 1, el de un ordenador (el encuadre de cada vista no cambia con la forma de la pantalla)
+export function zoomPara() { return 1; }
 
 export function iniciarMovil({ lienzo, camera, puedeGirar, alMover }) {
   if (!esMovil) return;
