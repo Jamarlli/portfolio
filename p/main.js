@@ -184,7 +184,7 @@ async function loadRoom() {
     if (n.startsWith('espejo_cristal')) { mirrors.push(o); return; }
     // los cristales no se pueden tocar (el clic los atraviesa): ni se prueban en el raycast
     if (n.startsWith('cristal')) { o.material = new THREE.MeshBasicMaterial({ color: '#dfe9f2', transparent: true, opacity: 0.08, depthWrite: false }); o.raycast = () => {}; return; }
-    if (n.startsWith('vaso')) { o.material = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.22, depthWrite: false }); o.raycast = () => {}; return; }
+    if (n.startsWith('vaso')) { o.visible = false; o.raycast = () => {}; return; }   // el vaso de leche ya no está en el cuarto
     o.material = new THREE.MeshBasicMaterial({ map, color: map ? 0xffffff : src.color, side: THREE.FrontSide });
     if (/^monitor(\d|_)/.test(n) && !n.startsWith('monitor2')) objects.monitor.push(o);   // cuerpo (monitor001) y pantalla
     if (n.startsWith('libro')) objects.libro.push(o);
@@ -251,10 +251,12 @@ async function loadRoom() {
     lb.geometry.computeBoundingBox(); const bb = lb.geometry.boundingBox, c = bb.getCenter(new THREE.Vector3());
     const mapa = new THREE.Mesh(new THREE.PlaneGeometry(bb.max.x - bb.min.x, bb.max.z - bb.min.z), new THREE.MeshBasicMaterial({ map: portada, color: '#ffffff' }));
     mapa.rotation.x = -Math.PI / 2;   // la portada se lee desde la puerta (el lado largo del libro va a lo largo de z, y su parte de arriba mira hacia la ventana)
+    // la tapa y el lomo son del color de fondo de la portada (la mediana de los píxeles del borde que no son blancos): al cambiar la imagen se recalcula sola
+    lb.material = new THREE.MeshBasicMaterial({ color: colorDeFondo(portada.image) }); lb.material.userData.base = lb.material.color.clone(); objects.tomo = lb;
     mapa.position.set(c.x, bb.max.y + 0.0007, c.z); lb.add(mapa); objects.libro.push(mapa); objects.portada = mapa;
     // el canto del libro: las páginas se ven blancas (con sus hojas) por tres lados; el lomo, a la izquierda de la portada, sigue siendo de la tapa
     const cv = document.createElement('canvas'); cv.width = 4; cv.height = 64; const cx = cv.getContext('2d');
-    cx.fillStyle = '#bdb7a8'; cx.fillRect(0, 0, 4, 64); cx.fillStyle = '#9d978a'; for (let y = 3; y < 64; y += 4) cx.fillRect(0, y, 4, 1);
+    cx.fillStyle = '#e2ddd0'; cx.fillRect(0, 0, 4, 64); cx.fillStyle = '#c4beaf'; for (let y = 3; y < 64; y += 4) cx.fillRect(0, y, 4, 1);
     const tp = new THREE.CanvasTexture(cv); tp.colorSpace = THREE.SRGBColorSpace; tp.magFilter = THREE.NearestFilter; tp.minFilter = THREE.NearestFilter;
     const eps = 0.0006, tapa = 0.0045, lomo = 0.012;
     const paginas = new THREE.Mesh(new THREE.BoxGeometry(bb.max.x - bb.min.x - lomo + eps, bb.max.y - bb.min.y - 2 * tapa, bb.max.z - bb.min.z + 2 * eps), new THREE.MeshBasicMaterial({ map: tp, color: '#ffffff' }));
@@ -479,6 +481,19 @@ function construirResplandor() {
 const PERSIANA_Y = { abajo: 1.02, arriba: 2.075 };   // y (m, mundo) del centro de la barra con el estor todo abajo / todo arriba
 const BANDA = 0.022;                                  // alto de cada banda de la tela con el estor estirado (encogen hasta un 25 % al recogerlo)
 const persiana = { malla: null, estores: [] };
+// color de fondo de una portada: mediana (por canal) de los píxeles del marco exterior de la imagen que no son blancos (el blanco es del fondo de la foto o del rótulo)
+function colorDeFondo(img) {
+  const N = 32, c = document.createElement('canvas'); c.width = c.height = N;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, N, N);
+  const d = x.getImageData(0, 0, N, N).data, canal = [[], [], []];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    if (i >= 5 && i < N - 5 && j >= 5 && j < N - 5) continue;
+    const k = (j * N + i) * 4; if (d[k] > 225 && d[k + 1] > 225 && d[k + 2] > 225) continue;
+    for (let q = 0; q < 3; q++) canal[q].push(d[k + q]);
+  }
+  const med = a => a.length ? a.sort((p, q) => p - q)[a.length >> 1] : 128;
+  return new THREE.Color().setRGB(...canal.map(a => med(a) / 255), THREE.SRGBColorSpace);
+}
 function construirPersiana(room) {
   const o = room.getObjectByName('estor'); if (!o) return;
   const g = o.geometry, P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv, I = g.index, n = P.count;
@@ -1002,6 +1017,7 @@ function frame(now) {
       if (objects.balon) { const f = Math.min(1, 0.35 + 0.65 * (r.d + 0.9 * r.a + 0.3 * r.n)); objects.balon.hemi.intensity = 1.55 * f; objects.balon.sol.intensity = 1.25 * f * (1 - 0.7 * r.n); objects.balon.sombra.material.opacity = 0.5 + 0.4 * f; }
       if (objects.matFotos) { const f = Math.min(1, 1.0 * r.d + 0.9 * r.a + 0.36 * r.n); for (const m of objects.matFotos) m.color.setScalar(f); }
       if (objects.marcoEspejo) { const f = 1.0 * r.d + 0.9 * r.a + 0.36 * r.n, c = new THREE.Color(MARCO_ESPEJO); for (const m of objects.marcoEspejo) m.color.copy(c).multiplyScalar(f * m.userData.k); }
+      if (objects.tomo) { const b = objects.tomo.material.userData.base; objects.tomo.material.color.setRGB(b.r * (0.95 * r.d + 0.85 * r.a + 0.32 * r.n), b.g * (0.93 * r.d + 0.72 * r.a + 0.30 * r.n), b.b * (0.90 * r.d + 0.68 * r.a + 0.42 * r.n)); }
       for (const m of [objects.alfombrilla, objects.portada, objects.paginas]) if (m) m.material.color.setRGB(0.95 * r.d + 0.85 * r.a + 0.32 * r.n, 0.93 * r.d + 0.72 * r.a + 0.30 * r.n, 0.90 * r.d + 0.68 * r.a + 0.42 * r.n);
     }
     const hh = Math.floor(r.h) % 24, mm = Math.round((r.h % 1) * 60) % 60;
