@@ -4,7 +4,7 @@
 //
 // Dos modos:
 //  - clásico: los horneados llevan el sol de esa hora ya cocinado (día, atardecer, noche).
-//  - sol dinámico (si están cuarto_luz_dia_nosol.png, cuarto_luz_atardecer_nosol.png y cuarto_albedo.png): los horneados son solo la luz del cielo y el sol
+//  - sol dinámico (si están cuarto_luz_dia_nosol.webp, cuarto_luz_atardecer_nosol.webp y cuarto_albedo.webp): los horneados son solo la luz del cielo y el sol
 //    directo se suma encima en directo (soldirecto.js: dónde está de verdad el sol, con sus sombras), atenuado por las nubes.
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
@@ -70,17 +70,17 @@ function juego(dia, atar, noche, sol) {
 }
 
 // empieza a descargar los horneados de cada hora (a la vez que el cuarto). Las últimas son opcionales (null si faltan)
-const OBLIGATORIAS = ['cuarto_luz_dia.webp', 'cuarto_luz_noche.webp', 'vista_dia.webp', 'vista_noche.webp', 'vista_atardecer.webp'];
-const OPCIONALES = ['cuarto_luz_atardecer_off.webp', 'cuarto_luz_noche_off.webp', 'cuarto_luz_noche_share.webp',      // lámparas apagadas
-  'cuarto_luz_dia_nosol.png', 'cuarto_luz_atardecer_nosol.png', 'cuarto_luz_atardecer_nosol_off.png', 'cuarto_albedo.png'];       // sol dinámico
+const OBLIGATORIAS = ['cuarto_luz_noche.webp', 'vista_dia.webp', 'vista_noche.webp', 'vista_atardecer.webp'];
+const OPCIONALES = ['cuarto_luz_atardecer_off.png', 'cuarto_luz_noche_off.webp', 'cuarto_luz_noche_share.webp',      // lámparas apagadas
+  'cuarto_luz_dia_nosol.webp', 'cuarto_luz_atardecer_nosol.webp', 'cuarto_luz_atardecer_nosol_off.webp', 'cuarto_albedo.webp'];       // sol dinámico
 export const cargar = base => Promise.all([...OBLIGATORIAS, ...OPCIONALES]
   .map((f, i) => cargarTextura(base + f, { flipY: false }).catch(e => { if (i < OBLIGATORIAS.length) throw e; return null; })));   // orientación de glTF
 
 export async function prepararHoras(meshes, cargando, rend) {
   renderer = rend;
-  let dia, noche, vDia, vNoche, vAtar, aOff, nOff, share, diaN, atarN, atarNOff, albedo;
-  try { [dia, noche, vDia, vNoche, vAtar, aOff, nOff, share, diaN, atarN, atarNOff, albedo] = await cargando; } catch { return false; }   // horneado de una sola hora: se queda en atardecer
-  const solDin = !!(diaN && atarN && albedo);
+  let noche, vDia, vNoche, vAtar, aOff, nOff, share, diaN, atarN, atarNOff, albedo;
+  try { [noche, vDia, vNoche, vAtar, aOff, nOff, share, diaN, atarN, atarNOff, albedo] = await cargando; } catch { return false; }   // horneado de una sola hora: se queda en atardecer
+  const solDin = !!(diaN && atarN && albedo), dia = diaN;
   let cuarto = null, vista = null;
   for (const o of meshes) {
     const m = o.material; if (!m?.map) continue;
@@ -91,7 +91,7 @@ export async function prepararHoras(meshes, cargando, rend) {
     } else if (o.name.startsWith('paisaje')) (vista ??= juego(vDia, vAtar, vNoche, false)).mats.push(m);   // el glTF trae la última hora horneada: se cambia por estas
   }
   if (cuarto && solDin) mezcla.material.uniforms.tAlb.value = albedo;
-  return [dia, noche, vDia, vNoche, vAtar, ...[aOff, nOff, share, diaN, atarN, atarNOff, albedo].filter(Boolean)];   // las texturas, para subirlas a la GPU antes de empezar
+  return [noche, vDia, vNoche, vAtar, ...[aOff, nOff, share, diaN, atarN, atarNOff, albedo].filter(Boolean)];   // las texturas, para subirlas a la GPU antes de empezar
 }
 
 // pone en los materiales la luz del estado actual; devuelve true si ha cambiado algo

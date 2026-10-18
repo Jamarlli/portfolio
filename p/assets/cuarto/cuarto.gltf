@@ -46,9 +46,7 @@
 				42,
 				43,
 				45,
-				46,
-				47,
-				48
+				46
 			]
 		}
 	],
@@ -577,24 +575,6 @@
 		},
 		{
 			"mesh":33,
-			"name":"vaso",
-			"translation":[
-				0.6800000071525574,
-				0.8999999761581421,
-				1.2799999713897705
-			]
-		},
-		{
-			"mesh":34,
-			"name":"vaso.001",
-			"translation":[
-				0.6800000071525574,
-				0.8849999904632568,
-				1.2799999713897705
-			]
-		},
-		{
-			"mesh":35,
 			"name":"ventana",
 			"translation":[
 				1.059999942779541,
@@ -1212,42 +1192,15 @@
 			]
 		},
 		{
-			"name":"vaso",
-			"primitives":[
-				{
-					"attributes":{
-						"POSITION":122,
-						"NORMAL":123
-					},
-					"indices":47,
-					"material":1
-				}
-			]
-		},
-		{
-			"name":"leche",
-			"primitives":[
-				{
-					"attributes":{
-						"POSITION":124,
-						"NORMAL":125,
-						"TEXCOORD_0":126
-					},
-					"indices":127,
-					"material":0
-				}
-			]
-		},
-		{
 			"name":"marco",
 			"primitives":[
 				{
 					"attributes":{
-						"POSITION":128,
-						"NORMAL":129,
-						"TEXCOORD_0":130
+						"POSITION":122,
+						"NORMAL":123,
+						"TEXCOORD_0":124
 					},
-					"indices":131,
+					"indices":125,
 					"material":0
 				}
 			]
@@ -1290,8 +1243,8 @@
 	"images":[
 		{
 			"mimeType":"image/webp",
-			"name":"cuarto_luz_atardecer",
-			"uri":"cuarto_luz_atardecer.webp"
+			"name":"cuarto_luz_dia_nosol",
+			"uri":"cuarto_luz_dia_nosol.webp"
 		},
 		{
 			"mimeType":"image/webp",
@@ -1772,12 +1725,12 @@
 			"componentType":5126,
 			"count":304,
 			"max":[
-				0.08500000089406967,
+				0.07349999994039536,
 				0.017500000074505806,
 				0.11999999731779099
 			],
 			"min":[
-				-0.08500000089406967,
+				-0.07349999994039536,
 				-0.017500000074505806,
 				-0.11999999731779099
 			],
@@ -2380,62 +2333,6 @@
 		{
 			"bufferView":122,
 			"componentType":5126,
-			"count":48,
-			"max":[
-				0.03799999877810478,
-				0.05999999865889549,
-				0.03799999877810478
-			],
-			"min":[
-				-0.03799999877810478,
-				-0.05999999865889549,
-				-0.03799999877810478
-			],
-			"type":"VEC3"
-		},
-		{
-			"bufferView":123,
-			"componentType":5126,
-			"count":48,
-			"type":"VEC3"
-		},
-		{
-			"bufferView":124,
-			"componentType":5126,
-			"count":104,
-			"max":[
-				0.03400000184774399,
-				0.042500000447034836,
-				0.03400000184774399
-			],
-			"min":[
-				-0.03400000184774399,
-				-0.042500000447034836,
-				-0.03400000184774399
-			],
-			"type":"VEC3"
-		},
-		{
-			"bufferView":125,
-			"componentType":5126,
-			"count":104,
-			"type":"VEC3"
-		},
-		{
-			"bufferView":126,
-			"componentType":5126,
-			"count":104,
-			"type":"VEC2"
-		},
-		{
-			"bufferView":127,
-			"componentType":5123,
-			"count":276,
-			"type":"SCALAR"
-		},
-		{
-			"bufferView":128,
-			"componentType":5126,
 			"count":1209,
 			"max":[
 				0.8199999928474426,
@@ -2450,19 +2347,19 @@
 			"type":"VEC3"
 		},
 		{
-			"bufferView":129,
+			"bufferView":123,
 			"componentType":5126,
 			"count":1209,
 			"type":"VEC3"
 		},
 		{
-			"bufferView":130,
+			"bufferView":124,
 			"componentType":5126,
 			"count":1209,
 			"type":"VEC2"
 		},
 		{
-			"bufferView":131,
+			"bufferView":125,
 			"componentType":5123,
 			"count":4512,
 			"type":"SCALAR"
@@ -3203,62 +3100,26 @@
 		},
 		{
 			"buffer":0,
-			"byteLength":576,
+			"byteLength":14508,
 			"byteOffset":2317668,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":576,
-			"byteOffset":2318244,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":1248,
-			"byteOffset":2318820,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":1248,
-			"byteOffset":2320068,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":832,
-			"byteOffset":2321316,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":552,
-			"byteOffset":2322148,
-			"target":34963
-		},
-		{
-			"buffer":0,
 			"byteLength":14508,
-			"byteOffset":2322700,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":14508,
-			"byteOffset":2337208,
+			"byteOffset":2332176,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":9672,
-			"byteOffset":2351716,
+			"byteOffset":2346684,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":9024,
-			"byteOffset":2361388,
+			"byteOffset":2356356,
 			"target":34963
 		}
 	],
@@ -3270,7 +3131,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":2370412,
+			"byteLength":2365380,
 			"uri":"cuarto.bin"
 		}
 	]

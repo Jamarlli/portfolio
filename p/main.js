@@ -14,13 +14,13 @@ import * as Clima from './clima.js';
 import { crearLluvia } from './lluvia.js';
 import { crearSolDirecto } from './soldirecto.js';
 import { esMovil, iniciarMovil, pasoGiro, reiniciarGiro, mirada, giro, zoomPara } from './movil.js';
+import { hash, estado, objects, espejos, renderer, scene, camera } from './escena.js';
 import { crearEspejo } from './espejo.js';
 import { cargarTextura } from './texturas.js';
 import { icono } from './iconos.js';
 import { crearCadena, crearPresentador, crearReproyector } from './postpro.js';
 // el personaje está archivado en archivo/personaje (web/personaje.js + assets/javier.glb); se retomará más adelante
 
-const hash = new URLSearchParams(location.hash.slice(1));
 if (hash.get('noanim')) document.documentElement.classList.add('noanim');
 
 // ---------------------------------------------------------------- vistas (coordenadas = web/blender: x mesa->estantería, y altura, z ventana->puerta)
@@ -44,20 +44,6 @@ const SECTIONS = T.secciones;
 // zonas de la pizarra (altura relativa en la cara blanca, de abajo arriba) — igual que blender/tex.py BOARD_ITEMS
 const BOARD_ITEMS = [['proyectos', 0.60], ['educacion', 0.47], ['experiencia', 0.34], ['sobremi', 0.21]];
 
-// ---------------------------------------------------------------- renderer + postprocesado (resplandor, contorno, etalonaje lofi)
-// sin MSAA ni profundidad en el lienzo: la escena se pinta en los búferes del compositor y al lienzo solo llega la pasada final
-const renderer = new THREE.WebGLRenderer({ antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
-document.getElementById('stage').appendChild(renderer.domElement);
-// si el sistema pierde el contexto gráfico (suspensión, reinicio del driver), la escena quedaría negra: al recuperarlo, se recarga
-renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault());
-renderer.domElement.addEventListener('webglcontextrestored', () => location.reload());
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('#1c1322');
-const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.02, 200);
-camera.zoom = zoomPara(camera.aspect); camera.updateProjectionMatrix();     // en vertical (móvil) se abre la vista para que quepa más cuarto
-
 // cadenas de posprocesado (postpro.js): la nítida (la imagen de siempre) y las de vuelo; se elige midiendo la GPU
 const PR = renderer.getPixelRatio();
 const MSAA = +(hash.get('msaa') ?? 4);                        // antialiasing 4x en la nítida: sin bordes dentados ni rayas que centellean (+2,6 ms)
@@ -74,14 +60,12 @@ const nivelFijo = hash.get('nivel') != null ? +hash.get('nivel') : null;     // 
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.zoom = zoomPara(camera.aspect); camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight); for (const c of todas) c.tamano(innerWidth, innerHeight); sucio = true;
+  renderer.setSize(innerWidth, innerHeight); for (const c of todas) c.tamano(innerWidth, innerHeight); estado.sucio = true;
   lista.cadena = obra.cadena = null; ultimaMovil = null; mezcla = 1;      // las imágenes guardadas ya no valen: la próxima, entera
   clearTimeout(reservarEspejo.t); reservarEspejo.t = setTimeout(reservarEspejo, 400);   // con otra forma de ventana, el espejo ocupa otro trozo
 });
 
 // ---------------------------------------------------------------- cargar el cuarto horneado
-const objects = { monitor: [], libro: [], ventana: [], espejo: [], cristales: [], pizarra: null, armario: null };
-const espejos = [];
 
 // ---------------------------------------------------------------- mesa regulable (manivela)
 // La mesa horneada es una sola malla (tablero, patas, travesaño, manivela y cajonera). Se parte por triángulos: el tablero y el travesaño suben
@@ -158,11 +142,11 @@ function ponerManivela(s, r) {
   const z = mesa.zona, a = (v, w) => v + (w - v) * s;
   z.position.copy(mesa.zonaBase).add(new THREE.Vector3(a(-0.11, 0.07), a(-0.02, -0.04), a(-0.04, 0)));
   z.scale.set(a(1.1, 1.2), a(0.65, 1.15), a(1.9, 1.3));
-  mesa.pivote.updateMatrixWorld(true); z.updateMatrixWorld(true); sucio = true;
+  mesa.pivote.updateMatrixWorld(true); z.updateMatrixWorld(true); estado.sucio = true;
 }
 function ponerMesa(u) {
   mesa.u = u; mesa.grupo.position.y = u * MESA_ALZ; mesa.vueltas = u * MESA_VUELTAS * 2 * Math.PI; mesa.pivote.rotation.x = mesa.vueltas + (mesa.giro ?? Math.PI / 2);
-  mesa.grupo.updateMatrixWorld(true); sucio = solSucio = true;
+  mesa.grupo.updateMatrixWorld(true); estado.sucio = estado.solSucio = true;
 }
 if (hash.get('debug')) window.__alternarMesa = () => alternarMesa();
 if (hash.get('debug')) window.__dbg = { camera, scene, objects, renderer, huevoClic: k => huevoClic(k) };   // para las pruebas automáticas
@@ -404,7 +388,7 @@ const tooltip = document.getElementById('tooltip'), hint = document.getElementBy
 const backBtn = document.getElementById('back'), panel = document.getElementById('panel');
 let state = 'home', flight = null, hoverKey = null;
 const currentLook = VIEWS.home.look.clone(), mouseN = new THREE.Vector2(), miradaV = new THREE.Vector3();
-iniciarMovil({ lienzo: renderer.domElement, camera, puedeGirar: () => !flight && (state === 'home' || state === 'pizarra'), alMover: () => { sucio = true; } });
+iniciarMovil({ lienzo: renderer.domElement, camera, puedeGirar: () => !flight && (state === 'home' || state === 'pizarra'), alMover: () => { estado.sucio = true; } });
 
 function hitTest(ev) {
   ndc.set((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
@@ -446,7 +430,7 @@ function animarGrito(now) {                                        // el balón 
   const g = gritoAnim, b = objects.balon.grupo; if (g.t0 == null) g.t0 = now;
   const t = (now - g.t0) / 1700, fin = t >= 1, e = fin ? 0 : (1 - t);
   b.position.y = g.y0 + Math.abs(Math.sin(t * Math.PI * 3)) * 0.035 * e; b.rotation.z = Math.sin(t * Math.PI * 9) * 0.06 * e;
-  b.updateMatrixWorld(true); sucio = true; if (fin) gritoAnim = null;
+  b.updateMatrixWorld(true); estado.sucio = true; if (fin) gritoAnim = null;
 }
 // lámparas (barra de luz del monitor y flexo): un clic las enciende o las apaga. 'auto' sigue la hora (encendidas al atardecer y de noche, como están
 // horneadas); al hacer clic pasan a 'on' u 'off'. La luz del cuarto se mezcla en horas.js con el horneado sin lámparas; aquí solo el resplandor propio
@@ -467,7 +451,7 @@ function animarLamparas(dt) {
       if (l.glow) { l.glow.visible = nb > 0.01; l.glow.material.color.setRGB(2.6 * nb, 2.1 * nb, 1.5 * nb); }
     }
   }
-  if (cambia) { Horas.fijarLamparas(lamparas.barra.luz, lamparas.flexo.luz); sucio = true; }
+  if (cambia) { Horas.fijarLamparas(lamparas.barra.luz, lamparas.flexo.luz); estado.sucio = true; }
 }
 function construirResplandor() {
   const glow = (r, geo, padre, pos) => {
@@ -571,7 +555,7 @@ function construirPersiana(room) {
       pos.set([e.x0, yy, zz, e.x1, yy, zz], (e.iC + j * 2) * 3);
     }
     geo.attributes.position.needsUpdate = true; geo.computeBoundingSphere(); geo.computeBoundingBox();
-    e.y = yb; e.zona.position.y = yb; e.zona.updateMatrixWorld(true); o.updateMatrixWorld(true); sucio = solSucio = true;
+    e.y = yb; e.zona.position.y = yb; e.zona.updateMatrixWorld(true); o.updateMatrixWorld(true); estado.sucio = estado.solSucio = true;
   };
   persiana.poner = poner; persiana.niveles = [PERSIANA_Y.abajo, oy + cb0, PERSIANA_Y.arriba];
   estores.forEach(e => poner(e, persiana.niveles[1]));
@@ -755,8 +739,7 @@ function showPanel(key) {
 //    reproyectada a la cámara actual con su profundidad (bicúbico + enfocado: la misma nitidez que la real).
 //  - Vuelos y puerta: la nítida si cabe; si no, resolución dinámica medida en la GPU (cadenas de 85, 72 y 60 %, afiladas
 //    con CAS); al llegar, la nítida con un fundido corto. Todo se decide midiendo cada fotograma en la GPU.
-let solSucio = false;                                       // un estor o la mesa se mueven: las sombras del sol hay que rehacerlas
-let sucio = true, contornoSucio = false, mezcla = 1, ultimaMovil = null;        // mezcla: cuánto se ve la nítida (1) frente a la de movimiento (0)
+let contornoSucio = false, mezcla = 1, ultimaMovil = null;        // mezcla: cuánto se ve la nítida (1) frente a la de movimiento (0)
 const contornoAnim = { brillo: 0, objetivo: 0 };            // el contorno aparece y se va con un fundido, no de golpe
 const camUlt = new THREE.Matrix4(), tmp = new THREE.Vector3();
 // coste de cada cadena respecto a la nítida
@@ -810,7 +793,7 @@ function anotarTiempo(i, ms) {
 // la nítida entera, en este fotograma
 function pintarEntera() {
   prepararEspejos(1); medida(0, componer, nitida); usar('entera');
-  lista.cadena = nitida; anotarCamara(lista); obra.cadena = null; sucio = false;
+  lista.cadena = nitida; anotarCamara(lista); obra.cadena = null; estado.sucio = false;
 }
 // un trozo de la nítida en obras (la otra cadena nítida, para no tocar la que se está mostrando), todos con la cámara de
 // cuando empezó (aunque el ratón siga). En 2 trozos (espejo y escena; contorno, resplandor y etalonaje) o, si la GPU va
@@ -832,7 +815,7 @@ const ETAPAS = {
   4: [espejoYEscena, () => { pasar(1, 2); mitadResplandor(1); }, () => mitadResplandor(2), () => pasar(3)],   // trozos parecidos
 };
 function avanzarObra(trozos) {
-  if (!obra.cadena) { obra.cadena = lista.cadena === nitida ? nitidaB : nitida; obra.etapa = 0; obra.trozos = trozos; anotarCamara(obra); sucio = false; }
+  if (!obra.cadena) { obra.cadena = lista.cadena === nitida ? nitidaB : nitida; obra.etapa = 0; obra.trozos = trozos; anotarCamara(obra); estado.sucio = false; }
   const etapas = ETAPAS[obra.trozos], e = obra.etapa;
   medida(-1 - e - (obra.trozos === 2 ? 4 : 0), conCamaraDeObra, etapas[e]);
   if (++obra.etapa === etapas.length) {
@@ -863,23 +846,23 @@ function pintar(dt = 1000 / 60) {
   let movil = null, reproyectar = false, entera = false, soloContorno = false;
   for (const c of todas) c.bloom.reutilizar = false;
   for (const e of espejos) e.reutilizar = false;
-  if (enVuelo && (cambio || sucio)) {
+  if (enVuelo && (cambio || estado.sucio)) {
     if (calidad.nivel === 0) entera = true; else movil = cadenas[calidad.nivel];
     // si el equipo va justo (ya volando por debajo de la nítida, o recortando), lo difuso o pequeño se rehace un fotograma
     // sí y otro no, alternando: el resplandor en uno, el espejo en otro. Con margen, todo en cada fotograma.
-    const c = movil || nitida, seguido = c === pintar.ultimaVuelo && !sucio && (calidad.nivel > 0 || calidad.margen < 1);
+    const c = movil || nitida, seguido = c === pintar.ultimaVuelo && !estado.sucio && (calidad.nivel > 0 || calidad.margen < 1);
     pintar.par = !pintar.par; c.bloom.reutilizar = seguido && pintar.par; for (const e of espejos) e.reutilizar = seguido && !pintar.par;
     pintar.ultimaVuelo = c;
   } else if (cambio && !enVuelo && cerca() && !pintar.entera && (obra.cadena || trozosBalanceo() > 1)) {   // (pintar.entera: pruebas)
     avanzarObra(calidad.trozos); reproyectar = true;                        // balanceo: nítida a trozos + reproyección
-  } else if (cambio || sucio || (lista.cadena && !lista.cam.equals(camera.matrixWorld)) || !lista.cadena) entera = true;
+  } else if (cambio || estado.sucio || (lista.cadena && !lista.cam.equals(camera.matrixWorld)) || !lista.cadena) entera = true;
   else if (late) soloContorno = true;                                       // cámara quieta y escena igual: solo contorno + resplandor + etalonaje
   if (entera) pintarEntera();
   if (soloContorno) { medida(-10, rehacerContorno); usar('contorno'); }
   if (entera || soloContorno) contornoSucio = false;
   if (movil) {
     prepararEspejos(movil.escala); medida(calidad.nivel, componer, movil); usar('ligera');
-    ultimaMovil = movil; obra.cadena = null; sucio = false;
+    ultimaMovil = movil; obra.cadena = null; estado.sucio = false;
   }
   if (reproyectar) {
     usar('reproy');
@@ -1012,20 +995,20 @@ function frame(now) {
   if (puertaAnim && intro) {
     puertaAnim.t0 ??= now;
     const t = THREE.MathUtils.clamp((now - puertaAnim.t0) / puertaAnim.dur, 0, 1), e = ease(t);
-    intro.abrir(puertaAnim.de + (puertaAnim.a - puertaAnim.de) * e); sucio = true;
+    intro.abrir(puertaAnim.de + (puertaAnim.a - puertaAnim.de) * e); estado.sucio = true;
     if (t >= 1) puertaAnim = null;
   }
   for (const k in lineasPizarra) {                          // resaltador de la pizarra: fundido de 0,12 s
     const L = lineasPizarra[k], v = L.obj ? Math.min(1, L.op + dt / 120) : Math.max(0, L.op - dt / 160);
-    if (v !== L.op) { L.op = v; L.mat.opacity = v; L.m.visible = v > 0; sucio = true; }
+    if (v !== L.op) { L.op = v; L.mat.opacity = v; L.m.visible = v > 0; estado.sucio = true; }
   }
   if (objects.armario) {                                    // dentro de su volumen, oculto al momento; al salir, aparece en 0,2 s
     const u = objects.armario.material.userData.aparicion, fuera = camera.position.z < 3.03 || camera.position.z > 3.62;
     const v = fuera ? Math.min(1, u.value + dt / 200) : 0;
-    if (v !== u.value) { u.value = v; sucio = true; }
+    if (v !== u.value) { u.value = v; estado.sucio = true; }
     objects.armario.visible = v > 0;
   }
-  if (objects.horas && (horaManual !== frame.horaPuesta || climaManual !== frame.climaPuesto || solSucio || !frame.ultimaHora || now - frame.ultimaHora > 5000)) {   // la elegida a mano, solo si cambia
+  if (objects.horas && (horaManual !== frame.horaPuesta || climaManual !== frame.climaPuesto || estado.solSucio || !frame.ultimaHora || now - frame.ultimaHora > 5000)) {   // la elegida a mano, solo si cambia
     frame.ultimaHora = now; frame.horaPuesta = horaManual; frame.climaPuesto = climaManual;
     const ms = horaManual != null ? Sol.fechaValencia(horaManual) : Date.now(), sol = Sol.posicionSol(ms), elg = sol.el * 180 / Math.PI;
     const tiempo = Clima.ponerClima(ms, climaManual);
@@ -1035,9 +1018,9 @@ function frame(now) {
     let cambioCielo = false;
     frame.ambiente = 1;
     if (objects.solDirecto) {
-      const sd = objects.solDirecto, rehacer = entra && (sd.necesita(dirSol) || solSucio);
+      const sd = objects.solDirecto, rehacer = entra && (sd.necesita(dirSol) || estado.solSucio);
       if (rehacer) sd.actualizar(dirSol);
-      solSucio = false;
+      estado.solSucio = false;
       const amb = 1 - 0.30 * tiempo.nubes - 0.14 * li, sat = 1 - 0.35 * tiempo.nubes - 0.1 * li;
       cambioCielo = Horas.fijarCielo({ sol: entra ? Sol.colorSol(elg).map(v => v * solI) : [0, 0, 0], amb: amb * +(hash.get('samb') ?? 1), sat, reb: 0.35, k: +(hash.get('sk') ?? 1.4) }, sd.rt.texture);
       if (rehacer && !cambioCielo) cambioCielo = Horas.forzar();
@@ -1048,7 +1031,7 @@ function frame(now) {
     objects.lluvia?.ponerSol(dirSol.toArray(), colorSol, visSol);
     if (persiana.malla) persiana.malla.material.color.setRGB(1 + 0.7 * colorSol[0] * frame.solI, 1 + 0.7 * colorSol[1] * frame.solI, 1 + 0.7 * colorSol[2] * frame.solI);   // las telas, con el sol encima, brillan
     if (r.cambio || cambioCielo || !frame.reloj) {
-      sucio = true;
+      estado.sucio = true;
       if (objects.balon) { const f = Math.min(1, 0.35 + 0.65 * (r.d + 0.9 * r.a + 0.3 * r.n)) * frame.ambiente; objects.balon.hemi.intensity = 1.55 * f; objects.balon.sol.intensity = 1.25 * f * (1 - 0.7 * r.n); objects.balon.sombra.material.opacity = 0.5 + 0.4 * f; }
       if (objects.matFotos) { const f = Math.min(1, 1.0 * r.d + 0.9 * r.a + 0.36 * r.n) * frame.ambiente; for (const m of objects.matFotos) m.color.setScalar(f); }
       if (objects.marcoEspejo) { const f = (1.0 * r.d + 0.9 * r.a + 0.36 * r.n) * frame.ambiente, c = new THREE.Color(MARCO_ESPEJO); for (const m of objects.marcoEspejo) m.color.copy(c).multiplyScalar(f * m.userData.k); }
@@ -1060,7 +1043,7 @@ function frame(now) {
     const txt = `${r.n > 0.5 ? '☾' : r.a > 0.5 ? '◐' : '☀'} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${horaManual != null ? ' *' : ''}${resumen.icono || resumen.temp ? ' · ' + resumen.icono + resumen.temp : ''}`;
     if (frame.reloj !== txt) relojBtn.textContent = frame.reloj = txt;
   }
-  if (objects.lluvia && objects.lluvia.actualizar(Clima.clima, Clima.intensidadLluvia(Clima.clima.lluvia), now)) sucio = true;
+  if (objects.lluvia && objects.lluvia.actualizar(Clima.clima, Clima.intensidadLluvia(Clima.clima.lluvia), now)) estado.sucio = true;
   if (hash.get('debug')) hint.style.opacity = 1, hint.textContent = `${state} ${flight ? 'volando' : ''} cam ${camera.position.toArray().map(v => v.toFixed(2))} fov:${camera.fov.toFixed(0)} nivel ${calidad.nivel} gpu≈${calidad.equiv?.toFixed(1)} cpu ${calidad.cpu.toFixed(1)}`;
   seMovio = pintar(dt);
 }
@@ -1085,7 +1068,7 @@ function entrar() {
     cerrarAlPasar = true;                                       // se cierra al pasar (en cuanto la cámara deja libre la hoja)
     flyTo(VIEWS.home, () => {
       if (cerrarAlPasar) { cerrarAlPasar = false; puertaAnim = { t0: null, dur: 1800, de: 1, a: 0 }; }
-      intro.ocultarPasillo(); sucio = true; state = 'home'; hint.textContent = T.hintCuarto; hint.style.opacity = 1;
+      intro.ocultarPasillo(); estado.sucio = true; state = 'home'; hint.textContent = T.hintCuarto; hint.style.opacity = 1;
     }, 2.0, intro.paso);
   }, 1.6), 450);
 }
@@ -1137,7 +1120,7 @@ async function calentar() {
   t.sort((a, b) => a - b); calidad.equiv = t[t.length >> 1] * 0.8;    // la espera síncrona exagera un poco
   elegirNivel();
   console.info(`fotograma nítido ≈ ${calidad.equiv.toFixed(1)} ms -> en movimiento, nivel ${calidad.nivel}`);
-  sucio = true;
+  estado.sucio = true;
 }
 loadRoom().then(async () => {
   if (objects.puerta) intro = crearIntro(scene, objects.puerta);
@@ -1161,11 +1144,11 @@ loadRoom().then(async () => {
     if (objects.horas) Horas.actualizar(horaManual ?? undefined);
     calidad.nivel = nivelFijo ?? 0;                                       // las medidas, con la nítida salvo que se pida
     if (calidad.nivel) flight = { banco: true };                          // pintar() usa las de movimiento solo moviéndose
-    const gl = renderer.getContext(), app = window.__app = { camera, gl, render: () => { sucio = true; pintar.entera = true; pintar(); pintar.entera = false; }, passes: { bloom: cadenas[calidad.nivel].bloom, outline: cadenas[calidad.nivel].outline, espejos, composer: cadenas[calidad.nivel].composer, renderer, scene }, hitTest, setHover: k => setHover(k && { key: k }),
+    const gl = renderer.getContext(), app = window.__app = { camera, gl, render: () => { estado.sucio = true; pintar.entera = true; pintar(); pintar.entera = false; }, passes: { bloom: cadenas[calidad.nivel].bloom, outline: cadenas[calidad.nivel].outline, espejos, composer: cadenas[calidad.nivel].composer, renderer, scene }, hitTest, setHover: k => setHover(k && { key: k }),
       pose: (k, i) => { if (k.includes('>')) { const [x, y, f] = k.split(/[>@]/); poseVuelo(VIEWS[x], VIEWS[y], ease(+f));   // a mitad de un vuelo: 'pizarra>home@0.5'
           if (objects.armario) objects.armario.visible = camera.position.z < 3.03 || camera.position.z > 3.62; return; }
         const v = VIEWS[k === 'espejo' ? 'espejoTercera' : k]; camera.position.copy(v.pos).add(new THREE.Vector3(Math.sin(i * 0.3) * 0.03, Math.cos(i * 0.2) * 0.02, 0)); camera.fov = v.fov; camera.updateProjectionMatrix(); camera.lookAt(v.look); if (objects.armario) objects.armario.visible = camera.position.z < 3.03 || camera.position.z > 3.62; },
-      armario: (k, v) => { app.pose(k, 0); objects.armario.visible = v; sucio = true; pintar.entera = true; pintar(); pintar.entera = false; return [camera.position.z, renderer.domElement.toDataURL('image/png')]; },
+      armario: (k, v) => { app.pose(k, 0); objects.armario.visible = v; estado.sucio = true; pintar.entera = true; pintar(); pintar.entera = false; return [camera.position.z, renderer.domElement.toDataURL('image/png')]; },
       shot: k => { app.pose(k, 0); app.render(); return renderer.domElement.toDataURL('image/png'); },
       // la nítida a trozos (empezada en la pose d=0.5, con la cámara moviéndose) y reproyectada a d=1 -> [mostrada, pintada de verdad]
       obra: (dx, dy) => { const v = VIEWS.home, en = d => { camera.position.copy(v.pos).add({ x: d * dx, y: d * dy, z: 0 }); camera.lookAt(v.look); camera.updateMatrixWorld(); };
