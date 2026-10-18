@@ -1,11 +1,16 @@
-// Luz según la hora de Valencia: funde los tres horneados (día, atardecer, noche) y las tres vistas de la ventana.
-// La mezcla no se hace en cada píxel de cada fotograma: se pinta una vez en una textura cuando cambia la hora
-// (y si la hora es pura, de día o de noche, se usa directamente el horneado de esa hora).
+// Luz según la hora de Valencia: funde los horneados (día, atardecer, noche) y las tres vistas de la ventana.
+// La mezcla no se hace en cada píxel de cada fotograma: se pinta una vez en una textura cuando cambia algo (la hora, el tiempo, el sol, una lámpara)
+// y, si la luz es pura (de día o de noche, sin sol dinámico), se usa directamente el horneado de esa hora.
+//
+// Dos modos:
+//  - clásico: los horneados llevan el sol de esa hora ya cocinado (día, atardecer, noche).
+//  - sol dinámico (si están cuarto_luz_dia_nosol.png, cuarto_luz_atardecer_nosol.png y cuarto_albedo.png): los horneados son solo la luz del cielo y el sol
+//    directo se suma encima en directo (soldirecto.js: dónde está de verdad el sol, con sus sombras), atenuado por las nubes.
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { cargarTextura } from './texturas.js';
 
-// pesos (día, atardecer, noche) a lo largo del día, principios de octubre en Valencia (amanece ~7:55, anochece ~19:35)
+// pesos (día, atardecer, noche) a lo largo del día, principios de octubre en Valencia (amanece ~7:55, anochece ~19:35); solo si no llegan los del sol
 const CLAVES = [
   [0.0, 0, 0, 1], [6.6, 0, 0, 1], [7.9, 0, 1, 0], [9.2, 1, 0, 0],
   [17.4, 1, 0, 0], [19.2, 0, 1, 0], [20.6, 0, 0, 1], [24.0, 0, 0, 1],
@@ -26,65 +31,83 @@ export function horaValencia() {
 export const W = { value: new THREE.Vector3(0, 1, 0) };          // pesos (día, atardecer, noche) de la hora actual
 // lámparas del escritorio (interruptores): 1 = como están horneadas a esa hora, 0 = apagadas. x = barra de luz, y = flexo
 export const LAMP = { value: new THREE.Vector2(1, 1) };
+// el cielo del momento: color e intensidad del sol directo (rgb), cuánta luz de cielo queda con nubes (amb), cuánto color (sat), cuánto rebota el sol (reb) y la escala (k)
+export const CIELO = { sol: { value: new THREE.Vector3(0, 0, 0) }, amb: { value: 1 }, sat: { value: 1 }, reb: { value: 0.3 }, k: { value: 1 } };
 
-// cada juego: tres texturas (día, atardecer, noche), la textura donde se pinta la mezcla y los materiales que la usan
+// cada juego: las texturas (día, atardecer, noche), la textura donde se pinta la mezcla y los materiales que la usan
 const juegos = [];
-let renderer = null, aplicados = null;
+let renderer = null, aplicados = null, sunTex = null;
 const mezcla = new FullScreenQuad(new THREE.ShaderMaterial({
-  uniforms: { tD: { value: null }, tA: { value: null }, tN: { value: null }, tAo: { value: null }, tNo: { value: null }, tSh: { value: null }, w: W, lamp: LAMP, usarLamp: { value: 0 } },
+  uniforms: { tD: { value: null }, tA: { value: null }, tN: { value: null }, tAo: { value: null }, tNo: { value: null }, tSh: { value: null }, tAlb: { value: null }, tSun: { value: null },
+    w: W, lamp: LAMP, usarLamp: { value: 0 }, usarSol: { value: 0 }, solRGB: CIELO.sol, amb: CIELO.amb, sat: CIELO.sat, reb: CIELO.reb, kSol: CIELO.k },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
   // con las lámparas apagadas se mezcla el horneado con luces (tA, tN) y el horneado sin ellas (tAo, tNo) según cuánta luz de ese texel viene de cada una
   // (tSh: parte que pone la barra de luz de noche; al atardecer solo hay barra)
-  fragmentShader: `uniform sampler2D tD, tA, tN, tAo, tNo, tSh; uniform vec3 w; uniform vec2 lamp; uniform float usarLamp; varying vec2 vUv;
+  fragmentShader: `uniform sampler2D tD, tA, tN, tAo, tNo, tSh, tAlb, tSun; uniform vec3 w, solRGB; uniform vec2 lamp; uniform float usarLamp, usarSol, amb, sat, reb, kSol; varying vec2 vUv;
     void main(){
-      vec4 d = texture2D(tD, vUv), on = d * w.x + texture2D(tA, vUv) * w.y + texture2D(tN, vUv) * w.z;
-      if (usarLamp < .5) { gl_FragColor = on; return; }
-      vec4 off = d * w.x + texture2D(tAo, vUv) * w.y + texture2D(tNo, vUv) * w.z;
-      float s = (w.y + w.z * texture2D(tSh, vUv).r) / max(w.y + w.z, 1e-4);
-      gl_FragColor = mix(off, on, clamp(lamp.x * s + lamp.y * (1. - s), 0., 1.));
+      vec4 d = texture2D(tD, vUv), on = d * w.x + texture2D(tA, vUv) * w.y + texture2D(tN, vUv) * w.z, c = on;
+      if (usarLamp > .5) {
+        vec4 off = d * w.x + texture2D(tAo, vUv) * w.y + texture2D(tNo, vUv) * w.z;
+        float s = (w.y + w.z * texture2D(tSh, vUv).r) / max(w.y + w.z, 1e-4);
+        c = mix(off, on, clamp(lamp.x * s + lamp.y * (1. - s), 0., 1.));
+      }
+      if (usarSol > .5) {                                  // luz de cielo (con nubes) + sol directo y su rebote, por el color propio de cada material
+        float directa = texture2D(tSun, vUv).r, rebote = textureLod(tSun, vUv, 4.).r;
+        c.rgb = c.rgb * amb + texture2D(tAlb, vUv).rgb * solRGB * (directa + reb * rebote) * kSol;
+      }
+      float l = dot(c.rgb, vec3(.2126, .7152, .0722));
+      gl_FragColor = vec4(mix(vec3(l), c.rgb, sat), c.a);
     }`,
   depthTest: false, depthWrite: false,
 }));
 
-function juego(dia, atar, noche) {
+function juego(dia, atar, noche, sol) {
   const img = atar.image, rt = new THREE.WebGLRenderTarget(img.width, img.height, {
     colorSpace: THREE.SRGBColorSpace, depthBuffer: false, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter, anisotropy: 8,
   });
   rt.texture.flipY = false;
-  const j = { tex: [dia, atar, noche], rt, mats: [], ext: null }; juegos.push(j); return j;
+  const j = { tex: [dia, atar, noche], rt, mats: [], ext: null, sol }; juegos.push(j); return j;
 }
 
-// empieza a descargar los horneados de cada hora (a la vez que el cuarto)
-export const cargar = base => Promise.all(['cuarto_luz_dia.webp', 'cuarto_luz_noche.webp', 'vista_dia.webp', 'vista_noche.webp', 'vista_atardecer.webp',
-  'cuarto_luz_atardecer_off.webp', 'cuarto_luz_noche_off.webp', 'cuarto_luz_noche_share.webp']                  // las tres últimas: lámparas apagadas (opcionales)
-  .map((f, i) => cargarTextura(base + f, { flipY: false }).catch(e => { if (i < 5) throw e; return null; })));   // orientación de glTF
+// empieza a descargar los horneados de cada hora (a la vez que el cuarto). Las últimas son opcionales (null si faltan)
+const OBLIGATORIAS = ['cuarto_luz_dia.webp', 'cuarto_luz_noche.webp', 'vista_dia.webp', 'vista_noche.webp', 'vista_atardecer.webp'];
+const OPCIONALES = ['cuarto_luz_atardecer_off.webp', 'cuarto_luz_noche_off.webp', 'cuarto_luz_noche_share.webp',      // lámparas apagadas
+  'cuarto_luz_dia_nosol.png', 'cuarto_luz_atardecer_nosol.png', 'cuarto_luz_atardecer_nosol_off.png', 'cuarto_albedo.png'];       // sol dinámico
+export const cargar = base => Promise.all([...OBLIGATORIAS, ...OPCIONALES]
+  .map((f, i) => cargarTextura(base + f, { flipY: false }).catch(e => { if (i < OBLIGATORIAS.length) throw e; return null; })));   // orientación de glTF
 
 export async function prepararHoras(meshes, cargando, rend) {
   renderer = rend;
-  let dia, noche, vDia, vNoche, vAtar, aOff, nOff, share;
-  try { [dia, noche, vDia, vNoche, vAtar, aOff, nOff, share] = await cargando; } catch { return false; }   // horneado de una sola hora: se queda en atardecer
+  let dia, noche, vDia, vNoche, vAtar, aOff, nOff, share, diaN, atarN, atarNOff, albedo;
+  try { [dia, noche, vDia, vNoche, vAtar, aOff, nOff, share, diaN, atarN, atarNOff, albedo] = await cargando; } catch { return false; }   // horneado de una sola hora: se queda en atardecer
+  const solDin = !!(diaN && atarN && albedo);
   let cuarto = null, vista = null;
   for (const o of meshes) {
     const m = o.material; if (!m?.map) continue;
-    if (o.userData.mat === 'horneado') { cuarto ??= juego(dia, m.map, noche); cuarto.mats.push(m); if (aOff && nOff && share) cuarto.ext = [aOff, nOff, share]; }
-    else if (o.name.startsWith('paisaje')) (vista ??= juego(vDia, vAtar, vNoche)).mats.push(m);   // el glTF trae la última hora horneada: se cambia por estas
+    if (o.userData.mat === 'horneado') {
+      cuarto ??= solDin ? juego(diaN, atarN, noche, true) : juego(dia, m.map, noche, false); cuarto.mats.push(m);
+      if (nOff && share) cuarto.ext = [solDin ? (atarNOff || atarN) : aOff, nOff, share];
+      if (!cuarto.ext?.[0]) cuarto.ext = null;
+    } else if (o.name.startsWith('paisaje')) (vista ??= juego(vDia, vAtar, vNoche, false)).mats.push(m);   // el glTF trae la última hora horneada: se cambia por estas
   }
-  return [dia, noche, vDia, vNoche, vAtar, ...[aOff, nOff, share].filter(Boolean)];   // las texturas, para subirlas a la GPU antes de empezar
+  if (cuarto && solDin) mezcla.material.uniforms.tAlb.value = albedo;
+  return [dia, noche, vDia, vNoche, vAtar, ...[aOff, nOff, share, diaN, atarN, atarNOff, albedo].filter(Boolean)];   // las texturas, para subirlas a la GPU antes de empezar
 }
 
-// pone en los materiales la luz de los pesos actuales; devuelve true si ha cambiado algo
-let lampAplicada = new THREE.Vector2(1, 1);
-function aplicar() {
-  const w = W.value;
-  if (aplicados && aplicados.equals(w) && lampAplicada.equals(LAMP.value)) return false;
-  aplicados = w.clone(); lampAplicada.copy(LAMP.value);
+// pone en los materiales la luz del estado actual; devuelve true si ha cambiado algo
+let lampAplicada = new THREE.Vector2(1, 1), cieloAplicado = '';
+function aplicar(forzar = false) {
+  const w = W.value, cielo = `${CIELO.sol.value.toArray()}|${CIELO.amb.value}|${CIELO.sat.value}|${CIELO.reb.value}|${CIELO.k.value}`;
+  if (!forzar && aplicados && aplicados.equals(w) && lampAplicada.equals(LAMP.value) && cielo === cieloAplicado) return false;
+  aplicados = w.clone(); lampAplicada.copy(LAMP.value); cieloAplicado = cielo;
   const pura = [w.x, w.y, w.z].indexOf(1), anterior = renderer.getRenderTarget(), u = mezcla.material.uniforms;
   const apagada = (LAMP.value.x < 1 || LAMP.value.y < 1) && w.x < 1;      // de día las lámparas no pintan nada en el horneado
   for (const j of juegos) {
-    const lamp = apagada && j.ext;
-    let t = pura >= 0 && !(lamp && pura > 0) ? j.tex[pura] : null;
+    const lamp = apagada && j.ext, sol = j.sol && sunTex;
+    let t = pura >= 0 && !(lamp && pura > 0) && !j.sol ? j.tex[pura] : null;
     if (!t) {
       [u.tD.value, u.tA.value, u.tN.value] = j.tex; [u.tAo.value, u.tNo.value, u.tSh.value] = lamp ? j.ext : [j.tex[1], j.tex[2], j.tex[2]]; u.usarLamp.value = lamp ? 1 : 0;
+      u.usarSol.value = sol ? 1 : 0; u.tSun.value = sunTex;
       renderer.setRenderTarget(j.rt); mezcla.render(renderer);
       t = j.rt.texture;
     }
@@ -94,15 +117,23 @@ function aplicar() {
   return true;
 }
 
-export function actualizar(horaForzada) {
-  const h = horaForzada ?? horaValencia(); const [d, a, n] = pesos(h);
+// pesosFuera: (día, atardecer, noche) según la altura del sol (sol.js); si no llegan, los de la tabla de horas
+export function actualizar(horaForzada, pesosFuera) {
+  const h = horaForzada ?? horaValencia(); const [d, a, n] = pesosFuera || pesos(h);
   W.value.set(d, a, n); const cambio = juegos.length > 0 && aplicar(); return { h, d, a, n, cambio };
 }
+// el cielo del momento (ver CIELO) y la textura de luz solar de soldirecto.js; true si ha cambiado algo
+export function fijarCielo({ sol, amb, sat, reb, k = 1 }, texturaSol) {
+  CIELO.sol.value.set(...sol); CIELO.amb.value = amb; CIELO.sat.value = sat; CIELO.reb.value = reb; CIELO.k.value = k; sunTex = texturaSol ?? sunTex;
+  return juegos.length > 0 && aplicar();
+}
+export const forzar = () => juegos.length > 0 && aplicar(true);     // el sol (la textura) cambió aunque sus valores no
+export const haySolDinamico = () => juegos.some(j => j.sol);
 
 // pinta las mezclas una vez al cargar, para que la primera transición de hora no tenga que reservar memoria en la GPU
 export function calentar() {
   const anterior = renderer.getRenderTarget(), u = mezcla.material.uniforms;
-  for (const j of juegos) { [u.tD.value, u.tA.value, u.tN.value] = j.tex; [u.tAo.value, u.tNo.value, u.tSh.value] = j.ext || [j.tex[1], j.tex[2], j.tex[2]]; u.usarLamp.value = 0; renderer.setRenderTarget(j.rt); mezcla.render(renderer); }
+  for (const j of juegos) { [u.tD.value, u.tA.value, u.tN.value] = j.tex; [u.tAo.value, u.tNo.value, u.tSh.value] = j.ext || [j.tex[1], j.tex[2], j.tex[2]]; u.usarLamp.value = 0; u.usarSol.value = 0; renderer.setRenderTarget(j.rt); mezcla.render(renderer); }
   renderer.setRenderTarget(anterior);
 }
 

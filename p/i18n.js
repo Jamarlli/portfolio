@@ -25,6 +25,13 @@ const TEXTOS = {
 };
 export const T = TEXTOS[LANG];
 export const PENDIENTE = /pendiente|pending/i;
+// en pantallas táctiles no hay ratón: las pistas hablan del dedo
+if (hash.get('movil') === '1' || (matchMedia('(pointer: coarse)').matches && !hash.get('movil'))) {
+  Object.assign(T, LANG === 'en'
+    ? { hintCuarto: 'Swipe to look around · tap to explore', hintPizarra: 'Tap a topic on the board', hintPuerta: 'Knock, knock… tap to come in', hintPegatina: 'Tap outside the sticker to zoom out' }
+    : { hintCuarto: 'Desliza para mirar alrededor · toca para curiosear', hintPizarra: 'Toca un tema de la pizarra', hintPuerta: 'Toc, toc… toca para entrar', hintPegatina: 'Toca fuera de la pegatina para alejarte' });
+  const h = document.getElementById('hint'); if (h) h.textContent = T.hintPuerta;      // la pista de la puerta es la primera que se ve
+}
 
 // los textos fijos del HTML (en español en la plantilla) pasan al idioma elegido
 if (LANG === 'en') {

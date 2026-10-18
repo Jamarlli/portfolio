@@ -9,6 +9,11 @@ import { PROJECTS, EDUCATION, EXPERIENCE, ABOUT, FOTOS } from './content.js';
 import { T, PENDIENTE } from './i18n.js';
 import { crearIntro } from './intro.js';
 import * as Horas from './horas.js';
+import * as Sol from './sol.js';
+import * as Clima from './clima.js';
+import { crearLluvia } from './lluvia.js';
+import { crearSolDirecto } from './soldirecto.js';
+import { esMovil, iniciarMovil, pasoGiro, reiniciarGiro, mirada, giro, zoomPara } from './movil.js';
 import { crearEspejo } from './espejo.js';
 import { cargarTextura } from './texturas.js';
 import { icono } from './iconos.js';
@@ -51,6 +56,7 @@ renderer.domElement.addEventListener('webglcontextrestored', () => location.relo
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#1c1322');
 const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.02, 200);
+camera.zoom = zoomPara(camera.aspect); camera.updateProjectionMatrix();     // en vertical (móvil) se abre la vista para que quepa más cuarto
 
 // cadenas de posprocesado (postpro.js): la nítida (la imagen de siempre) y las de vuelo; se elige midiendo la GPU
 const PR = renderer.getPixelRatio();
@@ -67,14 +73,14 @@ const presentar = crearPresentador(renderer), reproyector = crearReproyector(ren
 const nivelFijo = hash.get('nivel') != null ? +hash.get('nivel') : null;     // para pruebas: forzar una cadena en movimiento
 
 addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  camera.aspect = innerWidth / innerHeight; camera.zoom = zoomPara(camera.aspect); camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight); for (const c of todas) c.tamano(innerWidth, innerHeight); sucio = true;
   lista.cadena = obra.cadena = null; ultimaMovil = null; mezcla = 1;      // las imágenes guardadas ya no valen: la próxima, entera
   clearTimeout(reservarEspejo.t); reservarEspejo.t = setTimeout(reservarEspejo, 400);   // con otra forma de ventana, el espejo ocupa otro trozo
 });
 
 // ---------------------------------------------------------------- cargar el cuarto horneado
-const objects = { monitor: [], libro: [], ventana: [], espejo: [], pizarra: null, armario: null };
+const objects = { monitor: [], libro: [], ventana: [], espejo: [], cristales: [], pizarra: null, armario: null };
 const espejos = [];
 
 // ---------------------------------------------------------------- mesa regulable (manivela)
@@ -104,7 +110,7 @@ function construirMesaRegulable(room) {
       pos.set(q, i * 9 + k * 3); uv.set([U.getX(v), U.getY(v)], i * 6 + k * 2);
     } });
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-    geo.computeBoundingBox(); geo.computeBoundingSphere(); return geo;
+    geo.computeVertexNormals(); geo.computeBoundingBox(); geo.computeBoundingSphere(); return geo;
   };
   const nueva = (geo, nombre, padre, enLaMesa = true) => {
     const m = new THREE.Mesh(geo, base.material.clone()); m.name = nombre; m.userData.mat = base.userData.mat;
@@ -156,10 +162,10 @@ function ponerManivela(s, r) {
 }
 function ponerMesa(u) {
   mesa.u = u; mesa.grupo.position.y = u * MESA_ALZ; mesa.vueltas = u * MESA_VUELTAS * 2 * Math.PI; mesa.pivote.rotation.x = mesa.vueltas + (mesa.giro ?? Math.PI / 2);
-  mesa.grupo.updateMatrixWorld(true); sucio = true;
+  mesa.grupo.updateMatrixWorld(true); sucio = solSucio = true;
 }
 if (hash.get('debug')) window.__alternarMesa = () => alternarMesa();
-if (hash.get('debug')) window.__dbg = { camera, scene, objects, huevoClic: k => huevoClic(k) };   // para las pruebas automáticas
+if (hash.get('debug')) window.__dbg = { camera, scene, objects, renderer, huevoClic: k => huevoClic(k) };   // para las pruebas automáticas
 function alternarMesa() {
   if (mesa.anim || !mesa.grupo) return;
   mesa.arriba = !mesa.arriba; mesa.anim = { t0: null, dur: 3800, de: mesa.u, a: mesa.arriba ? 1 : 0 };
@@ -168,7 +174,7 @@ async function loadRoom() {
   const paso = t => { const l = document.getElementById('loading'); if (l) l.textContent = t; };
   paso(T.cargando);
   // todo se descarga a la vez; las imágenes se descomprimen fuera del hilo principal
-  const base = './assets/cuarto/', horas = Horas.cargar(base);
+  const base = './assets/cuarto/', horas = Horas.cargar(base), climaListo = Clima.cargar();
   const alfombrilla = cargarTextura(base + 'alfombrilla.webp'), pizarraTexto = cargarTextura(base + T.pizarraImagen);
   horas.catch(() => {}); alfombrilla.catch(() => {}); pizarraTexto.catch(() => {});
   const gltf = await new GLTFLoader().loadAsync(base + 'cuarto.gltf');
@@ -183,7 +189,7 @@ async function loadRoom() {
     if (map) { map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8; }
     if (n.startsWith('espejo_cristal')) { mirrors.push(o); return; }
     // los cristales no se pueden tocar (el clic los atraviesa): ni se prueban en el raycast
-    if (n.startsWith('cristal')) { o.material = new THREE.MeshBasicMaterial({ color: '#dfe9f2', transparent: true, opacity: 0.08, depthWrite: false }); o.raycast = () => {}; return; }
+    if (n.startsWith('cristal')) { o.material = new THREE.MeshBasicMaterial({ color: '#dfe9f2', transparent: true, opacity: 0.08, depthWrite: false }); o.raycast = () => {}; objects.cristales.push(o); return; }
     if (n.startsWith('vaso')) { o.visible = false; o.raycast = () => {}; return; }   // el vaso de leche ya no está en el cuarto
     o.material = new THREE.MeshBasicMaterial({ map, color: map ? 0xffffff : src.color, side: THREE.FrontSide });
     if (/^monitor(\d|_)/.test(n) && !n.startsWith('monitor2')) objects.monitor.push(o);   // cuerpo (monitor001) y pantalla
@@ -212,7 +218,7 @@ async function loadRoom() {
     if (fijas.length > 1 && !hash.get('sinfusion')) {
       const geo = mergeGeometries(fijas.map(o => {
         const g = new THREE.BufferGeometry();
-        g.setAttribute('position', o.geometry.attributes.position); g.setAttribute('uv', o.geometry.attributes.uv); g.setIndex(o.geometry.index);
+        g.setAttribute('position', o.geometry.attributes.position); g.setAttribute('uv', o.geometry.attributes.uv); g.setAttribute('normal', o.geometry.attributes.normal); g.setIndex(o.geometry.index);
         return g.applyMatrix4(o.matrixWorld);
       }));
       const malla = new THREE.Mesh(geo, fijas[0].material); malla.name = 'fijas'; malla.userData.mat = 'horneado';
@@ -266,6 +272,9 @@ async function loadRoom() {
   // luz según la hora de Valencia (si existen los horneados de día y noche)
   const mallas = []; room.traverse(o => o.isMesh && mallas.push(o));
   objects.horas = await Horas.prepararHoras(mallas, horas, renderer);
+  await Promise.race([climaListo, new Promise(r => setTimeout(r, 1800))]);      // el tiempo, si llega pronto; si no, entra cuando llegue
+  if (Horas.haySolDinamico()) objects.solDirecto = crearSolDirecto(renderer, scene, mallas.filter(o => o.userData.mat === 'horneado' && o.visible));
+  objects.lluvia = crearLluvia({ scene, camera, renderer, cristales: objects.cristales, paisajes: mallas.filter(o => o.name.startsWith('paisaje')) });
   if (Horas.hayLamparas()) { lamparas.listas = true; construirResplandor(); }
   paso(T.colocando);
   // texto de la pizarra: capa nítida sobre la cara horneada (y su UV dice en qué línea se hace clic)
@@ -394,7 +403,8 @@ const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 const tooltip = document.getElementById('tooltip'), hint = document.getElementById('hint');
 const backBtn = document.getElementById('back'), panel = document.getElementById('panel');
 let state = 'home', flight = null, hoverKey = null;
-const currentLook = VIEWS.home.look.clone(), mouseN = new THREE.Vector2();
+const currentLook = VIEWS.home.look.clone(), mouseN = new THREE.Vector2(), miradaV = new THREE.Vector3();
+iniciarMovil({ lienzo: renderer.domElement, camera, puedeGirar: () => !flight && (state === 'home' || state === 'pizarra'), alMover: () => { sucio = true; } });
 
 function hitTest(ev) {
   ndc.set((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
@@ -561,7 +571,7 @@ function construirPersiana(room) {
       pos.set([e.x0, yy, zz, e.x1, yy, zz], (e.iC + j * 2) * 3);
     }
     geo.attributes.position.needsUpdate = true; geo.computeBoundingSphere(); geo.computeBoundingBox();
-    e.y = yb; e.zona.position.y = yb; e.zona.updateMatrixWorld(true); o.updateMatrixWorld(true); sucio = true;
+    e.y = yb; e.zona.position.y = yb; e.zona.updateMatrixWorld(true); o.updateMatrixWorld(true); sucio = solSucio = true;
   };
   persiana.poner = poner; persiana.niveles = [PERSIANA_Y.abajo, oy + cb0, PERSIANA_Y.arriba];
   estores.forEach(e => poner(e, persiana.niveles[1]));
@@ -627,6 +637,7 @@ function ponerZoomPegatina(on) {
   flyTo(on ? intro.vistaPegatina : intro.vista, null, 1.1);
 }
 renderer.domElement.addEventListener('click', ev => {
+  if (giro.arrastro) return;                                         // el clic que acompaña a un arrastre del dedo no cuenta
   if (state === 'intro') {
     if (flight) return;
     if (zoomPegatina) { if (!alPegatina(ev)) ponerZoomPegatina(false); return; }
@@ -654,6 +665,7 @@ function flyTo(to, done, dur = 1.6, via = null) {
   // el destino ya incluye el balanceo del ratón de esa vista: al llegar no hay que corregir nada
   const amp = to === VIEWS.home ? 1 : to === VIEWS.pizarra ? 0.25 : 0;
   if (amp) to = { ...to, pos: to.pos.clone().add({ x: mouseN.x * 0.06 * amp, y: -mouseN.y * 0.04 * amp, z: 0 }), q: null };
+  reiniciarGiro();
   flight = { from: { pos: camera.position.clone(), look: currentLook.clone(), fov: camera.fov, q: camera.quaternion.clone(), dist: camera.position.distanceTo(currentLook) }, to, done, via, t0: null, dur: dur * 1000 };   // t0: el primer fotograma; via: punto de paso (curva)
 }
 function goBoard() {
@@ -743,6 +755,7 @@ function showPanel(key) {
 //    reproyectada a la cámara actual con su profundidad (bicúbico + enfocado: la misma nitidez que la real).
 //  - Vuelos y puerta: la nítida si cabe; si no, resolución dinámica medida en la GPU (cadenas de 85, 72 y 60 %, afiladas
 //    con CAS); al llegar, la nítida con un fundido corto. Todo se decide midiendo cada fotograma en la GPU.
+let solSucio = false;                                       // un estor o la mesa se mueven: las sombras del sol hay que rehacerlas
 let sucio = true, contornoSucio = false, mezcla = 1, ultimaMovil = null;        // mezcla: cuánto se ve la nítida (1) frente a la de movimiento (0)
 const contornoAnim = { brillo: 0, objetivo: 0 };            // el contorno aparece y se va con un fundido, no de golpe
 const camUlt = new THREE.Matrix4(), tmp = new THREE.Vector3();
@@ -959,7 +972,8 @@ let prevNow = null, seMovio = false;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = prevNow == null ? 1000 / 60 : Math.min(100, now - prevNow); prevNow = now;
-  vigilar(dt, seMovio || !!flight);
+  const girando = esMovil && pasoGiro(dt);
+  vigilar(dt, seMovio || !!flight || girando);
   if (gritoAnim) animarGrito(now);
   if (persiana.estores.some(e => e.anim)) animarPersiana(now);
   animarLamparas(dt);
@@ -984,7 +998,8 @@ function frame(now) {
     const amp = enIntro ? (zoomPegatina ? 0.05 : 1) : state === 'home' ? 1 : state === 'pizarra' ? 0.25 : 0;
     tmp.set(mouseN.x * (enIntro ? 0.05 : 0.06) * amp, -mouseN.y * (enIntro ? 0.03 : 0.04) * amp, 0).add(v.pos);
     seguir(suave, tmp, dt / 1000);
-    ponerCamara(suave, v.look, v.fov); currentLook.copy(v.look);
+    const mira = esMovil && giro.activo && (state === 'home' || state === 'pizarra') ? mirada(v.pos, v.look, suave, miradaV) : v.look;
+    ponerCamara(suave, mira, v.fov); currentLook.copy(v.look);
   }
   if (mesa.anim) {                                          // mesa regulable: sube o baja girando la manivela
     const a = mesa.anim; a.t0 ??= now;
@@ -1010,20 +1025,42 @@ function frame(now) {
     if (v !== u.value) { u.value = v; sucio = true; }
     objects.armario.visible = v > 0;
   }
-  if (objects.horas && (horaManual !== frame.horaPuesta || !frame.ultimaHora || now - frame.ultimaHora > 5000)) {   // la elegida a mano, solo si cambia
-    frame.ultimaHora = now; frame.horaPuesta = horaManual; const r = Horas.actualizar(horaManual ?? undefined);
-    if (r.cambio || !frame.reloj) {
-      sucio = true;
-      if (objects.balon) { const f = Math.min(1, 0.35 + 0.65 * (r.d + 0.9 * r.a + 0.3 * r.n)); objects.balon.hemi.intensity = 1.55 * f; objects.balon.sol.intensity = 1.25 * f * (1 - 0.7 * r.n); objects.balon.sombra.material.opacity = 0.5 + 0.4 * f; }
-      if (objects.matFotos) { const f = Math.min(1, 1.0 * r.d + 0.9 * r.a + 0.36 * r.n); for (const m of objects.matFotos) m.color.setScalar(f); }
-      if (objects.marcoEspejo) { const f = 1.0 * r.d + 0.9 * r.a + 0.36 * r.n, c = new THREE.Color(MARCO_ESPEJO); for (const m of objects.marcoEspejo) m.color.copy(c).multiplyScalar(f * m.userData.k); }
-      if (objects.tomo) { const b = objects.tomo.material.userData.base; objects.tomo.material.color.setRGB(b.r * (0.95 * r.d + 0.85 * r.a + 0.32 * r.n), b.g * (0.93 * r.d + 0.72 * r.a + 0.30 * r.n), b.b * (0.90 * r.d + 0.68 * r.a + 0.42 * r.n)); }
-      for (const m of [objects.alfombrilla, objects.portada, objects.paginas]) if (m) m.material.color.setRGB(0.95 * r.d + 0.85 * r.a + 0.32 * r.n, 0.93 * r.d + 0.72 * r.a + 0.30 * r.n, 0.90 * r.d + 0.68 * r.a + 0.42 * r.n);
+  if (objects.horas && (horaManual !== frame.horaPuesta || climaManual !== frame.climaPuesto || solSucio || !frame.ultimaHora || now - frame.ultimaHora > 5000)) {   // la elegida a mano, solo si cambia
+    frame.ultimaHora = now; frame.horaPuesta = horaManual; frame.climaPuesto = climaManual;
+    const ms = horaManual != null ? Sol.fechaValencia(horaManual) : Date.now(), sol = Sol.posicionSol(ms), elg = sol.el * 180 / Math.PI;
+    const tiempo = Clima.ponerClima(ms, climaManual);
+    const r = Horas.actualizar(horaManual ?? undefined, Sol.pesosSol(elg)), li = Clima.intensidadLluvia(tiempo.lluvia);
+    // el sol directo (si hay horneados sin sol): entra por la ventana solo con el sol a más de 0,5° y dentro de ±90° del sudoeste, y las nubes y la lluvia lo apagan
+    const dirSol = new THREE.Vector3(...(hash.get('sundir') ? hash.get('sundir').split(',').map(Number) : Sol.direccionSol(sol.az, sol.el))).normalize(), solI = Sol.intensidadSol(elg) * Math.pow(1 - tiempo.nubes, 1.7) * (1 - 0.8 * li), entra = dirSol.z < -0.02 && solI > 0.004;
+    let cambioCielo = false;
+    frame.ambiente = 1;
+    if (objects.solDirecto) {
+      const sd = objects.solDirecto, rehacer = entra && (sd.necesita(dirSol) || solSucio);
+      if (rehacer) sd.actualizar(dirSol);
+      solSucio = false;
+      const amb = 1 - 0.30 * tiempo.nubes - 0.14 * li, sat = 1 - 0.35 * tiempo.nubes - 0.1 * li;
+      cambioCielo = Horas.fijarCielo({ sol: entra ? Sol.colorSol(elg).map(v => v * solI) : [0, 0, 0], amb: amb * +(hash.get('samb') ?? 1), sat, reb: 0.35, k: +(hash.get('sk') ?? 1.4) }, sd.rt.texture);
+      if (rehacer && !cambioCielo) cambioCielo = Horas.forzar();
+      frame.ambiente = amb + 0.3 * (entra ? solI : 0);
     }
-    const hh = Math.floor(r.h) % 24, mm = Math.round((r.h % 1) * 60) % 60;
-    const txt = `${r.n > 0.5 ? '☾' : r.a > 0.5 ? '◐' : '☀'} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${horaManual != null ? ' *' : ''}`;
+    frame.solI = entra ? solI : 0; frame.dirSol = dirSol;
+    const colorSol = Sol.colorSol(elg), visSol = Sol.intensidadSol(elg) * Math.pow(1 - tiempo.nubes, 1.2) * (1 - 0.9 * li);
+    objects.lluvia?.ponerSol(dirSol.toArray(), colorSol, visSol);
+    if (persiana.malla) persiana.malla.material.color.setRGB(1 + 0.7 * colorSol[0] * frame.solI, 1 + 0.7 * colorSol[1] * frame.solI, 1 + 0.7 * colorSol[2] * frame.solI);   // las telas, con el sol encima, brillan
+    if (r.cambio || cambioCielo || !frame.reloj) {
+      sucio = true;
+      if (objects.balon) { const f = Math.min(1, 0.35 + 0.65 * (r.d + 0.9 * r.a + 0.3 * r.n)) * frame.ambiente; objects.balon.hemi.intensity = 1.55 * f; objects.balon.sol.intensity = 1.25 * f * (1 - 0.7 * r.n); objects.balon.sombra.material.opacity = 0.5 + 0.4 * f; }
+      if (objects.matFotos) { const f = Math.min(1, 1.0 * r.d + 0.9 * r.a + 0.36 * r.n) * frame.ambiente; for (const m of objects.matFotos) m.color.setScalar(f); }
+      if (objects.marcoEspejo) { const f = (1.0 * r.d + 0.9 * r.a + 0.36 * r.n) * frame.ambiente, c = new THREE.Color(MARCO_ESPEJO); for (const m of objects.marcoEspejo) m.color.copy(c).multiplyScalar(f * m.userData.k); }
+      const q = frame.ambiente;
+      if (objects.tomo) { const b = objects.tomo.material.userData.base; objects.tomo.material.color.setRGB(q * b.r * (0.95 * r.d + 0.85 * r.a + 0.32 * r.n), q * b.g * (0.93 * r.d + 0.72 * r.a + 0.30 * r.n), q * b.b * (0.90 * r.d + 0.68 * r.a + 0.42 * r.n)); }
+      for (const m of [objects.alfombrilla, objects.portada, objects.paginas]) if (m) m.material.color.setRGB(q * (0.95 * r.d + 0.85 * r.a + 0.32 * r.n), q * (0.93 * r.d + 0.72 * r.a + 0.30 * r.n), q * (0.90 * r.d + 0.68 * r.a + 0.42 * r.n));
+    }
+    const hh = Math.floor(r.h) % 24, mm = Math.round((r.h % 1) * 60) % 60, resumen = Clima.resumen();
+    const txt = `${r.n > 0.5 ? '☾' : r.a > 0.5 ? '◐' : '☀'} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${horaManual != null ? ' *' : ''}${resumen.icono || resumen.temp ? ' · ' + resumen.icono + resumen.temp : ''}`;
     if (frame.reloj !== txt) relojBtn.textContent = frame.reloj = txt;
   }
+  if (objects.lluvia && objects.lluvia.actualizar(Clima.clima, Clima.intensidadLluvia(Clima.clima.lluvia), now)) sucio = true;
   if (hash.get('debug')) hint.style.opacity = 1, hint.textContent = `${state} ${flight ? 'volando' : ''} cam ${camera.position.toArray().map(v => v.toFixed(2))} fov:${camera.fov.toFixed(0)} nivel ${calidad.nivel} gpu≈${calidad.equiv?.toFixed(1)} cpu ${calidad.cpu.toFixed(1)}`;
   seMovio = pintar(dt);
 }
@@ -1031,11 +1068,14 @@ function frame(now) {
 addEventListener('error', e => { hint.style.opacity = 1; hint.textContent = 'ERROR: ' + e.message; });
 let intro = null, puertaAnim = null, cerrarAlPasar = false;
 // ---------------------------------------------------------------- reloj (hora real de Valencia o elegida a mano)
-let horaManual = hash.get('hora') != null ? +hash.get('hora') : null;
+let horaManual = hash.get('hora') != null ? +hash.get('hora') : null, climaManual = null;   // climaManual: null = el real; si no, uno de Clima.PRESETS
 const relojBtn = document.getElementById('relojBtn'), relojPanel = document.getElementById('relojPanel'), relojSlider = document.getElementById('relojSlider');
 relojBtn.addEventListener('click', () => { relojPanel.hidden = !relojPanel.hidden; relojSlider.value = horaManual ?? Horas.horaValencia(); });
 relojSlider.addEventListener('input', () => { horaManual = +relojSlider.value; });
-document.getElementById('relojReal').addEventListener('click', () => { horaManual = null; frame.ultimaHora = 0; relojPanel.hidden = true; });
+document.getElementById('relojReal').addEventListener('click', () => { horaManual = null; climaManual = null; frame.ultimaHora = 0; relojPanel.hidden = true; marcarClima(); });
+const marcarClima = () => document.querySelectorAll('#climaSel button').forEach(b => b.classList.toggle('on', (b.dataset.clima || null) === climaManual));
+document.getElementById('climaSel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; climaManual = b.dataset.clima || null; frame.ultimaHora = 0; marcarClima(); });
+marcarClima();
 function entrar() {
   if (state !== 'intro' || flight) return;
   zoomPegatina = false; hoverPuerta.clave = ''; contornoAnim.objetivo = 0; contornoSucio = true;
