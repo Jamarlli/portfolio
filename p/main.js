@@ -594,7 +594,7 @@ function setHover(h, ev) {
 }
 let movPendiente = null;          // el raycast se hace una vez por fotograma, no en cada evento del ratón (pueden llegar 500-1000 por segundo)
 renderer.domElement.addEventListener('mousemove', ev => {
-  mouseN.set(ev.clientX / innerWidth - 0.5, ev.clientY / innerHeight - 0.5);
+  // mouseN se queda en 0: la cámara ya no «respira» con el ratón (menos repintados y nada se mueve al apuntar); basta volver a rellenarlo aquí para recuperar el balanceo
   if (state === 'intro') { renderer.domElement.style.cursor = 'pointer'; movPendiente = ev; return; }
   if (state === 'sobremi') { renderer.domElement.style.cursor = FOTOS[fotoBajo(ev)] ? 'pointer' : 'default'; return; }
   movPendiente = ev;
