@@ -56,7 +56,7 @@ function juego(dia, atar, noche) {
 
 // empieza a descargar los horneados de cada hora (a la vez que el cuarto)
 export const cargar = base => Promise.all(['cuarto_luz_dia.webp', 'cuarto_luz_noche.webp', 'vista_dia.webp', 'vista_noche.webp', 'vista_atardecer.webp',
-  'cuarto_luz_atardecer_off.png', 'cuarto_luz_noche_off.png', 'cuarto_luz_noche_share.png']                  // las tres últimas: lámparas apagadas (opcionales)
+  'cuarto_luz_atardecer_off.webp', 'cuarto_luz_noche_off.webp', 'cuarto_luz_noche_share.webp']                  // las tres últimas: lámparas apagadas (opcionales)
   .map((f, i) => cargarTextura(base + f, { flipY: false }).catch(e => { if (i < 5) throw e; return null; })));   // orientación de glTF
 
 export async function prepararHoras(meshes, cargando, rend) {

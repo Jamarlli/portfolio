@@ -31,6 +31,7 @@ const VIEWS = {
 const FLEXO_POLO = (hash.get('flexo') ?? '0.18,1.075').split(',').map(Number);   // x, z del palo del flexo (#flexo=x,z para probar otra posición)
 const FLEXO_PIE = (hash.get('pie') ?? '0.02,-0.075').split(',').map(Number);   // desplazamiento (x, z) del pie respecto al palo
 const LIBRO_GIRO = +(hash.get('lg') ?? 0.3);   // rad que se tuerce el libro sobre la mesa (#lg=0 lo deja recto)
+const RETOQUES = hash.get('retoques') === '1';   // solo para comparar: aplica en JS lo que ya viene horneado (mesa corrida, flexo, pizarra y libro) y vale con el horneado viejo
 const MESA_DESPLAZ = 0.03;   // m que se corre la mesa (y lo que lleva) hacia la puerta, para dejar sitio al palo del flexo
 const ESPEJO_INCL = +(hash.get('lean') ?? 0.14);   // rad que se separa de la pared por abajo (0,14 ≈ 8°; antes 0,22 ≈ 12,6°; #lean=0.22 para compararlo)
 const SOBREMI = (hash.get('sm') ?? '0.7,1.45,1.25,52').split(',').map(Number);   // vista de "Sobre mí": distancia al espejo, altura de los ojos, altura a la que mira, campo de visión (#sm=… para probar)
@@ -210,10 +211,10 @@ async function loadRoom() {
   // o debajo, se corre 3 cm hacia la puerta (la cama y las medidas reales no se tocan) y queda la rendija de 3 cm por donde pasa el palo
   room.updateMatrixWorld(true);
   const sobreMesa = new Set(['mesa', 'barra_luz', 'libro', 'mesita_portatil', 'monitor001', 'monitor_pantalla', 'monitor2001', 'monitor2_pantalla', 'portatil001', 'portatil_pantalla', 'raton', 'teclado', 'vaso', 'vaso001']);
-  room.traverse(o => { if (o.isMesh && sobreMesa.has(o.name)) { const w = o.getWorldPosition(new THREE.Vector3()); w.z += MESA_DESPLAZ; o.position.copy(o.parent.worldToLocal(w)); } });
+  if (RETOQUES) room.traverse(o => { if (o.isMesh && sobreMesa.has(o.name)) { const w = o.getWorldPosition(new THREE.Vector3()); w.z += MESA_DESPLAZ; o.position.copy(o.parent.worldToLocal(w)); } });
   room.updateMatrixWorld(true);
   construirMesaRegulable(room);
-  if (objects.flexo && objects.flexoPantalla) {
+  if (RETOQUES && objects.flexo && objects.flexoPantalla) {
     const [px, pz] = FLEXO_POLO, v0 = new THREE.Vector2(0.38 - 0.90, 0.60 - 1.16), v1 = new THREE.Vector2(0.36 - px, 0.58 - pz);   // brazo de antes / hacia donde apunta
     const ang = v => Math.atan2(v.x, v.y), th = ang(v1) - ang(v0), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), th);
     const base0 = objects.flexo.position.clone(), base1 = new THREE.Vector3(px, base0.y, pz);
@@ -232,7 +233,7 @@ async function loadRoom() {
   // la pizarra se gira un poco más hacia el escritorio y se inclina hacia atrás (la parte de arriba), apoyada por detrás en la KALLAX
   // y rozando la esquina de la cama; se coloca calculando sus esquinas para que no atraviese nada (ni la cómoda): el borde de arriba
   // que más sobresale toca la cara de la KALLAX (x = 2,21) y el borde de abajo del lado de la cama, la cama (z = 1,06)
-  if (objects.pizarra?.parent) {
+  if (RETOQUES && objects.pizarra?.parent) {
     const piz = objects.pizarra.parent, Y = new THREE.Vector3(0, 1, 0);
     const n0 = new THREE.Vector3(-1, 0, 0).applyQuaternion(piz.quaternion), giro = Math.atan2(n0.z, -n0.x) + PIZARRA_GIRO;   // giro horneado + el extra
     piz.quaternion.setFromAxisAngle(Y, giro).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -PIZARRA_INCL));
@@ -301,7 +302,7 @@ async function loadRoom() {
     const eps = 0.0006, tapa = 0.0045, lomo = 0.012;
     const paginas = new THREE.Mesh(new THREE.BoxGeometry(bb.max.x - bb.min.x - lomo + eps, bb.max.y - bb.min.y - 2 * tapa, bb.max.z - bb.min.z + 2 * eps), new THREE.MeshBasicMaterial({ map: tp, color: '#ffffff' }));
     paginas.position.set((bb.min.x + lomo + bb.max.x + eps) / 2, (bb.min.y + bb.max.y) / 2, c.z); lb.add(paginas); objects.libro.push(paginas); objects.paginas = paginas;
-    lb.rotation.y = LIBRO_GIRO; lb.position.add(c.clone().sub(c.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), LIBRO_GIRO)));
+    if (RETOQUES) { lb.rotation.y = LIBRO_GIRO; lb.position.add(c.clone().sub(c.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), LIBRO_GIRO))); }
     lb.updateMatrixWorld(true);
   } catch (e) { console.warn('sin portada', e); }
   // luz según la hora de Valencia (si existen los horneados de día y noche)
