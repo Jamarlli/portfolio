@@ -19,6 +19,7 @@ import { crearEspejo } from './espejo.js';
 import { cargarTextura } from './texturas.js';
 import { icono } from './iconos.js';
 import { crearCadena, crearPresentador, crearReproyector } from './postpro.js';
+import { crearClawd } from './clawd.js';
 // el personaje está archivado en archivo/personaje (web/personaje.js + assets/javier.glb); se retomará más adelante
 
 if (hash.get('noanim')) document.documentElement.classList.add('noanim');
@@ -177,6 +178,8 @@ async function loadRoom() {
     if (n.startsWith('vaso')) { o.visible = false; o.raycast = () => {}; return; }   // el vaso de leche ya no está en el cuarto
     o.material = new THREE.MeshBasicMaterial({ map, color: map ? 0xffffff : src.color, side: THREE.FrontSide });
     if (/^monitor(\d|_)/.test(n) && !n.startsWith('monitor2')) objects.monitor.push(o);   // cuerpo (monitor001) y pantalla
+    if (n.startsWith('monitor2')) objects.monitor2.push(o);                                // la segunda pantalla: Clawd
+    if (n === 'monitor2_pantalla') objects.pantalla2 = o;
     if (n.startsWith('libro')) objects.libro.push(o);
     if (n.startsWith('ventana') || n.startsWith('estor') || n.startsWith('paisaje')) objects.ventana.push(o);
     if (n.startsWith('pizarra')) objects.pizarra = o;
@@ -196,7 +199,7 @@ async function loadRoom() {
   // que en un portátil cuestan CPU en la página y en el proceso de GPU del navegador (cada una se traduce a Direct3D)
   {
     const bajoMesa = o => { for (let p = o; p; p = p.parent) if (p === mesa.grupo) return true; return false; };
-    const tocables = new Set([...objects.monitor,...objects.libro, ...objects.ventana, ...objects.espejo, objects.pizarra, objects.armario, objects.puerta, objects.flexo]);
+    const tocables = new Set([...objects.monitor, ...objects.monitor2, ...objects.libro, ...objects.ventana, ...objects.espejo, objects.pizarra, objects.armario, objects.puerta, objects.flexo]);
     const fijas = [];
     room.updateMatrixWorld(true);
     room.traverse(o => { if (o.isMesh && o.userData.mat === 'horneado' && !tocables.has(o) && !bajoMesa(o) &&!o.name.startsWith('espejo') && !o.material.transparent && o.material.map && o.geometry.index && o.geometry.attributes.uv) fijas.push(o); });
@@ -261,6 +264,14 @@ async function loadRoom() {
   if (Horas.haySolDinamico()) objects.solDirecto = crearSolDirecto(renderer, scene, mallas.filter(o => o.userData.mat === 'horneado' && o.visible));
   objects.lluvia = crearLluvia({ scene, camera, renderer, cristales: objects.cristales, paisajes: mallas.filter(o => o.name.startsWith('paisaje')) });
   if (Horas.hayLamparas()) { lamparas.listas = true; construirResplandor(); }
+  // Clawd en la segunda pantalla: al hacer clic sale una escena en píxeles según la fecha, la hora y el tiempo (#clawd=nombre fuerza una; #fecha=AAAA-MM-DD la fecha)
+  if (objects.pantalla2) {
+    objects.clawd = crearClawd(THREE, objects.pantalla2, { forzada: hash.get('clawd'), contexto: () => {
+      const f = hash.get('fecha') ? new Date(hash.get('fecha') + 'T12:00:00') : new Date(), t = Clima.clima.temp;
+      return { fecha: f, hora: horaManual ?? Horas.horaValencia(), temp: t == null ? null : t, llueve: Clima.clima.lluvia > 0.3, en: LANG === 'en' };
+    } });
+    objects.clawd.malla.updateMatrixWorld(true); if (hash.get('debug')) window.__clawd = objects.clawd;
+  }
   paso(T.colocando);
   // texto de la pizarra: capa nítida sobre la cara horneada (y su UV dice en qué línea se hace clic)
   if (objects.pizarra) {
@@ -398,6 +409,7 @@ function hitTest(ev) {
   if (!hit) return null;
   const o = hit.object;
   if (objects.monitor.includes(o)) return { key: 'proyectos' };
+  if (objects.monitor2.includes(o) || (objects.clawd && o === objects.clawd.malla)) return { key: 'clawd' };
   if (objects.libro.includes(o)) return { key: 'educacion' };
   if (objects.ventana.includes(o)) return { key: 'experiencia' };
   if (objects.espejo.includes(o) || objects.espejoFotos?.includes(o)) return { key: 'sobremi' };
@@ -415,10 +427,11 @@ function hitTest(ev) {
   return null;
 }
 // easter eggs: interacciones sin panel (no se iluminan ni llevan cartel; el cursor sí pasa a la manita)
-const HUEVOS = new Set(['mesa', 'balon', 'persiana0', 'persiana1', 'barra', 'flexo']);
+const HUEVOS = new Set(['mesa', 'balon', 'persiana0', 'persiana1', 'barra', 'flexo', 'clawd']);
 const grito = new Audio('./assets/cuarto/grito.mp3'); grito.preload = 'none';
 let gritoAnim = null;
 function huevoClic(k) {
+  if (k === 'clawd') return objects.clawd?.clic(performance.now());
   if (k === 'mesa') return alternarMesa();
   if (k.startsWith('persiana')) return alternarPersiana(+k.slice(8));
   if (k === 'barra' || k === 'flexo') return alternarLampara(k);
@@ -1083,6 +1096,7 @@ function frame(now) {
   }
   if (objects.lluvia && objects.lluvia.actualizar(Clima.clima, Clima.intensidadLluvia(Clima.clima.lluvia), now)) { const limpio = !estado.sucio; estado.sucio = true; estado.lluviaSola = limpio; }
   if (hash.get('debug')) hint.style.opacity = 1, hint.textContent = `${state} ${flight ? 'volando' : ''} cam ${camera.position.toArray().map(v => v.toFixed(2))} fov:${camera.fov.toFixed(0)} nivel ${calidad.nivel} gpu≈${calidad.equiv?.toFixed(1)} cpu ${calidad.cpu.toFixed(1)}`;
+  if (objects.clawd && objects.clawd.actualizar(now)) estado.sucio = true;
   seMovio = pintar(dt);
 }
 
