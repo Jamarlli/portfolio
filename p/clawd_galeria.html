@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Clawd · escenas</title>
+<style>
+  :root { color-scheme: dark; --fondo: #17141a; --panel: #231f29; --borde: #3a3342; --texto: #ece6e0; --tenue: #a79eb0; --naranja: #d77757; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.4 system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px 16px 40px; gap: 16px; }
+  h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  h1 span { color: var(--naranja); }
+  #lienzo { width: min(100%, 960px); aspect-ratio: 128 / 78; image-rendering: pixelated; background: #000; border: 1px solid var(--borde); border-radius: 6px; display: block; }
+  .fila { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: min(100%, 960px); }
+  button { font: inherit; color: var(--texto); background: var(--panel); border: 1px solid var(--borde); border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+  button:hover { border-color: var(--naranja); }
+  button.on { background: var(--naranja); border-color: var(--naranja); color: #1b1410; font-weight: 600; }
+  label { display: inline-flex; align-items: center; gap: 6px; color: var(--tenue); }
+  input[type=range] { accent-color: var(--naranja); }
+  #barra { width: min(100%, 960px); height: 6px; background: var(--panel); border-radius: 3px; overflow: hidden; cursor: pointer; }
+  #barra i { display: block; height: 100%; width: 0; background: var(--naranja); }
+  #info { color: var(--tenue); font-size: 13px; }
+</style>
+</head>
+<body>
+  <h1>Clawd · <span>escenas</span></h1>
+  <canvas id="lienzo" width="128" height="78"></canvas>
+  <div id="barra" title="Pulsa para saltar a ese momento"><i></i></div>
+  <div id="info"></div>
+  <div class="fila" id="escenas"></div>
+  <div class="fila">
+    <button id="pausa">Pausa</button>
+    <button id="reiniciar">Reiniciar</button>
+    <label>Velocidad <input id="vel" type="range" min="0.25" max="2" step="0.25" value="1"><span id="velTxt">1×</span></label>
+    <label><input id="bucle" type="checkbox" checked> Bucle</label>
+    <label><input id="lluvia" type="checkbox"> Lluvia (café)</label>
+    <label><input id="en" type="checkbox"> Inglés</label>
+  </div>
+<script type="module">
+import { ESCENAS, pintar } from './clawd.js';
+const NOMBRES = { saludo: 'Saludo', dormir: 'Dormir', trabajar: 'Trabajar', cafe: 'Café', nieve: 'Nieve', pascua: 'Pascua', noel: 'Papá Noel' };
+const cv = document.getElementById('lienzo'), ctx = cv.getContext('2d'), $ = id => document.getElementById(id);
+let actual = (location.hash.match(/e=(\w+)/) || [])[1]; if (!ESCENAS[actual]) actual = 'saludo';
+let t = 0, pausa = false, previo = null;
+const caja = $('escenas');
+for (const k of Object.keys(NOMBRES)) {
+  const b = document.createElement('button'); b.textContent = `${NOMBRES[k]} (${ESCENAS[k].dur} s)`; b.dataset.k = k;
+  b.onclick = () => { actual = k; t = 0; history.replaceState(null, '', '#e=' + k); marcar(); };
+  caja.append(b);
+}
+const marcar = () => caja.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === actual));
+marcar();
+$('pausa').onclick = () => { pausa = !pausa; $('pausa').textContent = pausa ? 'Seguir' : 'Pausa'; };
+$('reiniciar').onclick = () => { t = 0; };
+$('vel').oninput = () => { $('velTxt').textContent = $('vel').value + '×'; };
+$('barra').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); t = (e.clientX - r.left) / r.width * ESCENAS[actual].dur; };
+addEventListener('keydown', e => {
+  const ks = Object.keys(NOMBRES);
+  if (e.key === ' ') { e.preventDefault(); $('pausa').click(); }
+  else if (e.key === 'ArrowRight') { actual = ks[(ks.indexOf(actual) + 1) % ks.length]; t = 0; marcar(); }
+  else if (e.key === 'ArrowLeft') { actual = ks[(ks.indexOf(actual) + ks.length - 1) % ks.length]; t = 0; marcar(); }
+});
+function bucle(now) {
+  requestAnimationFrame(bucle);
+  const dt = previo == null ? 0 : (now - previo) / 1000; previo = now;
+  const dur = ESCENAS[actual].dur;
+  if (!pausa) { t += dt * +$('vel').value; if (t >= dur) t = $('bucle').checked ? t - dur : dur - 0.001; }
+  pintar(ctx, actual, Math.max(0, t), { llueve: $('lluvia').checked, en: $('en').checked });
+  $('barra').firstElementChild.style.width = (t / dur * 100) + '%';
+  $('info').textContent = `${NOMBRES[actual]} · ${t.toFixed(1)} / ${dur} s · flechas izquierda y derecha cambian de escena · espacio pausa`;
+}
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>
