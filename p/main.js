@@ -46,6 +46,14 @@ const BOARD_ITEMS = [['proyectos', 0.60], ['educacion', 0.47], ['experiencia', 0
 
 // cadenas de posprocesado (postpro.js): la nítida (la imagen de siempre) y las de vuelo; se elige midiendo la GPU
 const PR = renderer.getPixelRatio();
+// Modo ligero: sin GPU (renderizado por software, p. ej. «Microsoft Basic Render Driver» o SwiftShader) o con una nítida de más de 100 ms.
+// La imagen en reposo es la misma, nítida y entera; lo que cambia es cómo se llega a ella: los vuelos son un fundido entre dos
+// imágenes nítidas (en vez de 40 fotogramas a medias), las animaciones largas (mesa, persianas, puerta, luces) saltan al final,
+// el contorno no late y la lluvia no repinta la escena por su cuenta. #ligero=1 lo fuerza y #ligero=0 lo impide.
+const gpuNombre = (() => { const g = renderer.getContext(), d = g.getExtension('WEBGL_debug_renderer_info'); return d ? String(g.getParameter(d.UNMASKED_RENDERER_WEBGL)) : ''; })();
+const sinGPU = /swiftshader|basic render|llvmpipe|software|softpipe/i.test(gpuNombre);
+let ligero = hash.get('ligero') != null ? hash.get('ligero') === '1' : sinGPU;
+const rapido = ms => ligero ? 1 : ms;                         // duración de una animación: en modo ligero, de golpe
 const MSAA = +(hash.get('msaa') ?? 4);                        // antialiasing 4x en la nítida: sin bordes dentados ni rayas que centellean (+2,6 ms)
 const nitida = crearCadena(renderer, scene, camera, { msaa: MSAA });
 // para volar en equipos justos, tres más ligeras: 85 %, 72 % y 60 % de resolución, con los bordes suavizados (FXAA, como
@@ -57,6 +65,8 @@ const todas = [...cadenas, nitidaB];
 const contorno = sel => { for (const c of todas) c.outline.selectedObjects = sel; };
 const presentar = crearPresentador(renderer), reproyector = crearReproyector(renderer);
 const nivelFijo = hash.get('nivel') != null ? +hash.get('nivel') : null;     // para pruebas: forzar una cadena en movimiento
+function activarLigero() { ligero = true; for (const c of todas) c.outline.pulsePeriod = 0; if (objects.lluvia) objects.lluvia.estatica = true; }
+if (ligero) for (const c of todas) c.outline.pulsePeriod = 0;
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.zoom = zoomPara(camera.aspect); camera.updateProjectionMatrix();
@@ -152,7 +162,7 @@ if (hash.get('debug')) window.__alternarMesa = () => alternarMesa();
 if (hash.get('debug')) window.__dbg = { camera, scene, objects, renderer, huevoClic: k => huevoClic(k) };   // para las pruebas automáticas
 function alternarMesa() {
   if (mesa.anim || !mesa.grupo) return;
-  mesa.arriba = !mesa.arriba; mesa.anim = { t0: null, dur: 3800, de: mesa.u, a: mesa.arriba ? 1 : 0 };
+  mesa.arriba = !mesa.arriba; mesa.anim = { t0: null, dur: rapido(3800), de: mesa.u, a: mesa.arriba ? 1 : 0 };
 }
 async function loadRoom() {
   const paso = t => { const l = document.getElementById('loading'); if (l) l.textContent = t; };
@@ -260,6 +270,7 @@ async function loadRoom() {
   await Promise.race([climaListo, new Promise(r => setTimeout(r, 1800))]);      // el tiempo, si llega pronto; si no, entra cuando llegue
   if (Horas.haySolDinamico()) objects.solDirecto = crearSolDirecto(renderer, scene, mallas.filter(o => o.userData.mat === 'horneado' && o.visible));
   objects.lluvia = crearLluvia({ scene, camera, renderer, cristales: objects.cristales, paisajes: mallas.filter(o => o.name.startsWith('paisaje')) });
+  objects.lluvia.estatica = ligero;
   if (Horas.hayLamparas()) { lamparas.listas = true; construirResplandor(); }
   paso(T.colocando);
   // texto de la pizarra: capa nítida sobre la cara horneada (y su UV dice en qué línea se hace clic)
@@ -446,7 +457,7 @@ function animarLamparas(dt) {
   if (!lamparas.listas) return;
   for (const k of ['barra', 'flexo']) {
     const l = lamparas[k], b = brilloLampara(k);
-    const nb = l.brillo + Math.sign(b - l.brillo) * Math.min(Math.abs(b - l.brillo), dt / 300);
+    const nb = l.brillo + Math.sign(b - l.brillo) * Math.min(Math.abs(b - l.brillo), ligero ? 1 : dt / 300);
     if (nb !== l.brillo) {
       l.luz = l.brillo = nb; cambia = true;
       if (l.glow) { l.glow.visible = nb > 0.01; l.glow.material.color.setRGB(2.6 * nb, 2.1 * nb, 1.5 * nb); }
@@ -567,7 +578,7 @@ function construirPersiana(room) {
 }
 function alternarPersiana(i) {
   const e = persiana.estores[i]; if (!e || e.anim) return;
-  const nuevo = e.nivel + e.dir; e.anim = { t0: null, de: e.y, a: persiana.niveles[nuevo], dur: 1500 };
+  const nuevo = e.nivel + e.dir; e.anim = { t0: null, de: e.y, a: persiana.niveles[nuevo], dur: rapido(1500) };
   e.nivel = nuevo; if (nuevo === 0) e.dir = 1; else if (nuevo === 2) e.dir = -1;
 }
 function animarPersiana(now) {
@@ -653,6 +664,7 @@ function flyTo(to, done, dur = 1.6, via = null) {
   const amp = to === VIEWS.home ? 1 : to === VIEWS.pizarra ? 0.25 : 0;
   if (amp) to = { ...to, pos: to.pos.clone().add({ x: mouseN.x * 0.06 * amp, y: -mouseN.y * 0.04 * amp, z: 0 }), q: null };
   reiniciarGiro();
+  if (ligero) { flight = { fundido: true, to, done, fase: 0, t0: null, dur: 380 }; return; }
   flight = { from: { pos: camera.position.clone(), look: currentLook.clone(), fov: camera.fov, q: camera.quaternion.clone(), dist: camera.position.distanceTo(currentLook) }, to, done, via, t0: null, dur: dur * 1000 };   // t0: el primer fotograma; via: punto de paso (curva)
 }
 function goBoard() {
@@ -849,12 +861,12 @@ function pintar(dt = 1000 / 60) {
   const enVuelo = !!flight || !!puertaAnim;
   // contorno: fundido de entrada y salida; mientras se ve, late (si la nítida va justa, a 30 fps: es un brillo lento)
   const ca = contornoAnim, antes = ca.brillo;
-  ca.brillo = ca.objetivo === 1 ? Math.min(1, ca.brillo + dt / 110) : Math.max(0, ca.brillo - dt / 160);   // (al máximo se queda quieto)
+  ca.brillo = ligero ? ca.objetivo : ca.objetivo === 1 ? Math.min(1, ca.brillo + dt / 110) : Math.max(0, ca.brillo - dt / 160);   // (al máximo se queda quieto)
   if (ca.brillo === 0 && antes > 0) contorno([]);
   const fuerza = 4 * ca.brillo * ca.brillo * (3 - 2 * ca.brillo);
   for (const c of todas) c.outline.edgeStrength = fuerza;
   // el contorno late (un brillo lento): basta a 30 fps; si aparece o se va (fundido) o cambia de objeto, cada fotograma
-  const late = contornoSucio || (nitida.outline.selectedObjects.length > 0 && (ca.brillo !== antes || (pintar.salto = !pintar.salto)));
+  const late = contornoSucio || (nitida.outline.selectedObjects.length > 0 && (ca.brillo !== antes || (!ligero && (pintar.salto = !pintar.salto))));
   const t0 = performance.now();
   let movil = null, reproyectar = false, entera = false, soloContorno = false;
   for (const c of todas) c.bloom.reutilizar = false;
@@ -892,6 +904,26 @@ function pintar(dt = 1000 / 60) {
   if (movil || entera) calidad.cpu = calidad.cpu * 0.9 + (performance.now() - t0) * 0.1;
   if (cronometro) cronometro.recoger(anotarTiempo);
   return cambio;
+}
+// modo ligero: en vez de volar, la nítida de llegada (entera, de una vez) y un fundido corto desde la que se veía
+function pasoFundido(now) {
+  const f = flight;
+  if (f.fase === 0) {
+    const ca = contornoAnim; if (ca.objetivo === 0) { ca.brillo = 0; contorno([]); for (const c of todas) c.outline.edgeStrength = 0; }
+    f.antes = lista.cadena || nitida; f.otra = f.antes === nitida ? nitidaB : nitida;
+    camera.updateMatrixWorld(); camUlt.copy(camera.matrixWorld);
+    nitidaB.bloom.reutilizar = nitida.bloom.reutilizar = false; for (const e of espejos) e.reutilizar = false;
+    prepararEspejos(1); componer(f.otra); usar('entera');
+    f.fase = 1; return true;
+  }
+  f.t0 ??= now;
+  const x = THREE.MathUtils.clamp((now - f.t0) / f.dur, 0, 1);
+  presentar(f.antes.textura, f.otra.textura, x * x * (3 - 2 * x));
+  if (x >= 1) {
+    lista.cadena = f.otra; anotarCamara(lista); obra.cadena = null; ultimaMovil = null; mezcla = 1; estado.sucio = false; estado.lluviaSola = false;
+    flight = null; f.done && f.done();
+  }
+  return true;
 }
 function rehacerContorno() {                                   // sobre la escena ya pintada de la nítida que se ve (su color y profundidad siguen ahí)
   const cp = lista.cadena.composer, ps = cp.passes;
@@ -982,7 +1014,7 @@ const diag = (() => {
     el.textContent = [`GPU: ${gpu}${software ? '  ← SIN ACELERACIÓN (va por software)' : ''}`,
       `pantalla ${innerWidth}×${innerHeight} · píxeles ${b.x}×${b.y} (×${renderer.getPixelRatio()})`,
       `${(1000 / media).toFixed(0)} fps · fotograma ${media.toFixed(1)} ms (p95 ${p95.toFixed(1)})`,
-      `GPU ${calidad.gpuUlt != null ? calidad.gpuUlt.toFixed(1) + ' ms' : '–'} · CPU ${calidad.cpu.toFixed(1)} ms · calidad nivel ${calidad.nivel} · margen ${calidad.margen.toFixed(2)}`,
+      `GPU ${calidad.gpuUlt != null ? calidad.gpuUlt.toFixed(1) + ' ms' : '–'} · CPU ${calidad.cpu.toFixed(1)} ms · calidad nivel ${calidad.nivel} · margen ${calidad.margen.toFixed(2)}${ligero ? ' · MODO LIGERO' : ''}`,
       `lluvia ${Clima.clima.lluvia.toFixed(1)} mm/h (${Clima.clima.origen.lluvia}) · viento ${Math.round(Clima.clima.viento)} km/h`].join('\n');
   };
   return e;
@@ -1002,13 +1034,15 @@ function frame(now) {
     if (!flight && (state === 'home' || state === 'pizarra')) { const h = hitTest(ev), huevo = HUEVOS.has(h?.key); setHover(huevo ? null : h, ev); if (huevo) renderer.domElement.style.cursor = 'pointer'; }   // los easter eggs (sin panel) no se iluminan ni llevan cartel, pero el cursor sí pasa a la manita
     else if (!flight && state === 'intro' && intro && !puertaAnim) hoverPuerta(ev);
   }
-  if (flight) {
+  if (flight?.fundido) {                                    // modo ligero: la cámara ya está en el destino; el fundido lo pinta pasoFundido
+    ponerCamara(flight.to.pos, flight.to.look, flight.to.fov); currentLook.copy(flight.to.look); suave.copy(camera.position); velSuave.set(0, 0, 0);
+  } else if (flight) {
     flight.t0 ??= now;
     const x = THREE.MathUtils.clamp((now - flight.t0) / flight.dur, 0, 1);
     poseVuelo(flight.from, flight.to, ease(x), flight.via); suave.copy(camera.position); velSuave.set(0, 0, 0);
     // al entrar, la puerta se cierra en cuanto la cámara sale del barrido de la hoja (antes se cruzaban)
     if (cerrarAlPasar && camera.position.z < intro.bisagra.y && Math.hypot(camera.position.x - intro.bisagra.x, camera.position.z - intro.bisagra.y) > intro.radioPuerta + 0.12) {
-      cerrarAlPasar = false; puertaAnim = { t0: null, dur: 1800, de: 1, a: 0 };
+      cerrarAlPasar = false; puertaAnim = { t0: null, dur: rapido(1800), de: 1, a: 0 };
     }
     if (x >= 1) { const d = flight.done; flight = null; d && d(); }
   } else {
@@ -1036,12 +1070,12 @@ function frame(now) {
     if (t >= 1) puertaAnim = null;
   }
   for (const k in lineasPizarra) {                          // resaltador de la pizarra: fundido de 0,12 s
-    const L = lineasPizarra[k], v = L.obj ? Math.min(1, L.op + dt / 120) : Math.max(0, L.op - dt / 160);
+    const L = lineasPizarra[k], v = L.obj ? Math.min(1, L.op + (ligero ? 1 : dt / 120)) : Math.max(0, L.op - (ligero ? 1 : dt / 160));
     if (v !== L.op) { L.op = v; L.mat.opacity = v; L.m.visible = v > 0; estado.sucio = true; }
   }
   if (objects.armario) {                                    // dentro de su volumen, oculto al momento; al salir, aparece en 0,2 s
     const u = objects.armario.material.userData.aparicion, fuera = camera.position.z < 3.03 || camera.position.z > 3.62;
-    const v = fuera ? Math.min(1, u.value + dt / 200) : 0;
+    const v = fuera ? Math.min(1, u.value + (ligero ? 1 : dt / 200)) : 0;
     if (v !== u.value) { u.value = v; estado.sucio = true; }
     objects.armario.visible = v > 0;
   }
@@ -1083,7 +1117,7 @@ function frame(now) {
   }
   if (objects.lluvia && objects.lluvia.actualizar(Clima.clima, Clima.intensidadLluvia(Clima.clima.lluvia), now)) { const limpio = !estado.sucio; estado.sucio = true; estado.lluviaSola = limpio; }
   if (hash.get('debug')) hint.style.opacity = 1, hint.textContent = `${state} ${flight ? 'volando' : ''} cam ${camera.position.toArray().map(v => v.toFixed(2))} fov:${camera.fov.toFixed(0)} nivel ${calidad.nivel} gpu≈${calidad.equiv?.toFixed(1)} cpu ${calidad.cpu.toFixed(1)}`;
-  seMovio = pintar(dt);
+  seMovio = flight?.fundido ? pasoFundido(now) : pintar(dt);
 }
 
 addEventListener('error', e => { hint.style.opacity = 1; hint.textContent = 'ERROR: ' + e.message; });
@@ -1126,11 +1160,11 @@ function entrar() {
   if (state !== 'intro' || flight) return;
   zoomPegatina = false; hoverPuerta.clave = ''; contornoAnim.objetivo = 0; contornoSucio = true;
   state = 'entrando'; hint.style.opacity = 0; renderer.domElement.style.cursor = 'default';
-  puertaAnim = { t0: null, dur: 1500, de: 0, a: 1 };
+  puertaAnim = { t0: null, dur: rapido(1500), de: 0, a: 1 };
   setTimeout(() => flyTo(intro.vistaDentro, () => {
     cerrarAlPasar = true;                                       // se cierra al pasar (en cuanto la cámara deja libre la hoja)
     flyTo(VIEWS.home, () => {
-      if (cerrarAlPasar) { cerrarAlPasar = false; puertaAnim = { t0: null, dur: 1800, de: 1, a: 0 }; }
+      if (cerrarAlPasar) { cerrarAlPasar = false; puertaAnim = { t0: null, dur: rapido(1800), de: 1, a: 0 }; }
       intro.ocultarPasillo(); estado.sucio = true; state = 'home'; hint.textContent = T.hintCuarto; hint.style.opacity = 1;
     }, 2.0, intro.paso);
   }, 1.6), 450);
@@ -1161,7 +1195,7 @@ async function calentar() {
   // búfer en el que se dibuja (escena, espejo, contorno…), y si no se hace aquí, se hace a mitad de un vuelo (tirón)
   const recortados = []; scene.traverse(o => { if (o.frustumCulled) { o.frustumCulled = false; recortados.push(o); } });
   contorno([...objects.monitor, ...objects.libro, ...objects.ventana, objects.pizarra, objects.boardFace].filter(o => o && !o.name?.startsWith('paisaje')));
-  for (const c of todas) for (const v of [VIEWS.home, VIEWS.pizarra, VIEWS.espejoTercera, VIEWS.sobremi].filter(Boolean)) {
+  for (const c of ligero ? [nitida, nitidaB] : todas) for (const v of (ligero ? [VIEWS.home] : [VIEWS.home, VIEWS.pizarra, VIEWS.espejoTercera, VIEWS.sobremi]).filter(Boolean)) {
     setCam(v); for (const e of espejos) { e.nuevoFotograma(); e.escala = c.escala; } c.composer.render(); presentar(c.textura, nitida.textura, 0.5);
   }
   camera.updateMatrixWorld(); reproyector(nitida.textura, nitida.profundidad, camera.projectionMatrixInverse, camera.projectionMatrix);   // compilar la reproyección
@@ -1176,11 +1210,13 @@ async function calentar() {
   // primera estimación de lo que tarda la nítida (luego la va afinando el cronómetro de GPU con los fotogramas reales)
   const gl = renderer.getContext(), px = new Uint8Array(4), t = [];
   setCam(VIEWS.home);
+  if (ligero) { calidad.equiv = 500; elegirNivel(); estado.sucio = true; return; }     // sin GPU no hace falta medir
   for (let i = 0; i < 9; i++) {
     const t0 = performance.now(); for (const e of espejos) { e.nuevoFotograma(); e.escala = 1; }
     nitida.composer.render(); presentar(nitida.textura, nitida.textura, 1); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); if (i > 1) t.push(performance.now() - t0);
   }
   t.sort((a, b) => a - b); calidad.equiv = t[t.length >> 1] * 0.8;    // la espera síncrona exagera un poco
+  if (calidad.equiv > 100 && hash.get('ligero') == null) activarLigero();     // una GPU que no llega: mejor el modo ligero
   elegirNivel();
   console.info(`fotograma nítido ≈ ${calidad.equiv.toFixed(1)} ms -> en movimiento, nivel ${calidad.nivel}`);
   estado.sucio = true;

@@ -150,7 +150,7 @@ export function crearLluvia({ scene, camera, renderer, cristales, paisajes }) {
   const sol = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false, fog: false }));
   sol.visible = false; sol.raycast = () => {}; scene.add(sol);
   const frustum = new THREE.Frustum(), pv = new THREE.Matrix4(), esfera = new THREE.Sphere(new THREE.Vector3(1.06, 1.55, -0.05), 1.05);
-  const e = { visible: false, flash: 0, proximoRayo: 0, ultimo: 0, int: 0 };
+  const e = { visible: false, flash: 0, proximoRayo: 0, ultimo: 0, int: 0, estatica: false };   // estatica: sin GPU, la lluvia no repinta la escena por su cuenta
   // dir: hacia el sol (cuarto); color rgb; vis: 0..1 cuánto se ve (nubes lo apagan)
   e.ponerSol = (dir, color, vis) => {
     const t = 29 / Math.max(1e-3, -dir[2]), x = 1.06 + dir[0] * t, y = 1.55 + dir[1] * t;
@@ -190,7 +190,7 @@ export function crearLluvia({ scene, camera, renderer, cristales, paisajes }) {
       gotas.u.uTime.value = cristal.u.uTime.value = now / 1000; cristal.u.uInt.value = intensidad;
     } else cristal.u.uInt.value = 0;
     // se anima a ~20 imágenes por segundo (las rayas largas disimulan) y solo con la ventana a la vista
-    const repintar = (dibujar && now - e.ultimo > 48) || e.flash > 0 || f0 > 0;
+    const repintar = !e.estatica && ((dibujar && now - e.ultimo > 48) || e.flash > 0 || f0 > 0);
     if (repintar) e.ultimo = now;
     return repintar;
   };
