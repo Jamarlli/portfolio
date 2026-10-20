@@ -45,7 +45,7 @@ const CONTENIDO = {
       ] },
       { title: 'Viajar', paras: [
         'Me encanta viajar. Conocer otras culturas, otros lugares y otras gastronomías me ha impulsado a moverme y lanzarme a ver mundo. Hasta ahora he visitado 15 países ... ¡y los que me quedan!',
-        { mapa: ['España', 'Italia', 'Francia', 'Portugal', 'Andorra', 'Irlanda', 'Alemania', 'Austria', 'Eslovaquia', 'Chequia', 'Hungría', 'Marruecos', 'Canadá', 'Tailandia', 'Ciudad del Vaticano'] },
+        { mapa: true },
         { h: 'Historia', t: 'Cuando visito una ciudad, un monumento o un museo, lo que más me gusta es que me cuenten la historia que hay detrás. Ya no los datos informativos, sino la narrativa que los envuelve. Entre free tours, audioguías y lo que dice Wikipedia, me atiborro de información hasta que me sale por las orejas.' },
         { h: 'Naturaleza', t: 'Pero no solo me gusta viajar a la ciudad. Otra cosa que me encanta es conocer la naturaleza de las zonas a las que viajo. Ya sea playa o montaña, ver paisajes tan distintos a los que acostumbro en España me llena de un asombro y una paz inmensas. Y cuando viajo intento informarme sobre las riquezas naturales del país para hacer alguna ruta o excursión y poder disfrutarlas.' },
         { h: 'Gastronomía', t: 'Y por supuesto, como español de buen comer, una de las cosas que más me gusta de viajar es probar otras gastronomías. Intento probar siempre el core de la gastronomía del país que visito, tocando todos los niveles, desde la comida callejera hasta sus mejores platos de restaurante (aunque intentando que no me sablen, que no soy de oro).' },
@@ -113,7 +113,7 @@ const CONTENIDO = {
       ] },
       { title: 'Travel', paras: [
         'I love travelling. Getting to know other cultures, other places and other cuisines has pushed me to move and go out to see the world. So far I have visited 15 countries ... and counting!',
-        { mapa: ['Spain', 'Italy', 'France', 'Portugal', 'Andorra', 'Ireland', 'Germany', 'Austria', 'Slovakia', 'Czechia', 'Hungary', 'Morocco', 'Canada', 'Thailand', 'Vatican City'] },
+        { mapa: true },
         { h: 'History', t: 'When I visit a city, a monument or a museum, what I like most is hearing the story behind it. Not the factual data, but the narrative that surrounds it. Between free tours, audio guides and what Wikipedia says, I stuff myself with information until it comes out of my ears.' },
         { h: 'Nature', t: 'But I do not only like travelling to cities. Another thing I love is getting to know the nature of the places I travel to. Whether it is beach or mountains, seeing landscapes so different from what I am used to in Spain fills me with immense wonder and peace. And when I travel I try to find out about the natural treasures of the country so I can do a route or an excursion and enjoy them.' },
         { h: 'Food', t: 'And of course, as a Spaniard who loves good food, one of the things I like most about travelling is trying other cuisines. I always try to taste the core of the cuisine of the country I visit, at every level, from street food to the best restaurant dishes (while trying not to get ripped off, because I am not made of gold).' },

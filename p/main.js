@@ -772,12 +772,18 @@ function mostrarFoto(i) {
   panel.replaceChildren(Object.assign(document.createElement('div'), { className: 'card bocadillo',
     innerHTML: `<button class="px-btn volver-sm" type="button">← ${SECTIONS.sobremi}</button><h2>${f.title}</h2>${f.paras.map(p => typeof p === 'string' ? `<p>${p}</p>` : p.mapa ? `<figure class="mapa" tabindex="0" role="button" aria-label="${T.ampliarMapa}">${MAPA}<figcaption>${T.ampliarMapa}</figcaption></figure>` : `<h3>${p.h}</h3>${p.t ? `<p>${p.t}</p>` : ''}${p.list ? `<ul>${p.list.map(x => typeof x === 'string' ? `<li>${x}</li>` : `<li><a href="${x.href}" target="_blank" rel="noopener">${x.t}</a>${x.res ? ', ' + x.res : ''}</li>`).join('')}</ul>` : ''}`).join('')}` }));
   panel.querySelector('.volver-sm').addEventListener('click', () => showPanel('sobremi'));
-  const mapa = panel.querySelector('.mapa'), paises = f.paras.find(p => p.mapa)?.mapa;
-  if (mapa) { mapa.addEventListener('click', () => abrirMapa(paises)); mapa.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirMapa(paises); } }); }
+  const mapa = panel.querySelector('.mapa');
+  if (mapa) { mapa.addEventListener('click', abrirMapa); mapa.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirMapa(); } }); }
 }
-// el mapa del mundo a pantalla completa, con la lista de países visitados; se cierra con un clic o con Esc
-function abrirMapa(paises) {
-  const velo = Object.assign(document.createElement('div'), { className: 'mapa-grande', innerHTML: `<div class="mapa-caja">${MAPA}<ul>${paises.map(n => `<li>${n}</li>`).join('')}</ul></div>` });
+// el nombre de un país visitado al pasar el ratón por encima (solo los visitados llevan nombre)
+const mapaTip = Object.assign(document.createElement('div'), { className: 'mapa-tip', hidden: true }); document.body.appendChild(mapaTip);
+document.addEventListener('mousemove', e => {
+  const p = e.target.closest?.('.mapa-svg .v, .mapa-svg .h'), n = p?.dataset[LANG === 'en' ? 'en' : 'es'];
+  mapaTip.hidden = !n; if (n) { mapaTip.textContent = n; mapaTip.style.left = e.clientX + 14 + 'px'; mapaTip.style.top = e.clientY + 14 + 'px'; }
+});
+// el mapa del mundo ampliado; se cierra con un clic o con Esc
+function abrirMapa() {
+  const velo = Object.assign(document.createElement('div'), { className: 'mapa-grande', innerHTML: `<div class="mapa-caja">${MAPA}</div>` });
   const cerrar = () => { velo.remove(); removeEventListener('keydown', alTeclear, true); };
   const alTeclear = e => { if (e.key === 'Escape') { e.stopImmediatePropagation(); cerrar(); } };
   velo.addEventListener('click', cerrar); addEventListener('keydown', alTeclear, true);
