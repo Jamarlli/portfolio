@@ -36,7 +36,7 @@ export function montarLibro(book, titulo, entradas, T) {
   }
   function pasar(d) {
     if (ocupado) return; const nuevo = spread + d; if (nuevo < 0 || nuevo >= total()) return;
-    ocupado = true;
+    ocupado = true; book.classList.remove('opening');                       // la animación de apertura volvería a dispararse al quitar la del giro: se movería dos veces
     const sale = d > 0 ? der : izq, entra = d > 0 ? izq : der, clase = d > 0 ? 'der' : 'izq';
     const fin = () => {
       sale.classList.remove('sale-' + clase); spread = nuevo; pintar();
