@@ -23,6 +23,9 @@
   .pie h2 { margin: 0 0 2px; font-size: 16px; font-weight: 600; }
   .pie p { margin: 0; color: var(--tenue); font-size: 13px; }
   .pie small { color: var(--naranja); font-size: 12px; }
+  .pie b { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 9px; margin-left: 4px; }
+  .pie b.v1 { background: #3a3342; color: var(--tenue); }
+  .pie b.v2 { background: var(--naranja); color: #1b1410; }
   .grande { position: fixed; inset: 0; z-index: 10; background: rgba(10, 8, 12, .92); display: none; align-items: center; justify-content: center; padding: 16px; cursor: pointer; }
   .grande.on { display: flex; }
   .grande canvas { width: min(100%, 1100px); aspect-ratio: 128 / 78; image-rendering: pixelated; border: 1px solid var(--borde); border-radius: 8px; background: #000; }
@@ -62,9 +65,11 @@ const INFO = {
 const ctxEscena = () => ({ llueve: document.getElementById('lluvia').checked, en: document.getElementById('en').checked });
 const rejilla = document.getElementById('rejilla'), grande = document.getElementById('grande'), cvGrande = grande.querySelector('canvas'), ctxGrande = cvGrande.getContext('2d');
 const tarjetas = [];
-for (const k of Object.keys(INFO)) {
+const ORDEN = Object.keys(INFO).flatMap(k => (ESCENAS[k + '2'] && k !== 'trabajar') ? [k, k + '2'] : [k]);
+for (const k of ORDEN) {
+  const base = k.replace(/2$/, ''), v2 = k !== base;
   const art = document.createElement('article'); art.className = 'tarjeta';
-  art.innerHTML = `<canvas width="128" height="78"></canvas><div class="pie"><h2>${INFO[k][0]} <small>${ESCENAS[k].dur} s</small></h2><p>${INFO[k][1]}</p></div>`;
+  art.innerHTML = `<canvas width="128" height="78"></canvas><div class="pie"><h2>${INFO[base][0]} ${v2 ? '<b class="v2">versión 2</b>' : (ESCENAS[base + '2'] && base !== 'trabajar' ? '<b class="v1">versión 1</b>' : '')} <small>${ESCENAS[k].dur} s</small></h2><p>${INFO[base][1]}</p></div>`;
   const cv = art.querySelector('canvas'), t = { k, cv, ctx: cv.getContext('2d'), visible: true, t0: null };
   new IntersectionObserver(es => { t.visible = es[0].isIntersecting; }).observe(art);
   art.onclick = () => { grande.on = k; grande.classList.add('on'); grande.t0 = null; };
