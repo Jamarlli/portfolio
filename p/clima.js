@@ -15,7 +15,7 @@ export const PRESETS = {
   niebla:   { lluvia: 0,   nubes: 0.9,  niebla: 0.85, tormenta: false, viento: 3, dir: 225, temp: 12 },
 };
 // qué se ve por la ventana en cada momento; lo lee quien pinta (lluvia.js) y quien mezcla la luz (horas.js)
-export const clima = { lluvia: 0, nubes: 0.04, niebla: 0, tormenta: false, viento: 6, dir: 225, racha: 10, temp: null, fuente: 'ninguna', forzado: null, origen: { lluvia: 'modelo', viento: 'modelo' } };
+export const clima = { nieva: false, lluvia: 0, nubes: 0.04, niebla: 0, tormenta: false, viento: 6, dir: 225, racha: 10, temp: null, fuente: 'ninguna', forzado: null, origen: { lluvia: 'modelo', viento: 'modelo' } };
 
 // el tiempo a medida: lo que se ajusta con los deslizadores del reloj (empieza como un preset y se toca a gusto)
 export const personalizado = { ...PRESETS.sol, temp: 20 };
@@ -98,7 +98,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 // el tiempo en el instante `ms` (Unix): de los datos por hora (interpolando) o, si es ahora mismo, de la medida actual
 export function ponerClima(ms, preset = null) {
   const forzado = preset || hash.get('clima');
-  if (forzado && (PRESETS[forzado] || forzado === 'a-medida')) { const p = forzado === 'a-medida' ? personalizado : PRESETS[forzado]; Object.assign(clima, p, { racha: p.viento * 1.5, fuente: 'simulado', forzado, origen: { lluvia: 'simulado', viento: 'simulado' } }); }
+  if (forzado && (PRESETS[forzado] || forzado === 'a-medida')) { const p = forzado === 'a-medida' ? personalizado : PRESETS[forzado]; Object.assign(clima, p, { nieva: false, racha: p.viento * 1.5, fuente: 'simulado', forzado, origen: { lluvia: 'simulado', viento: 'simulado' } }); }
   else if (datos.hora) {
     const h = datos.hora, tiempo = h.time.map(s => Date.parse(s + ':00' + offsetMadrid(s)));
     let i = tiempo.findIndex(t => t > ms) - 1; if (i < 0) i = ms < tiempo[0] ? 0 : tiempo.length - 2;
@@ -107,14 +107,14 @@ export function ponerClima(ms, preset = null) {
     let mm = v('precipitation');
     if (datos.ahora && Math.abs(ms - Date.now()) < 20 * 60000) mm = Math.max(mm, datos.ahora.precipitation * 3600 / (datos.ahora.interval || 900));   // ahora mismo: lo medido en el último cuarto de hora
     const angulo = k => { const a = h[k][f < 0.5 ? i : i + 1]; return a == null ? 225 : a; };      // la dirección no se interpola (359° y 1°): la de la hora más cercana
-    Object.assign(clima, { lluvia: mm > 0 ? mm : 0, nubes: Math.min(1, Math.max(0, v('cloud_cover') / 100)), niebla, tormenta, viento: v('wind_speed_10m'), dir: angulo('wind_direction_10m'), racha: v('wind_gusts_10m'), temp: v('temperature_2m'), fuente: 'open-meteo', forzado: null, origen: { lluvia: 'modelo', viento: 'modelo' } });
+    Object.assign(clima, { nieva: [71, 73, 75, 77, 85, 86].includes(c), lluvia: mm > 0 ? mm : 0, nubes: Math.min(1, Math.max(0, v('cloud_cover') / 100)), niebla, tormenta, viento: v('wind_speed_10m'), dir: angulo('wind_direction_10m'), racha: v('wind_gusts_10m'), temp: v('temperature_2m'), fuente: 'open-meteo', forzado: null, origen: { lluvia: 'modelo', viento: 'modelo' } });
     // ahora mismo se manda lo medido: el modelo dice «llovizna» con códigos y acumulados por hora que no son lo que cae en este minuto
     if (Math.abs(ms - Date.now()) < 20 * 60000) {
       const o = observado();
       if (o.mm != null) { clima.lluvia = o.mm; clima.origen.lluvia = o.origen; }
       if (o.viento) { clima.viento = o.viento.kmh; clima.dir = o.viento.azimut; clima.racha = Math.max(o.viento.racha, o.viento.kmh); clima.origen.viento = 'estaciones'; }
     }
-  } else Object.assign(clima, PRESETS.sol, { fuente: 'ninguna', forzado: null, temp: null });
+  } else Object.assign(clima, PRESETS.sol, { nieva: false, fuente: 'ninguna', forzado: null, temp: null });
   if (hash.get('lluvia') != null) clima.lluvia = +hash.get('lluvia');
   if (hash.get('nubes') != null) clima.nubes = +hash.get('nubes');
   return clima;

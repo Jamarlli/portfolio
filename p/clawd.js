@@ -1,3 +1,4 @@
+import { FRAMES_TRABAJO, COLS_TRABAJO, FILAS_TRABAJO, MS_TRABAJO, PALETA_TRABAJO } from './clawd_trabajo.js';
 // Clawd, la mascota de Claude Code, dibujado a mano en píxeles sobre un lienzo de 128 x 78 que se pone encima de la segunda pantalla.
 // Cada escena es una función dibujar(t) (t = segundos desde que empieza) que pinta el fotograma entero, sin imágenes: todo son rectángulos.
 // El cuerpo es el del sprite del terminal (naranja #d77757): un bloque ancho, brazos como tacos laterales, cuatro patas finas y ojos cuadrados.
@@ -206,22 +207,11 @@ function dormir(t) {
   }
 }
 
+// Clawd «trabajando»: el GIF de Tenor (claude-claude-code) reproducido celda a celda a 10 fotogramas por segundo, como el original:
+// de frente, gira a tres cuartos, aparece el portátil en perfil, teclea y vuelve a ponerse de frente. Cada celda del GIF son 2 x 2 píxeles.
 function trabajar(t) {
-  celdas(8, GY, () => { R(0, -5, 5, 5, '#f1ece0'); R(5, -4, 1, 3, '#f1ece0'); R(0, -5, 5, 1, '#6b4426'); R(0, -2, 5, 1, '#d77757'); });
-  for (let i = 0; i < 2; i++) { const f = (t * 0.6 + i * 0.5) % 1; alfa(1 - f); R(11 + i * 3 + Math.round(Math.sin(t * 3 + i)), 42 - f * 10, 1, 2, '#c8d0e8'); alfa(1); }
-  g.save(); g.translate(0, GY - 58);                                    // (el portátil se dibujó con el suelo en 58)
-  R(66, 54, 44, 4, '#8f939d'); R(66, 54, 44, 1, '#c0c4cc'); R(66, 57, 44, 1, '#5d616b'); R(70, 52, 30, 2, '#6a6e78');
-  for (let k = 0; k < 4; k++) linea(104 + k, 54, 114 + k, 14, k < 2 ? '#a9adb6' : '#7d818b');
-  for (let k = 0; k < 2; k++) linea(102 - k, 54, 112 - k, 15, '#9cc8ff');
-  for (let k = 0; k < 4; k++) { alfa(0.10 - k * 0.02); linea(98 - k * 3, 54, 108 - k * 3, 15, '#9cc8ff'); linea(97 - k * 3, 54, 107 - k * 3, 15, '#9cc8ff'); } alfa(1);
-  const cols = ['#d77757', '#6fd0c0', '#b79bff', '#ffd479'];
-  for (let i = 0; i < 7; i++) { const f = (t * 0.45 + i / 7) % 1; alfa(Math.sin(f * Math.PI)); R(100 - f * 44, 46 - f * 22 + Math.sin(i * 3) * 4, 3 + (i % 2) * 3, 1, cols[i % 4]); }
-  alfa(1); g.restore();
-  const pulsa = Math.floor(t * 6) % 2, parpadeo = (t % 3.2) > 3.05;
-  const c = clawd(46, GY, { ojos: parpadeo ? 'c' : 'a', mira: 1, bD: 'largo', alcance: 4, teclea: pulsa ? 0 : 1 });
-  for (let i = 0; i < 3; i++) R(32 + i * 6, c.top - 9, 3, 3, Math.floor(t * 3) % 3 === i ? '#ffd479' : '#5a5f7e');
-  const sx = 70, sy = c.top - 6, ro = '#d77757';
-  if (Math.floor(t * 6) % 2) { R(sx - 3, sy, 7, 1, ro); R(sx, sy - 3, 1, 7, ro); } else { for (let k = -2; k <= 2; k++) { P(sx + k, sy + k, ro); P(sx + k, sy - k, ro); } }
+  const f = FRAMES_TRABAJO[Math.floor(t * 1000 / MS_TRABAJO) % FRAMES_TRABAJO.length].split('/'), x0 = 64 - COLS_TRABAJO, y0 = GY - FILAS_TRABAJO * 2;
+  for (let r = 0; r < f.length; r++) for (let c = 0; c < f[r].length; c++) { const k = +f[r][c]; if (k) R(x0 + c * 2, y0 + r * 2, 2, 2, PALETA_TRABAJO[k]); }
 }
 
 function cafe(t) {
@@ -337,10 +327,45 @@ function noel(t) {
   for (let i = 0; i < 22; i++) { const x = (rnd(i) * W + t * (2 + rnd(i + 5) * 3)) % W, y = (rnd(i + 2) * 58 + t * (7 + rnd(i + 7) * 8)) % 58; P(x, y, '#ffffff'); }
 }
 
+// Clawd con cascos (la imagen de referencia): el cuerpo fino del GIF (16 celdas de ancho, ojos de 2 x 2, patas de 2) con ojos felices en forma de ⌣
+// y auriculares azules (arco de 9 celdas y ventosas con escalones). Se los pone, asiente al ritmo (120 pulsos por minuto) y suelta notas.
+function musica(t) {
+  const AZUL = '#14407a', LUZ = '#2a62b0', K2 = 2;
+  const pulso = (t * 2) % 1, compas = Math.floor(t * 2) % 4;
+  const baja = t < 1.0 ? Math.round((1 - suave(t / 1.0)) * 9) : 0;          // los cascos bajan desde arriba hasta ponerse
+  const dy = t < 1.2 ? 0 : (pulso < 0.22 ? (compas === 0 ? -2 : -1) : 0);
+  const sacude = t > 1.2 ? (Math.floor(t * 4) % 2) : 0;
+  const nota = (x, y, c) => { R(x, y + 3, 2, 2, c); R(x + 1, y, 1, 4, c); R(x + 2, y, 2, 1, c); };
+  for (const lado of [-1, 1]) for (let b = 0; b < 3; b++) {                 // ecualizador a los lados, al compás
+    const h = 4 + Math.round((Math.sin(t * 7 + b * 2 + lado) * 0.5 + 0.5) * 12) * (t > 1.2 ? 1 : 0);
+    R(lado < 0 ? 8 + b * 5 : 105 + b * 5, GY - h, 4, h, ['#6fd0c0', '#ffd479', '#f2a3b8'][b]);
+  }
+  celdas(64, GY, () => {
+    const piernas = 4 - dy;
+    for (const c of [-8, -4, 2, 6]) R(c, -piernas, 2, piernas, NARANJA);
+    const b = dy - 4;                                                       // la fila de arriba del cuerpo = b - 12 + ... (el suelo es 0)
+    const top = -4 - 12 + dy;
+    R(-8, top, 16, 12, NARANJA);
+    R(-12, top + 7 + (sacude ? 0 : -1), 4, 4, NARANJA); R(8, top + 7 + (sacude ? -1 : 0), 4, 4, NARANJA);
+    for (const x0 of [-8, 4]) { R(x0, top + 2, 1, 1, NEGRO); R(x0 + 3, top + 2, 1, 1, NEGRO); R(x0 + 1, top + 3, 2, 1, NEGRO); }   // ojos ⌣
+    const q = baja;                                                         // cascos: arco y ventosas (columnas relativas al cuerpo)
+    R(-4, top - 6 - q, 9, 1, AZUL); R(-6, top - 5 - q, 2, 1, AZUL); R(5, top - 5 - q, 2, 1, AZUL); R(-8, top - 4 - q, 1, 1, AZUL); R(7, top - 4 - q, 1, 1, AZUL);
+    for (const [c0, dir] of [[-9, -1], [8, 1]]) {
+      R(c0, top - 3 - q, 1, 10, AZUL); R(c0 + dir, top - q, 1, 7, AZUL); R(c0 + 2 * dir, top + 1 - q, 1, 5, AZUL);
+      R(c0 + (dir > 0 ? 0 : 0), top - 3 - q, 1, 1, LUZ);
+    }
+  });
+  if (t > 1.2) for (let i = 0; i < 5; i++) {                                // notas que suben de los cascos
+    const f = (t * 0.45 + i / 5) % 1, lado = i % 2 ? 1 : -1;
+    alfa(Math.sin(f * Math.PI)); nota(64 + lado * (24 + Math.sin(f * 6 + i) * 4) - 1, 36 - f * 24, ['#ffd479', '#6fd0c0', '#f2a3b8', '#b79bff', '#ffffff'][i]);
+  }
+  alfa(1);
+}
+
 const PROMPTS = { saludo: ['HOLA CLAUDE', 'HI CLAUDE'], dormir: ['BUENAS NOCHES', 'GOOD NIGHT'], trabajar: ['ARREGLA EL BUG', 'FIX THE BUG'], cafe: ['HORA DEL CAFE', 'COFFEE TIME'],
-  nieve: ['HAZ UN MUNECO DE NIEVE', 'BUILD A SNOWMAN'], pascua: ['BUSCA LOS HUEVOS', 'FIND THE EGGS'], noel: ['FELIZ NAVIDAD', 'MERRY CHRISTMAS'] };
-const ANIM = { saludo: [saludo, 9], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 16], pascua: [pascua, 16], noel: [noel, 19] };
-const INICIO = { saludo: 64, dormir: 28, trabajar: 46, cafe: 60, nieve: 22, pascua: 12, noel: 40 };
+  nieve: ['HAZ UN MUNECO DE NIEVE', 'BUILD A SNOWMAN'], musica: ['PON MUSICA', 'PLAY SOME MUSIC'], pascua: ['BUSCA LOS HUEVOS', 'FIND THE EGGS'], noel: ['FELIZ NAVIDAD', 'MERRY CHRISTMAS'] };
+const ANIM = { saludo: [saludo, 9], musica: [musica, 12], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 16], pascua: [pascua, 16], noel: [noel, 19] };
+const INICIO = { musica: 64, saludo: 64, dormir: 28, trabajar: 46, cafe: 60, nieve: 22, pascua: 12, noel: 40 };
 export const ESCENAS = Object.fromEntries(Object.entries(ANIM).map(([k, [fn, d]]) => [k, { dur: INTRO + d, dibujar: (t, c) => {
   terminal(t, PROMPTS[k][c.en ? 1 : 0], k === 'nieve' || k === 'noel', c, INICIO[k]);
   if (t >= INTRO) { g.save(); g.beginPath(); g.rect(0, 0, W, GY + 4); g.clip(); fn(t - INTRO, c); g.restore(); }
@@ -349,25 +374,16 @@ export function pintar(ctx2d, nombre, t, c = {}) { g = ctx2d; g.globalAlpha = 1;
 
 // ---------------------------------------------------------------- qué escena sale
 const pascuaDe = a => { const b = a % 19, c = Math.floor(a / 100), d = a % 100, e = Math.floor(c / 4), f = c % 4, h = Math.floor((c + 8) / 25), i = Math.floor((c - h + 1) / 3), k = (19 * b + c - e - i + 15) % 30, l = (32 + 2 * f + 2 * Math.floor(d / 4) - k - d % 4) % 7, m = Math.floor((b + 11 * k + 22 * l) / 451), mes = Math.floor((k + l - 7 * m + 114) / 31), dia = ((k + l - 7 * m + 114) % 31) + 1; return new Date(a, mes - 1, dia); };
-// pesos según la fecha (Navidad, Semana Santa), la hora, el tiempo y si es la primera vez que se pulsa
-export function pesos({ fecha = new Date(), hora = 12, temp = null, llueve = false, primera = false } = {}) {
-  const mes = fecha.getMonth() + 1, dia = fecha.getDate(), dow = fecha.getDay(), frio = temp != null ? temp <= 10 : (mes === 12 || mes <= 2);
-  const navidad = (mes === 12 && dia >= 20) || (mes === 1 && dia <= 6), p = pascuaDe(fecha.getFullYear()), dias = Math.round((fecha - p) / 864e5), semanaSanta = dias >= -7 && dias <= 1;
-  const noche = hora >= 23 || hora < 7;
-  return {
-    saludo: primera ? 8 : 1,
-    dormir: noche ? 6 : hora >= 22 ? 2 : 0.2,
-    cafe: (hora >= 6 && hora < 11 ? 4 : hora >= 15 && hora < 18 ? 3 : 0.6) + (llueve || frio ? 1.5 : 0),
-    trabajar: hora >= 9 && hora < 19 && dow > 0 && dow < 6 ? 4 : 1,
-    nieve: frio ? 3 : mes === 12 || mes <= 2 ? 1.5 : 0.25,
-    pascua: semanaSanta ? 14 : 0,
-    noel: navidad ? 14 : 0,
-  };
-}
-export function elegir(ctx, ultima = null, azar = Math.random) {
-  const p = pesos(ctx); if (ultima) p[ultima] = 0;
-  const total = Object.values(p).reduce((a, b) => a + b, 0); let r = azar() * total;
-  for (const k in p) { r -= p[k]; if (r <= 0) return k; }
+// Qué escena sale (horario fijo): si nieva, el muñeco de nieve; el 24 de diciembre desde las 20:00, Papá Noel; el Domingo de Pascua, el conejito
+// (todo el día); en un día normal, de 0 a 8 h durmiendo, de 8 a 9 el café y de 9 a 17 trabajando; el resto del tiempo, el saludo.
+export function elegir({ fecha = new Date(), hora = 12, nieva = false } = {}) {
+  if (nieva) return 'nieve';
+  const mes = fecha.getMonth() + 1, dia = fecha.getDate();
+  if (mes === 12 && dia === 24 && hora >= 20) return 'noel';
+  const p = pascuaDe(fecha.getFullYear()); if (fecha.getMonth() === p.getMonth() && dia === p.getDate()) return 'pascua';
+  if (hora < 8) return 'dormir';
+  if (hora < 9) return 'cafe';
+  if (hora < 17) return 'trabajar';
   return 'saludo';
 }
 
@@ -386,7 +402,7 @@ export function crearClawd(THREE, pantalla, { contexto, forzada = null } = {}) {
   e.reposo();
   e.clic = now => {
     if (e.activa) return;
-    const c = contexto(), nombre = e.forzada && ESCENAS[e.forzada] ? e.forzada : elegir({ ...c, primera: e.veces === 0 }, e.ultima);
+    const c = contexto(), nombre = e.forzada && ESCENAS[e.forzada] ? e.forzada : elegir(c);
     e.veces++; e.ultima = nombre; e.activa = { nombre, t0: now, c }; e.ultimoDibujo = -1e9;
   };
   e.actualizar = now => {                                            // devuelve true si hay que repintar la escena
