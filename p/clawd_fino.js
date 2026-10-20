@@ -75,12 +75,13 @@ const ojoParpadeo = (t, per = 3.2) => (t % per) > per - 0.15;
 export const ANIM2 = {};                                                        // (aquí solo está la Hispanidad)
 
 // ---------------------------------------------------------------- 12 de octubre
-// Una bandera de España ondea en su asta. Clawd llega andando de perfil, se emociona al verla, se acerca y le da un beso largo. Al retirarse se gira hacia quien mira
-// (de perfil a tres cuartos y de frente) y se ve que lleva la cara pintada con los colores de la bandera: rojo, amarillo (el doble de alto) y rojo. Salta con voltereta y lo celebra.
+// Una bandera de España ondea en su asta. Clawd llega andando de perfil, se emociona al verla, se acerca y se frota la cara contra ella (arriba y abajo, de lado a lado) mientras
+// la pintura se le va quedando en la cara. Al retirarse se gira hacia quien mira (de perfil a tres cuartos y de frente) y se ve que lleva la cara pintada con los colores de la bandera:
+// rojo, amarillo (el doble de alto) y rojo. Salta con voltereta y lo celebra.
 function hispanidad2(t, c) {
   const ROJO = '#c60b1e', AMAR = '#ffc400', X0 = 62, X1 = 96, Y0 = 24;
-  const contacto = t >= 3.4 && t < 5.6;
-  const amp = contacto ? 2.2 + Math.sin(t * 14) * 0.6 : 1;
+  const contacto = t >= 3.4 && t < 6.0, pintura = clamp((t - 3.6) / 2.4);                                   // cuánta pintura lleva (0 a 1)
+  const amp = contacto ? 2.4 + Math.sin(t * 14) * 0.7 : 1;
   // la bandera, con el borde libre ondeando más que el lado del asta
   for (let i = 0; i < X1 - X0; i++) {
     const k = i / (X1 - X0), off = Math.round(Math.sin(t * 5 + i * 0.35) * (0.5 + amp * (1 - k) * 2.2));
@@ -89,15 +90,15 @@ function hispanidad2(t, c) {
   }
   R(96, 20, 2, 36, '#b8bcc4'); R(95, 17, 4, 4, '#e0b020');
   // Clawd: llega, se emociona, se acerca, besa, se retira, se gira y se enseña
-  let x = 4, o = { giro: 2, ojos: 'a' }, dy = 0, pintado = t >= 5.0;
+  let x = 4, o = { giro: 2, ojos: 'a' }, dy = 0, pintado = t >= 6.0;
   if (t < 2.4) { x = mezcla(4, 34, suave(t / 2.4)); o = { giro: 2, ojos: 'a', paso: t < 2.4 ? (t * 1.5) % 1 : -1 }; }
   else if (t < 3.4) { const u = t - 2.4; x = mezcla(34, 38, suave(u)); o = { giro: 2, ojos: u < 0.5 ? 'g' : 'f', lean: Math.round(u * 2), sq: u > 0.6 ? 1 : 0, mano: { x: 0, y: -1 } }; dy = u < 0.5 ? salto(u / 0.5, 5) : 0; }
-  else if (t < 5.6) { const u = t - 3.4; x = 40 + (Math.sin(u * 9) > 0.4 ? 1 : 0); o = { giro: 2, ojos: 'c', lean: 3, sq: 1, mano: { x: 0, y: -1 } }; }
-  else if (t < 6.6) { const u = (t - 5.6) / 1.0; x = mezcla(40, 34, suave(u)); o = { giro: 2, ojos: 'g', lean: Math.round(2 * (1 - u)), mano: { x: 0, y: 0 } }; }
-  else if (t < 7.4) { const u = t - 6.6; x = 34; o = { giro: u < 0.4 ? 1 : 0, ojos: 'g' }; }
-  else if (t < 9.4) { const u = t - 7.4; x = 34; o = { giro: 0, ojos: u > 0.7 ? 'f' : 'g', bI: 'arriba', bD: 'arriba', sq: u < 0.15 ? 2 : 0, lean: Math.round(Math.sin(u * 5)) }; }
-  else if (t < 12.2) {
-    const u = t - 9.4; x = 34;
+  else if (t < 6.0) { const u = t - 3.4; x = 40 + (Math.sin(u * 11) > 0 ? 1 : 0); dy = Math.round(Math.sin(u * 7) * 3); o = { giro: 2, ojos: Math.sin(u * 3) > 0.6 ? 'f' : 'c', lean: 3, sq: 1, mano: { x: 0, y: -1 + Math.round(Math.sin(u * 7)) } }; }          // se frota la cara contra la bandera
+  else if (t < 7.0) { const u = (t - 6.0) / 1.0; x = mezcla(40, 34, suave(u)); o = { giro: 2, ojos: 'g', lean: Math.round(2 * (1 - u)), mano: { x: 0, y: 0 } }; }
+  else if (t < 7.8) { const u = t - 7.0; x = 34; o = { giro: u < 0.4 ? 1 : 0, ojos: 'g' }; }
+  else if (t < 9.8) { const u = t - 7.8; x = 34; o = { giro: 0, ojos: u > 0.7 ? 'f' : 'g', bI: 'arriba', bD: 'arriba', sq: u < 0.15 ? 2 : 0, lean: Math.round(Math.sin(u * 5)) }; }
+  else if (t < 12.6) {
+    const u = t - 9.8; x = 34;
     if (u < 0.5) o = { giro: 0, ojos: 'c', sq: 3, bI: 'abajo', bD: 'abajo' };
     else if (u < 1.6) { const k = (u - 0.5) / 1.1; dy = salto(k, 26); o = { giro: 0, ojos: 'f', sq: -2, bI: 'arriba', bD: 'arriba', rot: Math.floor(k * 4) % 4 }; }
     else if (u < 1.9) o = { giro: 0, ojos: 'f', sq: 3, bI: 'medio', bD: 'medio' };
@@ -105,16 +106,17 @@ function hispanidad2(t, c) {
   }
   else { x = 34; o = { giro: 0, ojos: ojoParpadeo(t, 2.4) ? 'c' : 'f', bI: 'cadera', bD: 'cadera', lean: Math.round(Math.sin(t * 3)) }; }
   const c0 = fino(x, GY + dy, { ...o, ropaAntes: true, ropa: top => {
-    if (pintado && o.giro !== 2) {                                                                // la cara pintada: 3 franjas, 3 : 6 : 3
+    if (o.giro === 2) {                                                                          // de perfil se ve cómo se le va pintando el hocico, según se frota
+      const w = Math.round(7 * pintura); if (w > 0) { R(11 - w, top, w, 3, ROJO); R(11 - w, top + 3, w, 6, AMAR); R(11 - w, top + 9, w, 3, ROJO); }
+    } else if (pintado) {                                                                        // la cara pintada: 3 franjas, 3 : 6 : 3
       const x0 = o.giro === 1 ? -6 : -8, w = o.giro === 1 ? 14 : 16;
       R(x0, top, w, 3, ROJO); R(x0, top + 3, w, 6, AMAR); R(x0, top + 9, w, 3, ROJO);
     }
   } });
-  // besos: corazones que suben, el «¡muac!» y un destello al quedar pintado
-  if (contacto) { for (let i = 0; i < 4; i++) { const f = ((t - 3.4) * 0.9 + i / 4) % 1; alfa(Math.sin(f * Math.PI)); corazon(40 + Math.sin(f * 6 + i) * 5 + i * 3, 18 - f * 6 + (i % 2) * 6, '#e8505b'); } alfa(1); }
-  if (t >= 3.8 && t < 5.4) bocadillo(24, 8, c.en ? 'MWAH!' : 'MUAH!', 1);
-  if (t >= 6.6 && t < 7.6) for (let i = 0; i < 8; i++) chispa(x - 14 + i * 4, GY - 26 + Math.sin(i * 2) * 6, ['#ffd479', '#ffffff', ROJO][i % 3]);
-  if (t >= 9.4) for (let i = 0; i < 26; i++) { const f = ((t - 9.4) * 0.7 + rnd(i)) % 1; P(10 + rnd(i + 3) * 70 + Math.sin(t * 4 + i) * 3, 12 + f * 44, i % 2 ? ROJO : AMAR); }
-  if (t >= 10.4 && t < 14.5) bocadillo(x + 30, c0.top - 8, 'OLE!', -1);
+  // al frotarse saltan chispas con los colores de la bandera, y al quedar pintado hay un destello
+  if (contacto) for (let i = 0; i < 6; i++) { const f = ((t - 3.4) * 2.2 + i / 6) % 1; alfa(1 - f); P(58 - f * 12 + Math.sin(i * 3) * 3, 30 + i * 3 + Math.sin(t * 14 + i) * 2, i % 2 ? ROJO : AMAR); P(59 - f * 12, 31 + i * 3, i % 2 ? AMAR : ROJO); } alfa(1);
+  if (t >= 7.0 && t < 8.0) for (let i = 0; i < 8; i++) chispa(x - 14 + i * 4, GY - 26 + Math.sin(i * 2) * 6, ['#ffd479', '#ffffff', ROJO][i % 3]);
+  if (t >= 9.8) for (let i = 0; i < 26; i++) { const f = ((t - 9.8) * 0.7 + rnd(i)) % 1; P(10 + rnd(i + 3) * 70 + Math.sin(t * 4 + i) * 3, 12 + f * 44, i % 2 ? ROJO : AMAR); }
+  if (t >= 10.8 && t < 15) bocadillo(x + 30, c0.top - 8, 'OLE!', -1);
 }
-ANIM2.hispanidad = [hispanidad2, 14];
+ANIM2.hispanidad = [hispanidad2, 15];
