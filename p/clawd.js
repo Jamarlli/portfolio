@@ -24,7 +24,11 @@ function bandas(y0, y1, cols) { const h = (y1 - y0) / cols.length; cols.forEach(
 // letras de 3 x 5 (las que hacen falta)
 const FUENTE = { A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101', I: '111010010010111', J: '001001001101010', K: '101101110101101', L: '100100100100111', M: '101111111101101', N: '111101101101101', O: '111101101101111', P: '111101111100100', Q: '111101101111001', R: '111101110101101', S: '011100010001110', T: '111010010010010', U: '101101101101111', V: '101101101101010', W: '101101111111101', X: '101101010101101', Y: '101101010010010', Z: '111001010100111',
   0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111',
-  '!': '11101', '?': '111001011000010', '>': '100010001010100', '.': '00001', '*': '000101010101000', ':': '01010', '-': '000000111000000', '/': '001001010100100', ',': '00011', '\\': '100100010001001', '(': '010100100100010', ')': '010001001001010', '"': '101101000000000', '+': '000010111010000', '·': '00100', '=': '000111000111000', '_': '000000000000111' };
+  '!': '11101', '?': '111001011000010', '>': '100010001010100', '.': '00001', '*': '000101010101000', ':': '01010', '-': '000000111000000', '/': '001001010100100', ',': '00011', '\\': '100100010001001', '(': '010100100100010', ')': '010001001001010', '"': '101101000000000', "'": '11000', '+': '000010111010000', '·': '00100', '=': '000111000111000', '_': '000000000000111' };
+// los verbos que muestra Claude Code mientras «piensa» (siempre en inglés), uno al azar cada vez
+export const VERBOS = ['Accomplishing','Actioning','Actualizing','Architecting','Baking','Beaming',"Beboppin'",'Befuddling','Billowing','Blanching','Bloviating','Boogieing','Boondoggling','Booping','Bootstrapping','Brewing','Bunning','Burrowing','Calculating','Canoodling','Caramelizing','Cascading','Catapulting','Cerebrating','Channeling','Channelling','Choreographing','Churning','Clauding','Coalescing','Cogitating','Combobulating','Composing','Computing','Concocting','Considering','Contemplating','Cooking','Crafting','Creating','Crunching','Crystallizing','Cultivating','Deciphering','Deliberating','Determining','Dilly-dallying','Discombobulating','Doing','Doodling','Drizzling','Ebbing','Effecting','Elucidating','Embellishing','Enchanting','Envisioning','Evaporating','Fermenting','Fiddle-faddling','Finagling','Flambéing','Flibbertigibbeting','Flowing','Flummoxing','Fluttering','Forging','Forming','Frolicking','Frosting','Gallivanting','Galloping','Garnishing','Generating','Gesticulating','Germinating','Gitifying','Grooving','Gusting','Harmonizing','Hashing','Hatching','Herding','Honking','Hullaballooing','Hyperspacing','Ideating','Imagining','Improvising','Incubating','Inferring','Infusing','Ionizing','Jitterbugging','Julienning','Kneading','Leavening','Levitating','Lollygagging','Manifesting','Marinating','Meandering','Metamorphosing','Misting','Moonwalking','Moseying','Mulling','Mustering','Musing','Nebulizing','Nesting','Newspapering','Noodling','Nucleating','Orbiting','Orchestrating','Osmosing','Perambulating','Percolating','Perusing','Philosophising','Photosynthesizing','Pollinating','Pondering','Pontificating','Pouncing','Precipitating','Prestidigitating','Processing','Proofing','Propagating','Puttering','Puzzling','Quantumizing','Razzle-dazzling','Razzmatazzing','Recombobulating','Reticulating','Roosting','Ruminating','Sautéing','Scampering','Schlepping','Scurrying','Seasoning','Shenaniganing','Shimmying','Simmering','Skedaddling','Sketching','Slithering','Smooshing','Sock-hopping','Spelunking','Spinning','Sprouting','Stewing','Sublimating','Swirling','Swooping','Symbioting','Synthesizing','Tempering','Thinking','Thundering','Tinkering','Tomfoolering','Topsy-turvying','Transfiguring','Transmuting','Twisting','Undulating','Unfurling','Unravelling','Vibing','Waddling','Wandering','Warping','Whatchamacalliting','Whirlpooling','Whirring','Whisking','Wibbling','Working','Wrangling','Zesting','Zigzagging'];
+const verboAlAzar = () => VERBOS[Math.floor(Math.random() * VERBOS.length)];
+const mayusculas = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 function texto(s, x, y, c, k = 1) {
   for (const ch of s) {
     const f = FUENTE[ch]; if (!f) { x += 2 * k; continue; }
@@ -181,7 +185,7 @@ function terminal(t, prompt, nevado, c, inicio) {
   else {
     const f = Math.floor(t * 6) % 2, ro = '#d77757';
     if (f) { R(2, sy + 2, 5, 1, ro); R(4, sy, 1, 5, ro); } else { P(2, sy, ro); P(6, sy, ro); P(4, sy + 2, ro); P(2, sy + 4, ro); P(6, sy + 4, ro); }
-    texto(c.en ? 'THINKING...' : 'PENSANDO...', 10, sy, ro);
+    texto(mayusculas(c.verbo || 'Thinking') + '...', 10, sy, ro);
   }
   // Clawd salta a su sitio y espera ahí hasta que empieza la animación (entonces la escena toma el relevo)
   if (t < INTRO - 0.15) {
@@ -749,7 +753,7 @@ export function crearClawd(THREE, pantalla, { contexto, forzada = null } = {}) {
   e.escribir = txt => { e.texto = txt.slice(0, 26); e.cursor = 1; e.sug = e.activa ? [] : sugerir(e.texto); e.sel = 0; if (!e.activa) e.reposo(); };
   e.mover = d => { if (!e.sug.length) return false; e.sel = (e.sel + d + e.sug.length) % e.sug.length; e.cursor = 1; e.reposo(); return true; };     // flechas arriba y abajo en el menú
   e.completar = () => { if (!e.sug.length) return null; const nombre = '/' + e.sug[e.sel].nombre; e.escribir(nombre); return nombre; };                      // Tab
-  const lanzar = (nombre, prompt, extra = {}) => { e.veces++; e.ultima = nombre; e.activa = { nombre, t0: performance.now() - 2900, c: { ...contexto(), prompt, ...extra } }; e.ultimoDibujo = -1e9; };   // empieza justo al pulsar Enter
+  const lanzar = (nombre, prompt, extra = {}) => { e.veces++; e.ultima = nombre; e.activa = { nombre, t0: performance.now() - 2900, c: { ...contexto(), prompt, verbo: verboAlAzar(), ...extra } }; e.ultimoDibujo = -1e9; };   // empieza justo al pulsar Enter
   e.ejecutar = txt => {
     let crudo = txt.trim(); if (!crudo) return;
     let n = quitarTildes(crudo);
@@ -766,7 +770,7 @@ export function crearClawd(THREE, pantalla, { contexto, forzada = null } = {}) {
   e.clic = now => {
     if (e.activa) return;
     const c = contexto(), nombre = e.forzada && ESCENAS[e.forzada] ? e.forzada : elegir(c);
-    e.veces++; e.ultima = nombre; e.activa = { nombre, t0: now, c }; e.ultimoDibujo = -1e9;
+    e.veces++; e.ultima = nombre; e.activa = { nombre, t0: now, c: { ...c, verbo: verboAlAzar() } }; e.ultimoDibujo = -1e9;
   };
   e.actualizar = now => {                                            // devuelve true si hay que repintar la escena
     const a = e.activa;

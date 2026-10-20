@@ -40,7 +40,7 @@
   <main id="rejilla"></main>
   <div class="grande" id="grande"><canvas width="128" height="78"></canvas><span>Pulsa en cualquier sitio para volver</span></div>
 <script type="module">
-import { ESCENAS, pintar } from './clawd.js';
+import { ESCENAS, pintar, VERBOS } from './clawd.js';
 const INFO = {
   saludo: ['Saludo', 'Se alegra de verte: salta tres veces y te dice hola.'],
   dormir: ['Dormir', 'En la cama con su gorrito de dormir, con luna y estrellas.'],
@@ -82,7 +82,8 @@ function bucle(now) {
   for (const t of tarjetas) {
     if (!t.visible) continue;
     t.t0 ??= now;
-    pintar(t.ctx, t.k, ((now - t.t0) / 1000) % ESCENAS[t.k].dur, c);
+    const v = (now - t.t0) / 1000 / ESCENAS[t.k].dur;
+    pintar(t.ctx, t.k, (v % 1) * ESCENAS[t.k].dur, { ...c, verbo: VERBOS[(Math.floor(v) * 17 + t.k.length * 5) % VERBOS.length] });
   }
   if (grande.on) { grande.t0 ??= now; pintar(ctxGrande, grande.on, ((now - grande.t0) / 1000) % ESCENAS[grande.on].dur, c); }
 }
