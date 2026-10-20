@@ -50,10 +50,13 @@ function celdas(x, y, fn, k = K) { g.save(); g.translate(Math.round(x), Math.rou
 // x: centro; y: el suelo, justo debajo de las patas. `ropa(top)` pinta gorros y accesorios en celdas (x = 0 es el centro, top la fila de arriba del cuerpo).
 // Devuelve { top } en píxeles del lienzo (la fila de arriba de la cabeza).
 function clawd(x, y, o = {}) {
-  const { ojos = 'a', mira = 0, bI = 'abajo', bD = 'abajo', agacha = 0, anda = -1, color = NARANJA, sombra = SOMBRA, alcance = 8, teclea = 0, ropa = null, ropaAntes = false, k = K } = o;
+  const { ojos = 'a', mira = 0, bI = 'abajo', bD = 'abajo', agacha = 0, anda = -1, color = NARANJA, sombra = SOMBRA, alcance = 8, teclea = 0, ropa = null, ropaAntes = false, k = K, patada = 0 } = o;
   const pata = 3 - agacha, top = -pata - 7;
   celdas(x, y, () => {
-    [-4, -2, 2, 4].forEach((dx, i) => R(dx, -pata, 1, pata - (anda >= 0 && (i + anda) % 2 === 0 ? 1 : 0), sombra));
+    [-4, -2, 2, 4].forEach((dx, i) => {
+      if (dx === 4 && patada > 0) { const l = Math.round(patada * 4); R(4, -pata + 1, 1 + l, 1, sombra); R(4 + l, -pata, 1, 2, sombra); }      // la pierna de delante, estirada en la patada
+      else R(dx, -pata, 1, pata - (anda >= 0 && (i + anda) % 2 === 0 ? 1 : 0), sombra);
+    });
     R(-5, top, 11, 7, color); R(-5, top + 6, 11, 1, sombra);
     const brazo = (lado, pose) => {
       const bx = lado < 0 ? -7 : 6;
@@ -362,10 +365,195 @@ function musica(t) {
   alfa(1);
 }
 
+// ---------------------------------------------------------------- escenas de fiestas y de otras cosas (Clawd sobre la caja: el suelo es GY)
+const mixC = (a, b, k) => { const f = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = f(a), B = f(b); return '#' + A.map((v, i) => Math.round(mezcla(v, B[i], clamp(k))).toString(16).padStart(2, '0')).join(''); };
+const murcielago = (x, y, t, c = '#2a1f3a') => { const a = Math.floor(t * 8) % 2; R(x - 1, y, 3, 2, c); R(x - 4, y - a, 3, 1, c); R(x + 2, y - a, 3, 1, c); R(x - 5, y + 1 - a, 1, 1, c); R(x + 5, y + 1 - a, 1, 1, c); };
+
+// Halloween: Clawd se pinta una cara de calabaza (se la pintan con un pincel), le sale el rabito y las costillas, y se enciende por dentro
+function halloween(t, c) {
+  const x = 64, p1 = clamp((t - 1.5) / 2.2), p2 = suave((t - 4.0) / 0.9), luz = t > 5 ? 0.8 + 0.2 * Math.sin(t * 9) : 0;
+  disco(106, 18, 7, '#f6c15a'); disco(109, 16, 6, FONDO);
+  for (let i = 0; i < 12; i++) { const sx = rnd(i) * W, sy = rnd(i + 5) * 40 + 10; if (Math.sin(t * 2 + i) > -0.3) P(sx, sy, '#6a5a8a'); }
+  murcielago(mezcla(-10, 140, (t * 0.12) % 1), 22 + Math.sin(t * 2) * 6, t); murcielago(mezcla(140, -10, ((t + 4) * 0.1) % 1), 34 + Math.cos(t * 2) * 5, t + 1);
+  const naranja = mixC(NARANJA, '#f08a1c', p2), sombra = mixC(SOMBRA, '#b8600c', p2);
+  if (luz) { alfa(0.10 * luz); disco(x, GY - 12, 26, '#ffa21f'); alfa(1); }
+  let dy = 0, agacha = 0, ojos = t < 1.5 ? 'a' : 'n';
+  if (t >= 7 && t < 12) { const u = (t - 7) % 2.5, s = Math.sin(clamp(u / 0.7) * Math.PI); dy = -s * 9; agacha = s < 0.1 && u < 0.9 ? 1 : 0; }
+  const cav = luz ? mixC('#2a1405', '#ffd34a', luz) : '#2a1405';
+  const c0 = clawd(x, GY + dy, { ojos, color: naranja, sombra, agacha, ropa: top => {
+    if (p2 > 0) { for (const rx of [-3, 0, 3]) R(rx, top + 6 - Math.round(6 * p2), 1, Math.round(6 * p2) + 1, '#c46410'); R(-1, top - 3 * p2, 3, Math.round(3 * p2), '#3f7a2c'); if (p2 > 0.8) { R(2, top - 3, 2, 1, '#3f7a2c'); R(-3, top - 2, 2, 1, '#5aa83a'); } }
+    // la cara: ojos triangulares y boca con dientes, pintados poco a poco
+    if (p1 > 0.0) { R(-3, top + 2, 1, 1, cav); R(-4, top + 3, 3, 1, cav); }
+    if (p1 > 0.3) { R(2, top + 2, 1, 1, cav); R(1, top + 3, 3, 1, cav); }
+    if (p1 > 0.55) R(-3, top + 5, 7, 1, cav);
+    if (p1 > 0.8) { R(-2, top + 6, 1, 1, cav); R(0, top + 6, 1, 1, cav); R(2, top + 6, 1, 1, cav); }
+  } });
+  if (t > 1.5 && t < 4.0) {                                                  // el pincel que pinta (suelto, con gotas)
+    const u = (t - 1.5) / 2.5, bx = 96 - u * 28 + Math.sin(t * 9) * 3, by = c0.top + 8 + Math.sin(u * 14) * 5;
+    linea(bx, by, bx + 14, by - 12, '#8a5a3a'); R(bx - 2, by - 1, 4, 3, '#2a1405'); if (Math.floor(t * 6) % 2) P(bx - 1, by + 4, '#2a1405');
+  }
+  if (t >= 6.2 && t < 8.6 || t >= 9.7 && t < 12) bocadillo(x + 18, c0.top - 15, c.en ? 'BOO!' : 'BU!', -1);
+}
+
+// Día de la Hispanidad: se pinta de rojo, amarillo y rojo (como la bandera) con un pincel y celebra
+function hispanidad(t, c) {
+  const rojo = '#c60b1e', amar = '#ffc400', x = 64;
+  const pr = [clamp((t - 1.0) / 1.5), clamp((t - 2.6) / 2.0), clamp((t - 4.8) / 1.5)];        // abajo (rojo), medio (amarillo), arriba (rojo)
+  let dy = 0, ojos = 'a', bI = 'abajo', bD = 'abajo', agacha = 0;
+  if (t >= 7) { const u = (t - 7) % 1.0, s = Math.sin(u * Math.PI); dy = -s * 12; agacha = u < 0.1 || u > 0.9 ? 1 : 0; ojos = 'f'; bI = bD = s > 0.1 ? 'arriba' : 'medio'; }
+  const c0 = clawd(x, GY + dy, { ojos, bI, bD, agacha, ropaAntes: true, ropa: top => {
+    R(-5, top + 5, Math.round(11 * pr[0]), 2, rojo); R(-5, top + 2, Math.round(11 * pr[1]), 3, amar); R(-5, top, Math.round(11 * pr[2]), 2, rojo);
+    if (pr[1] >= 1) { R(-7, top + 4, 2, 2, amar); R(6, top + 4, 2, 2, amar); }
+  } });
+  const k = t < 2.5 ? 0 : t < 4.6 ? 1 : 2;
+  if (t > 0.8 && t < 6.4) {                                                                     // el pincel pasa por la franja que toca
+    const u = k === 0 ? pr[0] : k === 1 ? pr[1] : pr[2], fila = [c0.top + 22, c0.top + 14, c0.top + 4][k], bx = 52 + u * 24;
+    linea(bx + 3, fila - 2, bx + 16, fila - 16, '#8a5a3a'); R(bx - 2, fila - 3, 6, 5, k === 1 ? amar : rojo);
+  }
+  celdas(14, GY, () => { R(0, -5, 5, 5, rojo); R(0, -5, 5, 1, '#8a0a16'); R(7, -5, 5, 5, amar); R(7, -5, 5, 1, '#b08800'); });                     // los dos botes
+  if (t >= 6.4) { for (let i = 0; i < 26; i++) { const f = ((t - 6.4) * 0.7 + rnd(i)) % 1; P(x - 36 + rnd(i + 3) * 72 + Math.sin(t * 4 + i) * 3, 12 + f * 44, i % 2 ? rojo : amar); } }
+  if (t >= 7.4) bocadillo(x + 18, c0.top - 15, 'OLE!', -1);
+}
+
+// Rugby: unos palos a un lado, Clawd coge carrerilla, patea el balón y lo mete entre los palos
+function rugby(t, c) {
+  const PX = [106, 122], tee = [46, GY - 3];
+  const poste = () => { R(PX[0], 12, 2, GY - 12, '#f4f1ea'); R(PX[1], 12, 2, GY - 12, '#f4f1ea'); R(PX[0], 34, 18, 2, '#f4f1ea'); R(PX[0] - 1, GY - 2, 4, 2, '#8d8d8d'); R(PX[1] - 1, GY - 2, 4, 2, '#8d8d8d'); };
+  const balon = (bx, by, est) => {
+    const f = [['.####.', '######', '######', '.####.'], ['..###.', '.####.', '.####.', '.###..'], ['.##.', '####', '####', '####', '####', '.##.'], ['.###..', '.####.', '.####.', '..###.']][est];
+    const W2 = f[0].length; for (let r = 0; r < f.length; r++) for (let q = 0; q < W2; q++) if (f[r][q] === '#') P(bx - W2 / 2 + q, by - f.length / 2 + r, (r + q) % 4 === 0 ? '#e8d8b8' : '#8a4a2a');
+  };
+  let cx = 34, anda = -1, patada = 0, ojos = 'a', bI = 'abajo', bD = 'abajo', dy = 0, agacha = 0, mira = 1;
+  if (t < 1.0) cx = 30;
+  else if (t < 2.0) { cx = mezcla(30, 14, suave(t - 1)); anda = Math.floor(t * 8) % 2; mira = -1; }
+  else if (t < 3.2) { const u = (t - 2.0) / 1.2; cx = mezcla(14, 34, u * u); anda = Math.floor(t * 12) % 2; }
+  else if (t < 3.9) { cx = 34; patada = Math.sin(clamp((t - 3.2) / 0.35) * Math.PI * 0.5) * (t < 3.7 ? 1 : 1 - (t - 3.7) / 0.2); }
+  else if (t < 4.6) cx = 36;
+  else { cx = 36; ojos = 'f'; const u = (t - 5.4) % 1; if (t > 5.4) { const s = Math.sin(u * Math.PI); dy = -s * 12; agacha = u < 0.1 || u > 0.9 ? 1 : 0; bI = bD = s > 0.1 ? 'arriba' : 'medio'; } }
+  poste();
+  let bx = tee[0], by = tee[1];
+  if (t < 3.5) { R(tee[0] - 1, GY - 1, 3, 1, '#2a2a2a'); } else {
+    const u = (t - 3.5) / 1.7; if (u <= 1) { bx = 48 + 80 * u; by = 50 - 145.1 * u + 131.9 * u * u; } else { const w = t - 5.2; bx = 128 + w * 10; by = 37 + w * 14; }
+  }
+  const gol = t > 4.55 && t < 5.4;
+  if (bx < W + 6) balon(bx, by, t < 3.5 ? 0 : Math.floor(t * 12) % 4);
+  clawd(cx, GY + dy, { ojos, bI, bD, anda, patada, agacha, mira });
+  if (gol) { for (let i = 0; i < 8; i++) chispa(PX[0] + 8 + Math.cos(i * 0.8) * (4 + (t - 4.55) * 20), 22 + Math.sin(i * 0.8) * (4 + (t - 4.55) * 14), ['#ffd479', '#ffffff'][i % 2]); }
+  if (t > 5.0 && t < 9.4) bocadillo(cx + 18, 20, '+2', -1);
+  if (t > 5.4) for (let i = 0; i < 20; i++) { const f = ((t - 5.4) * 0.7 + rnd(i)) % 1; P(cx - 28 + rnd(i + 3) * 56 + Math.sin(t * 4 + i) * 3, 14 + f * 42, ['#2a7ac0', '#ffffff', '#c02030', '#ffd479'][i % 4]); }
+}
+
+// Belén: Clawd es un Rey Mago que sigue la estrella hasta el portal y deja su regalo ante el niño
+function belen(t, c) {
+  const MARRON = '#6b4426', PAJA = '#d9b24a', PIEL = '#f0c9a0';
+  const sx = 100 - Math.min(t, 6) * 1.5, brilla = 0.6 + 0.4 * Math.sin(t * 5);                // la estrella baja despacio
+  alfa(0.10); R(sx - 3, 12, 6, 44, '#ffe58a'); alfa(1);
+  R(sx - 1, 6, 3, 9, '#ffe58a'); R(sx - 4, 9, 9, 3, '#ffe58a'); R(sx - 2, 7, 5, 7, '#fff3b0'); alfa(brilla); chispa(sx, 10, '#ffffff'); chispa(sx - 7, 12, '#ffe58a'); chispa(sx + 7, 8, '#ffe58a'); alfa(1);
+  // el portal
+  R(72, 27, 56, 3, MARRON); R(76, 24, 48, 3, '#7d5232'); R(82, 21, 36, 3, MARRON); for (let i = 0; i < 48; i += 4) R(76 + i, 25, 2, 1, PAJA);
+  R(75, 30, 3, 26, MARRON); R(122, 30, 3, 26, MARRON); R(72, 54, 56, 2, PAJA);
+  alfa(0.18 + 0.05 * Math.sin(t * 3)); disco(100, 48, 16, '#ffe58a'); alfa(1);
+  R(94, 50, 12, 2, '#8a5a3a'); R(95, 52, 2, 4, '#8a5a3a'); R(103, 52, 2, 4, '#8a5a3a'); R(96, 47, 8, 3, '#f4f1ea'); R(94, 46, 4, 4, PIEL); R(93, 44, 6, 1, '#ffe58a');   // la cuna, el niño y su halo
+  R(84, 40, 7, 14, '#2a56b0'); R(85, 35, 5, 5, PIEL); R(84, 34, 7, 2, '#e8e8f0'); R(84, 40, 1, 14, '#e8e8f0');                                      // la Virgen
+  R(110, 40, 7, 14, '#7a4a2a'); R(111, 35, 5, 5, PIEL); R(111, 34, 5, 2, '#3a2418'); R(118, 36, 1, 18, '#8a5a3a');                                // San José
+  // Clawd, Rey Mago: llega con su regalo, se arrodilla y lo deja
+  let cx = 12, anda = -1, agacha = 0, ojos = 'a', bI = 'frente', bD = 'frente', mira = 1, regalo = 1, gx = 0, gy = 0;
+  if (t < 5) { cx = mezcla(12, 54, suave(t / 5)); anda = Math.floor(t * 6) % 2; }
+  else if (t < 7) { cx = 54; agacha = 1; const u = clamp((t - 5.2) / 1.6); regalo = u < 1 ? 2 : 0; gx = mezcla(cx + 12, 78, suave(u)); gy = mezcla(GY - 12, GY - 5, u) - Math.sin(u * Math.PI) * 8; bI = bD = 'abajo'; }
+  else { cx = 54; ojos = 'f'; regalo = 0; bI = bD = 'abajo'; if (t > 9) { const u = (t - 9) % 1.4, s = Math.sin(clamp(u / 0.6) * Math.PI); agacha = 0; bI = bD = s > 0.1 ? 'arriba' : 'medio'; } }
+  R(cx - 6, GY - 14, 12, 12, '#7a3ab0'); R(cx - 6, GY - 14, 12, 2, '#c9a64a');                      // la capa, por detrás
+  clawd(cx, GY, { ojos, mira, bI, bD, anda, agacha, ropa: top => { R(-4, top - 3, 9, 3, '#e0b020'); R(-4, top - 5, 1, 2, '#e0b020'); R(0, top - 6, 1, 3, '#e0b020'); R(4, top - 5, 1, 2, '#e0b020'); P(0, top - 6, '#d02030'); if (regalo === 1) { R(-3, top + 4, 7, 4, '#e0b020'); R(0, top + 4, 1, 4, '#d02030'); } } });
+  if (regalo === 2 || (t >= 7)) { const px = regalo === 2 ? gx : 78, py = regalo === 2 ? gy : GY - 5; R(px - 4, py, 8, 6, '#e0b020'); R(px, py, 1, 6, '#d02030'); R(px - 4, py + 2, 8, 1, '#d02030'); R(px - 1, py - 2, 3, 2, '#d02030'); }
+  if (t >= 7.4) for (let i = 0; i < 6; i++) { const f = ((t - 7.4) * 0.5 + i / 6) % 1; alfa(Math.sin(f * Math.PI)); chispa(70 + i * 9, 50 - f * 30, '#ffe58a'); } alfa(1);
+}
+
+// San Valentín: Clawd es Cupido (alitas, arco y flecha con punta de corazón) y flecha el corazón de las nubes
+function cupido(t, c) {
+  const x = 40, flap = Math.floor(t * 7) % 2;
+  celdas(x, GY, () => {                                                            // las alitas, a los hombros y por detrás del cuerpo
+    const f = flap ? 1 : 0;
+    R(-9, -13 - f, 3, 1, '#f4f1ea'); R(-11, -12 - f, 5, 2, '#f4f1ea'); R(-12, -10 - f, 6, 1, '#dfe6f4'); R(-11, -9 - f, 5, 1, '#c9d4ea');
+    R(6, -13 - f, 3, 1, '#f4f1ea'); R(6, -12 - f, 5, 2, '#f4f1ea'); R(6, -10 - f, 6, 1, '#dfe6f4'); R(6, -9 - f, 5, 1, '#c9d4ea');
+  });
+  const tiros = [{ t0: 2.4, ox: 102, oy: 22 }, { t0: 6.4, ox: 92, oy: 26 }];
+  const tirando = tiros.find(q => t >= q.t0 - 1.0 && t < q.t0 + 0.4);
+  const tensa = tirando ? clamp((t - (tirando.t0 - 1.0)) / 0.9) : 0;
+  const c0 = clawd(x, GY, { ojos: t > 4.6 && t < 6 || t > 8.6 ? 'f' : 'a', mira: 1, bD: tirando ? 'frente' : 'abajo', ropa: top => { if (t > 3.4) { R(-4, top + 4, 2, 1, '#f2a3b8'); R(3, top + 4, 2, 1, '#f2a3b8'); } } });
+  // el arco, con la cuerda más o menos tensa
+  if (tirando) {
+    const bx = x + 18, by = c0.top + 12, estira = tensa * 6;
+    for (let i = -7; i <= 7; i++) P(bx + Math.round(Math.abs(i) * Math.abs(i) / 14) * -1 + 3, by + i, '#8a5a3a');
+    linea(bx + 3 - 4, by - 7, bx + 3 - 4 - estira, by, '#e6e6e6'); linea(bx + 3 - 4 - estira, by, bx + 3 - 4, by + 7, '#e6e6e6');
+    if (t < tirando.t0) { R(bx - 8 - estira, by, 16, 1, '#e6e6e6'); R(bx + 8 - estira, by - 1, 2, 3, '#f2a3b8'); }
+  }
+  const flecha = (q) => { const u = clamp((t - q.t0) / 0.5); if (t < q.t0 || u >= 1) return; const fx = mezcla(x + 26, q.ox - 4, u), fy = mezcla(c0.top + 12, q.oy + 3, u); R(fx - 12, fy, 12, 1, '#e6e6e6'); R(fx - 14, fy - 1, 3, 3, '#ffffff'); corazon(fx - 2, fy - 2, '#e8505b'); };
+  for (const q of tiros) {
+    flecha(q);
+    if (t < q.t0 - 2.6) continue;
+    if (t < q.t0 + 0.5) { const l = 1 + 0.12 * Math.sin(t * 6); R(q.ox - 4, q.oy - 3, 4, 3, '#e8505b'); R(q.ox + 2, q.oy - 3, 4, 3, '#e8505b'); R(q.ox - 5 * l + 0.5, q.oy, 11 * l, 4, '#e8505b'); R(q.ox - 3, q.oy + 4, 7, 2, '#e8505b'); R(q.ox - 1, q.oy + 6, 3, 2, '#e8505b'); }
+    else if (t < q.t0 + 2.4) for (let i = 0; i < 9; i++) { const u = (t - q.t0 - 0.5) / 1.9, a = i * 0.7; alfa(1 - u); corazon(q.ox + Math.cos(a) * (u * 26) - 2, q.oy + Math.sin(a) * (u * 18) - 1, ['#e8505b', '#f2a3b8', '#ffffff'][i % 3]); } alfa(1);
+  }
+  if (t > 4.4) for (let i = 0; i < 4; i++) { const f = (t * 0.5 + i / 4) % 1; alfa(Math.sin(f * Math.PI)); corazon(x - 16 + i * 12, c0.top - 4 - f * 20, '#f2a3b8'); } alfa(1);
+}
+
+// Cumpleaños: con su gorrito, sopla las velas de la tarta, se apagan una a una y llueve confeti
+function cumple(t, c) {
+  const CX = [82, 85.5, 89, 92.5, 96], apagada = i => t > 4.2 + i * 0.18;
+  R(74, 54, 30, 2, '#d9d9e0'); R(76, 46, 26, 8, '#c97b4a'); R(76, 46, 26, 2, '#f4c6d6'); for (const d of [78, 83, 88, 94, 99]) R(d, 48, 2, 2 + (d % 3), '#f4c6d6'); R(80, 40, 18, 6, '#f2a3b8'); R(80, 40, 18, 2, '#ffffff'); P(84, 43, '#d02030'); P(92, 43, '#d02030');
+  CX.forEach((cx, i) => {
+    R(cx, 34, 1, 6, ['#5ac8fa', '#ffd34a', '#ff5a8a', '#6fd0c0', '#b79bff'][i]);
+    if (!apagada(i)) { const f = Math.floor(t * 9 + i) % 2; R(cx - 0.5, 30 - f, 2, 3 + f, '#ffb020'); R(cx, 31 - f, 1, 2, '#fff3b0'); }
+    else if (t < 4.2 + i * 0.18 + 1.6) { const u = (t - 4.2 - i * 0.18) / 1.6; alfa(1 - u); P(cx + Math.sin(u * 9 + i) * 2, 32 - u * 16, '#b0b0b8'); P(cx + Math.sin(u * 9 + i + 1) * 2, 30 - u * 18, '#8d8d8d'); alfa(1); }
+  });
+  let ojos = 'a', bI = 'abajo', bD = 'abajo', dy = 0, agacha = 0, mira = 1;
+  if (t < 1.5) ojos = (t % 1.2) > 1.1 ? 'c' : 'a';
+  else if (t < 3.2) { ojos = 'g'; bI = bD = 'arriba'; agacha = 0; }
+  else if (t < 5.2) { ojos = 'c'; bI = bD = 'medio'; agacha = 1; }
+  else { ojos = 'f'; const u = (t - 5.4) % 1, s = t > 5.4 ? Math.sin(u * Math.PI) : 0; dy = -s * 11; agacha = s < 0.1 && t > 5.4 ? 1 : 0; bI = bD = s > 0.1 ? 'arriba' : 'medio'; }
+  const c0 = clawd(40, GY + dy, { ojos, bI, bD, agacha, mira, ropa: top => {
+    R(-1, top - 9, 3, 2, '#ffd34a'); R(-1, top - 7, 3, 1, '#ff5a8a'); R(-2, top - 6, 5, 1, '#5ac8fa'); R(-3, top - 5, 7, 1, '#ff5a8a'); R(-4, top - 4, 9, 1, '#5ac8fa'); R(-5, top - 3, 11, 1, '#ff5a8a');
+  } });
+  if (t >= 3.4 && t < 5.4) for (let i = 0; i < 7; i++) { const f = ((t - 3.4) * 1.6 + i / 7) % 1; alfa(1 - f * 0.8); R(54 + f * 28, c0.top + 12 + Math.sin(i * 2 + t * 10) * 3, 4 - f * 2, 1, '#ffffff'); } alfa(1);
+  if (t >= 5.2) {
+    for (let i = 0; i < 3; i++) { const bx = 116 - i * 5, by = 30 - Math.min(t - 5.2, 3) * 4 - i * 4 + Math.sin(t * 2 + i) * 2; R(bx, by, 5, 6, ['#ff5a8a', '#5ac8fa', '#ffd34a'][i]); R(bx + 1, by + 6, 3, 1, ['#ff5a8a', '#5ac8fa', '#ffd34a'][i]); R(bx + 2, by + 7, 1, 10, '#b0b0b8'); }
+    for (let i = 0; i < 26; i++) { const f = ((t - 5.2) * 0.7 + rnd(i)) % 1; P(10 + rnd(i + 3) * 108 + Math.sin(t * 4 + i) * 3, 12 + f * 44, ['#f2a3b8', '#ffd479', '#6fd0c0', '#b79bff', '#fff'][i % 5]); }
+  }
+  if (t >= 6) bocadillo(c.en ? 84 : 80, 16, c.en ? 'HAPPY BIRTHDAY' : 'FELIZ CUMPLE', 0);
+}
+
+// Fallas: con peinado de fallera (moños y peineta) mira cómo arde una falla, con petardos antes de la cremà
+function fallas(t, c) {
+  const x = 28, b = clamp((t - 3.5) / 8.5), yF = mezcla(54, 14, b);
+  const falla = () => {
+    R(64, 50, 62, 6, '#8a5a3a'); R(66, 48, 58, 2, '#a87a4a');
+    R(68, 34, 10, 16, '#2a7ac0'); R(70, 28, 6, 6, '#f0c9a0'); R(69, 26, 8, 3, '#c02030');
+    R(80, 30, 18, 20, '#e8b020'); R(84, 18, 10, 12, '#f0c9a0'); R(82, 15, 14, 4, '#c02030'); P(86, 23, NEGRO); P(91, 23, NEGRO); R(87, 27, 4, 1, '#c02030'); R(82, 34, 14, 3, '#c02030');
+    R(104, 34, 14, 16, '#8a3ab0'); R(107, 26, 8, 8, '#f0c9a0'); R(106, 24, 10, 3, '#e8b020');
+    R(98, 10, 4, 24, '#c02030'); R(96, 8, 8, 4, '#e8b020'); R(100, 34, 1, 14, '#ffd479');
+    for (let i = 0; i < 6; i++) { R(66 + i * 10, 44 + (i % 2) * 2, 4, 3, ['#ffd479', '#2a7ac0', '#c02030'][i % 3]); }
+  };
+  falla();
+  if (b > 0) {
+    alfa(0.88); R(64, yF, 62, 56 - yF, '#1a100c'); alfa(1);
+    for (let xx = 64; xx < 126; xx += 2) { const h = 5 + Math.round((Math.sin(t * 12 + xx * 0.7) * 0.5 + 0.5) * 8) + (b > 0.9 ? 0 : 3), yy = yF - h + 2; R(xx, yy + h * 0.6, 2, h * 0.4, '#e83a14'); R(xx, yy + h * 0.25, 2, h * 0.35, '#ff9a1c'); R(xx, yy, 2, h * 0.25, '#ffe45a'); }
+    for (let i = 0; i < 12; i++) { const f = (t * 0.8 + rnd(i)) % 1; alfa(1 - f); P(64 + rnd(i + 2) * 62, yF - f * 20, '#ffb020'); } alfa(1);
+    alfa(0.10); R(0, 8, W, 50, '#ff7a1c'); alfa(1);
+  }
+  if (t < 3.5) for (let i = 0; i < 3; i++) { const q = (t * 1.4 + i * 0.33) % 1, bx = 70 + i * 22 + Math.sin(i * 5) * 5; if (q < 0.25) { alfa(1 - q * 4); chispa(bx, GY - 2, '#ffffff'); chispa(bx + 2, GY - 6, '#ffd479'); alfa(1); } else { alfa(0.5 - q * 0.4); disco(bx, GY - 6 - q * 12, 2 + q * 5, '#8d8d8d'); alfa(1); } }
+  if (b > 0.5) for (let i = 0; i < 3; i++) { const f = (t * 0.5 + i / 3) % 1, fx = 30 + i * 36, fy = 22 + (i % 2) * 8; if (f < 0.6) { for (let k = 0; k < 8; k++) { const a = k * 0.785, r = f * 14; chispa(fx + Math.cos(a) * r, fy + Math.sin(a) * r, ['#ffd479', '#f2a3b8', '#6fd0c0'][i]); } } }
+  const c0 = clawd(x, GY, { ojos: t > 12.5 ? 'f' : 'a', mira: 1, bD: t > 12.5 ? 'arriba' : 'abajo', ropa: top => {
+    R(-9, top + 1, 4, 4, '#3a2418'); R(-8, top, 2, 1, '#3a2418'); R(5, top + 1, 4, 4, '#3a2418'); R(6, top, 2, 1, '#3a2418'); R(-9, top + 4, 2, 1, '#d02030'); P(-8, top + 3, '#d02030');           // los moños y una flor
+    R(-3, top - 2, 7, 1, '#e0b020'); R(-2, top - 5, 5, 3, '#e0b020'); P(-2, top - 6, '#e0b020'); P(0, top - 6, '#e0b020'); P(2, top - 6, '#e0b020'); R(-1, top - 4, 3, 1, '#a87a1a');            // la peineta
+    R(-5, top - 1, 11, 1, '#3a2418');
+  } });
+  if (t > 12.8) bocadillo(x + 20, c0.top - 15, 'VISCA!', -1);
+}
+
 const PROMPTS = { saludo: ['HOLA CLAUDE', 'HI CLAUDE'], dormir: ['BUENAS NOCHES', 'GOOD NIGHT'], trabajar: ['ARREGLA EL BUG', 'FIX THE BUG'], cafe: ['HORA DEL CAFE', 'COFFEE TIME'],
-  nieve: ['HAZ UN MUNECO DE NIEVE', 'BUILD A SNOWMAN'], musica: ['PON MUSICA', 'PLAY SOME MUSIC'], pascua: ['BUSCA LOS HUEVOS', 'FIND THE EGGS'], noel: ['FELIZ NAVIDAD', 'MERRY CHRISTMAS'] };
-const ANIM = { saludo: [saludo, 9], musica: [musica, 12], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 16], pascua: [pascua, 16], noel: [noel, 19] };
-const INICIO = { musica: 64, saludo: 64, dormir: 28, trabajar: 46, cafe: 60, nieve: 22, pascua: 12, noel: 40 };
+  nieve: ['HAZ UN MUNECO DE NIEVE', 'BUILD A SNOWMAN'], musica: ['PON MUSICA', 'PLAY SOME MUSIC'], halloween: ['TRUCO O TRATO', 'TRICK OR TREAT'], hispanidad: ['DIA DE LA HISPANIDAD', 'SPANISH NATIONAL DAY'], rugby: ['TRANSFORMA EL ENSAYO', 'CONVERT THE TRY'],
+  belen: ['MONTA EL BELEN', 'BUILD THE NATIVITY'], cupido: ['FELIZ SAN VALENTIN', 'HAPPY VALENTINES'], cumple: ['FELIZ CUMPLE', 'HAPPY BIRTHDAY'], fallas: ['VISCA LES FALLES', 'FALLAS FESTIVAL'], pascua: ['BUSCA LOS HUEVOS', 'FIND THE EGGS'], noel: ['FELIZ NAVIDAD', 'MERRY CHRISTMAS'] };
+const ANIM = { saludo: [saludo, 9], musica: [musica, 12], halloween: [halloween, 12], hispanidad: [hispanidad, 10], rugby: [rugby, 12], belen: [belen, 16], cupido: [cupido, 11], cumple: [cumple, 12], fallas: [fallas, 16], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 16], pascua: [pascua, 16], noel: [noel, 19] };
+const INICIO = { halloween: 64, hispanidad: 64, rugby: 30, belen: 12, cupido: 40, cumple: 40, fallas: 28, musica: 64, saludo: 64, dormir: 28, trabajar: 46, cafe: 60, nieve: 22, pascua: 12, noel: 40 };
 export const ESCENAS = Object.fromEntries(Object.entries(ANIM).map(([k, [fn, d]]) => [k, { dur: INTRO + d, dibujar: (t, c) => {
   terminal(t, PROMPTS[k][c.en ? 1 : 0], k === 'nieve' || k === 'noel', c, INICIO[k]);
   if (t >= INTRO) { g.save(); g.beginPath(); g.rect(0, 0, W, GY + 4); g.clip(); fn(t - INTRO, c); g.restore(); }
@@ -374,12 +562,21 @@ export function pintar(ctx2d, nombre, t, c = {}) { g = ctx2d; g.globalAlpha = 1;
 
 // ---------------------------------------------------------------- qué escena sale
 const pascuaDe = a => { const b = a % 19, c = Math.floor(a / 100), d = a % 100, e = Math.floor(c / 4), f = c % 4, h = Math.floor((c + 8) / 25), i = Math.floor((c - h + 1) / 3), k = (19 * b + c - e - i + 15) % 30, l = (32 + 2 * f + 2 * Math.floor(d / 4) - k - d % 4) % 7, m = Math.floor((b + 11 * k + 22 * l) / 451), mes = Math.floor((k + l - 7 * m + 114) / 31), dia = ((k + l - 7 * m + 114) % 31) + 1; return new Date(a, mes - 1, dia); };
-// Qué escena sale (horario fijo): si nieva, el muñeco de nieve; el 24 de diciembre desde las 20:00, Papá Noel; el Domingo de Pascua, el conejito
-// (todo el día); en un día normal, de 0 a 8 h durmiendo, de 8 a 9 el café y de 9 a 17 trabajando; el resto del tiempo, el saludo.
+// Qué escena sale (horario fijo): si nieva, el muñeco de nieve; Halloween (todo el 31 de octubre y hasta las 9 h del 1 de noviembre); 12 de octubre,
+// Hispanidad; 14 de febrero, Cupido; Fallas (15 a 19 de marzo); el cumpleaños de Javier (CUMPLE); el 24 de diciembre desde las 20:00, Papá Noel
+// (antes, y el 25, el 5 y el 6 de enero, el belén); el Domingo de Pascua, el conejito. En un día normal: de 0 a 8 h durmiendo, de 8 a 9 el café, de 9 a 17
+// trabajando y el resto, el saludo. Sin programar (solo con #clawd=nombre o en la galería): música y rugby.
+export const CUMPLE = null;                                            // [mes, día] del cumpleaños de Javier (sin decidir)
 export function elegir({ fecha = new Date(), hora = 12, nieva = false } = {}) {
   if (nieva) return 'nieve';
   const mes = fecha.getMonth() + 1, dia = fecha.getDate();
-  if (mes === 12 && dia === 24 && hora >= 20) return 'noel';
+  if ((mes === 10 && dia === 31) || (mes === 11 && dia === 1 && hora < 9)) return 'halloween';
+  if (mes === 10 && dia === 12) return 'hispanidad';
+  if (mes === 2 && dia === 14) return 'cupido';
+  if (mes === 3 && dia >= 15 && dia <= 19) return 'fallas';
+  if (CUMPLE && mes === CUMPLE[0] && dia === CUMPLE[1]) return 'cumple';
+  if (mes === 12 && dia === 24) return hora >= 20 ? 'noel' : 'belen';
+  if ((mes === 12 && dia === 25) || (mes === 1 && (dia === 5 || dia === 6))) return 'belen';
   const p = pascuaDe(fecha.getFullYear()); if (fecha.getMonth() === p.getMonth() && dia === p.getDate()) return 'pascua';
   if (hora < 8) return 'dormir';
   if (hora < 9) return 'cafe';
