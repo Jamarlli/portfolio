@@ -10,7 +10,7 @@ const TEXTOS = {
     plegar: '▾ Ver escena', abrir: '▴ Abrir', volver: '← Volver', cargando: 'Cargando el cuarto…', abriendo: 'Abriendo la puerta…', colocando: 'Colocando la pizarra…',
     relojTitulo: 'Cambiar la hora', relojReal: 'hora real',
     hintCuarto: 'Pasa el ratón por el cuarto · haz clic para curiosear', hintPizarra: 'Pasa el ratón por la pizarra · clic en un tema', hintPuerta: 'Toc, toc… haz clic para entrar', hintPegatina: 'Clic fuera de la pegatina para alejarte',
-    secciones: { proyectos: 'Proyectos', terminal: 'Terminal', educacion: 'Educación', experiencia: 'Experiencia', sobremi: 'Sobre mí' }, pizarraTip: 'Pizarra: elige un tema', ampliarMapa: 'Toca el mapa para ampliarlo',
+    secciones: { proyectos: 'Proyectos', terminal: 'Terminal', educacion: 'Educación', experiencia: 'Experiencia', sobremi: 'Sobre mí' }, pizarraTip: 'Pizarra: elige un tema', ampliarMapa: 'Toca el mapa para ampliarlo', paginaSig: 'Pasar página', paginaAnt: 'Página anterior',
     contacto: 'Contacto', pendiente: '(pendiente)', pizarraImagen: 'pizarra_texto.webp',
   },
   en: {
@@ -19,7 +19,7 @@ const TEXTOS = {
     plegar: '▾ View scene', abrir: '▴ Open', volver: '← Back', cargando: 'Loading the room…', abriendo: 'Opening the door…', colocando: 'Setting up the board…',
     relojTitulo: 'Change the time of day', relojReal: 'real time',
     hintCuarto: 'Move the mouse around the room · click to explore', hintPizarra: 'Move the mouse over the board · click a topic', hintPuerta: 'Knock, knock… click to come in', hintPegatina: 'Click outside the sticker to zoom out',
-    secciones: { proyectos: 'Projects', terminal: 'Terminal', educacion: 'Education', experiencia: 'Experience', sobremi: 'About me' }, pizarraTip: 'Board: pick a topic', ampliarMapa: 'Tap the map to enlarge it',
+    secciones: { proyectos: 'Projects', terminal: 'Terminal', educacion: 'Education', experiencia: 'Experience', sobremi: 'About me' }, pizarraTip: 'Board: pick a topic', ampliarMapa: 'Tap the map to enlarge it', paginaSig: 'Next page', paginaAnt: 'Previous page',
     contacto: 'Contact', pendiente: '(pending)', pizarraImagen: 'pizarra_texto_en.webp',
   },
 };

@@ -19,6 +19,7 @@ import { crearEspejo } from './espejo.js';
 import { cargarTextura } from './texturas.js';
 import { icono } from './iconos.js';
 import { MAPA } from './mapa.js';
+import { montarLibro } from './libro.js';
 import { crearCadena, crearPresentador, crearReproyector } from './postpro.js';
 import { crearClawd, sobreIcono, sobreVentana } from './clawd.js';
 // el personaje está archivado en archivo/personaje (web/personaje.js + assets/javier.glb); se retomará más adelante
@@ -754,7 +755,7 @@ const panelNodos = {};
 function poner(key, html) {
   const n = panelNodos[key] ??= Object.assign(document.createElement('div'), { innerHTML: html() });
   n.style.display = 'contents'; panel.replaceChildren(n);
-  for (const b of n.querySelectorAll('.book')) { b.classList.remove('opening'); requestAnimationFrame(() => b.classList.add('opening')); }   // que el libro se vuelva a abrir
+  for (const b of n.querySelectorAll('.book')) { b.classList.remove('opening'); requestAnimationFrame(() => { b.classList.add('opening'); b.dispatchEvent(new Event('abrir')); }); }   // que el libro se vuelva a abrir
 }
 // bocadillo de una foto del espejo: sustituye al panel de "Sobre mí" (con un botón para volver)
 function fotoBajo(ev) {                                           // índice de la foto bajo el ratón (-1: ninguna); las fotos son transparentes y no entran en hitTest
@@ -801,9 +802,10 @@ function showPanel(key) {
       <h3>${T.contacto}</h3><div class="contactos">${ABOUT.links.map(l => `<a class="ico ico-${l.icon}" href="${l.href}" target="_blank" rel="noopener" aria-label="${l.label}">${icono(l.icon)}<span>${l.label}</span></a>`).join('')}</div></div>`);
   } else if (key === 'educacion') {
     Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(94vw, 124vh)', height: '', right: '' });   // el libro abierto son dos A4 (420 x 297): ancho = 1,414 x alto
-    const half = Math.ceil(EDUCATION.length / 2);
-    const page = list => list.map(e => e.items ? `<h3>${todo(e.what)}</h3><ul>${e.items.map(i => `<li>${todo(i)}</li>`).join('')}</ul>` : `<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>${e.honores ? `<p>${e.honores.label}:</p><ul>${e.honores.items.map(i => `<li><a href="${i.href}" target="_blank" rel="noopener">${i.t}</a></li>`).join('')}</ul>` : ''}`).join('');
-    poner(key, () => `<div class="book"><div class="page left"><h2>${SECTIONS.educacion}</h2>${page(EDUCATION.slice(0, half))}</div><div class="page right">${page(EDUCATION.slice(half))}</div></div>`);
+    const bloques = e => e.items ? [`<h3>${todo(e.what)}</h3><ul>${e.items.map(i => `<li>${todo(i)}</li>`).join('')}</ul>`]
+      : [`<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`, ...(e.honores ? [`<p>${e.honores.label}:</p><ul>${e.honores.items.map(i => `<li><a href="${i.href}" target="_blank" rel="noopener">${i.t}</a></li>`).join('')}</ul>`] : [])];
+    poner(key, () => `<div class="book"><div class="page left"></div><div class="page right"></div></div>`);
+    montarLibro(panel.querySelector('.book'), `<h2>${SECTIONS.educacion}</h2>`, EDUCATION.map(bloques), T);
   }
 }
 

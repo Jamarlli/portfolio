@@ -744,6 +744,7 @@ export function elegir({ fecha = new Date(), hora = 12, nieva = false } = {}) {
   if (mes === 12 && dia === 25) return 'belen';
   if (mes === 1 && (dia === 5 || dia === 6)) return 'reyes';
   const p = pascuaDe(fecha.getFullYear()); if (fecha.getMonth() === p.getMonth() && dia === p.getDate()) return 'pascua';
+  if ([1, 3].includes(fecha.getDay()) && (mes >= 9 || mes <= 6) && hora >= 20 && hora < 22) return 'rugby';      // entrenamiento: lunes y miércoles de 20:00 a 22:00, de septiembre a junio
   if (hora < 8) return 'dormir';
   if (hora < 9) return 'cafe';
   if (hora < 17) return 'trabajar';
