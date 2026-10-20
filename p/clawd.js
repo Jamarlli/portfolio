@@ -208,10 +208,13 @@ function dormir(t) {
 }
 
 // Clawd «trabajando»: el GIF de Tenor (claude-claude-code) reproducido celda a celda a 10 fotogramas por segundo, como el original:
-// de frente, gira a tres cuartos, aparece el portátil en perfil, teclea y vuelve a ponerse de frente. Cada celda del GIF son 2 x 2 píxeles.
+// de frente, gira a tres cuartos, aparece el portátil en perfil, teclea y vuelve a ponerse de frente. Cada celda del GIF ocupa ESC_TRABAJO píxeles
+// (con un valor fraccionario, las celdas miden 1 o 2 píxeles de forma regular) para que Clawd tenga el mismo tamaño que en las demás escenas.
+const ESC_TRABAJO = 1.5;
 function trabajar(t) {
-  const f = FRAMES_TRABAJO[Math.floor(t * 1000 / MS_TRABAJO) % FRAMES_TRABAJO.length].split('/'), x0 = 64 - COLS_TRABAJO, y0 = GY - FILAS_TRABAJO * 2;
-  for (let r = 0; r < f.length; r++) for (let c = 0; c < f[r].length; c++) { const k = +f[r][c]; if (k) R(x0 + c * 2, y0 + r * 2, 2, 2, PALETA_TRABAJO[k]); }
+  const f = FRAMES_TRABAJO[Math.floor(t * 1000 / MS_TRABAJO) % FRAMES_TRABAJO.length].split('/'), e = ESC_TRABAJO, x0 = Math.round(64 - COLS_TRABAJO * e / 2 + 4), y0 = Math.round(GY - FILAS_TRABAJO * e);
+  const a = n => Math.floor(n * e);
+  for (let r = 0; r < f.length; r++) for (let c = 0; c < f[r].length; c++) { const k = +f[r][c]; if (k) R(x0 + a(c), y0 + a(r), a(c + 1) - a(c), a(r + 1) - a(r), PALETA_TRABAJO[k]); }
 }
 
 function cafe(t) {
