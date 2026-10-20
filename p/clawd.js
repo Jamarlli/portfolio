@@ -109,7 +109,7 @@ const barbaNoel = top => { R(-4, top + 4, 9, 2, BLANCO); R(-3, top + 6, 7, 1, BL
 const INTRO = 3.6, GY = 56;                                            // GY: el suelo de Clawd, justo encima de la línea de arriba de la caja
 const FONDO = '#0c0c0c', BARRA = '#2b2b2b', GRIS = '#9a9a9a', TENUE = '#5a5a5a', BLANQ = '#ececec', AMARILLO = '#e0b020';
 // La pantalla del monitor es un escritorio (SW x SH) con la ventana de la terminal (W x H) en el centro, un pelín inclinada (INCLINACION, en radianes).
-export const SW = 192, SH = 117, INCLINACION = -0.05, CENTRO = [96, 54];
+export const SW = 192, SH = 117, INCLINACION = 0, CENTRO = [96, 54];
 export function componer(sctx, ventana) {
   g = sctx; g.globalAlpha = 1;
   const cols = ['#0b1f4a', '#0e2a5e', '#123674', '#174289', '#1c4e9c', '#2159ad']; cols.forEach((c, i) => R(0, i * (SH - 7) / 6, SW, Math.ceil((SH - 7) / 6) + 1, c));
@@ -151,6 +151,16 @@ export function pintarReposo(ctx2d, c = {}) {
     if (c.cursor) R(9 + (tx ? anchoTexto(tx) + 2 : 0), GY + 4, 2, 7, '#d77757');
   } else caja('TRY "HOW DO I LOG AN ERROR?"', TENUE);
   texto('>>', 2, GY + 14, AMARILLO); texto('AUTO MODE ON (SHIFT+TAB)', 12, GY + 14, AMARILLO);
+  if (c.terminal && c.sug && c.sug.length) {                                              // el menú de comandos, encima de la caja de entrada
+    const n = c.sug.length, filas = Math.min(6, n), h = filas * 6 + 4, y0 = GY - h + 2, ini = Math.max(0, Math.min(c.sel - 2, n - filas));
+    R(2, y0, 124, h, '#141414'); R(2, y0, 124, 1, TENUE); R(2, y0 + h - 1, 124, 1, TENUE); R(2, y0, 1, h, TENUE); R(125, y0, 1, h, TENUE);
+    for (let i = 0; i < filas; i++) {
+      const en = c.sug[ini + i], yy = y0 + 3 + i * 6, activo = ini + i === c.sel;
+      if (activo) R(3, yy - 1, 121, 7, '#2a1a14');
+      texto('/' + en.nombre.toUpperCase(), 7, yy, activo ? '#d77757' : BLANQ); texto(DESC[en.nombre][c.en ? 1 : 0], 54, yy, activo ? BLANQ : GRIS);
+    }
+    if (n > filas) { R(123, y0 + 3, 1, filas * 6, TENUE); R(123, y0 + 3 + Math.round(ini / (n - filas) * (filas * 6 - 6)), 1, 6, GRIS); }
+  }
 }
 // la sesión: Clawd sale de la cabecera de un salto, se limpia la pantalla, se teclea el mensaje y Enter
 function terminal(t, prompt, nevado, c, inicio) {
@@ -670,6 +680,17 @@ const ALIAS = { hola: 'saludo', hello: 'saludo', hi: 'saludo', dormir: 'dormir',
   noel: 'noel', santa: 'noel', navidad: 'noel', halloween: 'halloween', hispanidad: 'hispanidad', espana: 'hispanidad', spain: 'hispanidad', rugby: 'rugby', belen: 'belen', nativity: 'belen', reyes: 'reyes', kings: 'reyes',
   cupido: 'cupido', cupid: 'cupido', valentin: 'cupido', cumple: 'cumple', birthday: 'cumple', fallas: 'fallas', musica: 'musica', music: 'musica', help: 'ayuda', ayuda: 'ayuda' };
 const SALIR = new Set(['exit', 'salir', 'quit', 'volver', 'back']);
+// el menú que sale al escribir «/»: cada comando con una descripción corta (es / en) y sus alias; se filtra al escribir, se navega con las flechas y Tab lo completa
+const DESC = { hola: ['SALUDA', 'SAYS HI'], dormir: ['DUERME', 'SLEEPS'], trabajar: ['ARREGLA UN BUG', 'FIXES A BUG'], cafe: ['CAFE CALENTITO', 'HOT COFFEE'], nieve: ['MUNECO DE NIEVE', 'SNOWMAN'], pascua: ['BUSCA HUEVOS', 'EGG HUNT'],
+  noel: ['PAPA NOEL', 'SANTA'], halloween: ['CALABAZA', 'PUMPKIN'], hispanidad: ['12 DE OCTUBRE', 'OCTOBER 12TH'], rugby: ['PATEA EL BALON', 'KICKS THE BALL'], belen: ['EL NACIMIENTO', 'NATIVITY'], reyes: ['REYES MAGOS', 'THREE KINGS'],
+  cupido: ['SAN VALENTIN', 'VALENTINES'], cumple: ['SOPLA LAS VELAS', 'BLOWS CANDLES'], fallas: ['CREMA LA FALLA', 'BURNS A FALLA'], musica: ['CON CASCOS', 'HEADPHONES'], help: ['AYUDA', 'HELP'], exit: ['SALIR', 'EXIT'] };
+const ENTRADAS = Object.keys(DESC).map(n => ({ nombre: n, alias: [...Object.keys(ALIAS).filter(a => a !== n && ALIAS[a] === (ALIAS[n] || 'x')), ...(n === 'exit' ? [...SALIR].filter(a => a !== 'exit') : [])] }));
+const quitarTildes = x => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function sugerir(texto) {
+  const q = quitarTildes(texto.trim()); if (!q.startsWith('/')) return [];
+  const k = q.slice(1), empieza = ENTRADAS.filter(en => en.nombre.startsWith(k) || en.alias.some(a => a.startsWith(k)));
+  return empieza.length || !k ? empieza : ENTRADAS.filter(en => en.nombre.includes(k) || en.alias.some(a => a.includes(k)));
+}
 
 // lo que se «teclea» al empezar cada escena: siempre un comando (empieza por «/» y no lleva espacios)
 const PROMPTS = { saludo: ['/hola', '/hello'], dormir: ['/dormir', '/sleep'], trabajar: ['/trabajar', '/work'], cafe: ['/cafe', '/coffee'], nieve: ['/nieve', '/snow'], musica: ['/musica', '/music'],
@@ -720,16 +741,20 @@ export function crearClawd(THREE, pantalla, { contexto, forzada = null } = {}) {
   const malla = new THREE.Mesh(pantalla.geometry, new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
   malla.position.copy(pantalla.position); malla.position.x += 0.0004; malla.quaternion.copy(pantalla.quaternion); malla.scale.copy(pantalla.scale);
   pantalla.parent.add(malla);
-  const e = { malla, forzada, activa: null, ultima: null, veces: 0, ultimoDibujo: -1e9, terminal: false, texto: '', cursor: 1, alSalir: null };
-  e.reposo = () => { pintarReposo(ctx2d, { ...contexto(), terminal: e.terminal, texto: e.texto, cursor: e.cursor }); componer(sctx, vent); tex.needsUpdate = true; };
+  const e = { malla, forzada, activa: null, ultima: null, veces: 0, ultimoDibujo: -1e9, terminal: false, texto: '', cursor: 1, alSalir: null, sug: [], sel: 0 };
+  e.reposo = () => { pintarReposo(ctx2d, { ...contexto(), terminal: e.terminal, texto: e.texto, cursor: e.cursor, sug: e.sug, sel: e.sel }); componer(sctx, vent); tex.needsUpdate = true; e.sucia = true; };
   // zoom a la terminal: se puede escribir; solo se obedece a los comandos que se conocen (el resto, el Clawd dubitativo del «404»)
   e.entrarTerminal = () => { e.terminal = true; e.texto = ''; e.cursor = 1; if (!e.activa) e.reposo(); };
-  e.salirTerminal = () => { e.terminal = false; e.texto = ''; if (!e.activa) e.reposo(); };
-  e.escribir = txt => { e.texto = txt.slice(0, 26); e.cursor = 1; if (!e.activa) e.reposo(); };
+  e.salirTerminal = () => { e.terminal = false; e.texto = ''; e.sug = []; if (!e.activa) e.reposo(); };
+  e.escribir = txt => { e.texto = txt.slice(0, 26); e.cursor = 1; e.sug = e.activa ? [] : sugerir(e.texto); e.sel = 0; if (!e.activa) e.reposo(); };
+  e.mover = d => { if (!e.sug.length) return false; e.sel = (e.sel + d + e.sug.length) % e.sug.length; e.cursor = 1; e.reposo(); return true; };     // flechas arriba y abajo en el menú
+  e.completar = () => { if (!e.sug.length) return null; const nombre = '/' + e.sug[e.sel].nombre; e.escribir(nombre); return nombre; };                      // Tab
   const lanzar = (nombre, prompt, extra = {}) => { e.veces++; e.ultima = nombre; e.activa = { nombre, t0: performance.now() - 2900, c: { ...contexto(), prompt, ...extra } }; e.ultimoDibujo = -1e9; };   // empieza justo al pulsar Enter
   e.ejecutar = txt => {
-    const crudo = txt.trim(); if (!crudo) return;
-    const n = crudo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); e.texto = '';
+    let crudo = txt.trim(); if (!crudo) return;
+    let n = quitarTildes(crudo);
+    if (e.sug.length && !(n.startsWith('/') && (ALIAS[n.slice(1)] || SALIR.has(n.slice(1))))) { crudo = '/' + e.sug[e.sel].nombre; n = crudo; }      // con el menú abierto, Enter ejecuta el comando marcado
+    e.texto = ''; e.sug = [];
     if (n.startsWith('/')) {
       const nom = n.slice(1);
       if (SALIR.has(nom)) { e.alSalir?.(); return; }
@@ -745,6 +770,7 @@ export function crearClawd(THREE, pantalla, { contexto, forzada = null } = {}) {
   };
   e.actualizar = now => {                                            // devuelve true si hay que repintar la escena
     const a = e.activa;
+    if (e.sucia) { e.sucia = false; if (!a) return true; }                // algo ha cambiado fuera de una animación (se ha escrito, flechas…): repintar ya
     if (!a) { if (e.terminal) { const b = Math.floor(now / 500) % 2; if (b !== e.cursor) { e.cursor = b; e.reposo(); return true; } } return false; }      // el cursor parpadea
     const t = (now - a.t0) / 1000;
     if (t >= ESCENAS[a.nombre].dur) { e.activa = null; e.cursor = 1; e.reposo(); return true; }

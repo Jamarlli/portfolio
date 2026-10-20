@@ -684,8 +684,12 @@ entradaTerminal.style.cssText = 'position:fixed;left:0;bottom:0;width:1px;height
 document.body.append(entradaTerminal);
 entradaTerminal.addEventListener('input', () => objects.clawd?.escribir(entradaTerminal.value));
 entradaTerminal.addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); objects.clawd?.ejecutar(entradaTerminal.value); entradaTerminal.value = ''; objects.clawd?.escribir(''); }
-  e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); if (!flight) goHome(); }
+  const cl = objects.clawd;
+  if (e.key === 'Enter') { e.preventDefault(); cl?.ejecutar(entradaTerminal.value); entradaTerminal.value = ''; cl?.escribir(''); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { if (cl?.mover(e.key === 'ArrowDown' ? 1 : -1)) e.preventDefault(); }       // el menú de comandos
+  else if (e.key === 'Tab') { e.preventDefault(); const r = cl?.completar(); if (r) entradaTerminal.value = r; }                      // autocompleta
+  else if (e.key === 'Escape') { e.preventDefault(); if (cl?.sug.length) { entradaTerminal.value = ''; cl.escribir(''); } else if (!flight) goHome(); }   // Esc cierra el menú; con el menú cerrado, sale
+  e.stopPropagation();
 });
 function vistaTerminal() {                                          // de frente a la pantalla, a 60 cm, para que quepa entera
   const p = objects.pantalla2; p.updateWorldMatrix(true, false);
