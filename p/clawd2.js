@@ -43,6 +43,7 @@ export function fino(x, y, o = {}) {
       else if (p === 'frente') R((lado < 0 ? -7 : 3) + lx, tb + 7, 4, 3, shade);
       else if (p === 'cadera') { R(bx - ancho + lx, tb + 4, 4, 2, color); R(bx - ancho + (lado < 0 ? 0 : 2) + lx, tb + 6, 2, 3, color); }
       else if (p === 'largo') R((lado < 0 ? -16 : 8) + lx, tb + 4, 8, 3, color);
+      else if (p === 'largoBajo') R((lado < 0 ? -16 : 8) + lx, tb + 8, 8, 3, color);
     };
     if (giro === 0) { brazoFrente(-1, bI); brazoFrente(1, bD); }
     else if (giro === 1) { brazoFrente(-1, bI); R(8 + lx, tb + 8, 3, 4, color); }
@@ -355,3 +356,49 @@ function pascua2(t, c) {
   if (conf) for (let i = 0; i < 26; i++) { const f = ((t - 12.8) * 0.7 + rnd(i)) % 1; P(x - 30 + rnd(i + 3) * 60 + Math.sin(t * 4 + i) * 3, 12 + f * 44, ['#f2a3b8', '#ffd479', '#6fd0c0', '#b79bff', '#fff'][i % 5]); }
 }
 ANIM2.pascua = [pascua2, 18];
+
+// ---------------------------------------------------------------- 12 de octubre (v2)
+// Mira los botes frotándose las manos, mete una mano en el de rojo y se barre la barriga con ella, luego el de amarillo con la otra y el rojo de arriba, retrocede a admirarse con las
+// manos en la cintura, saca músculo, salta con voltereta y lo celebra. Las franjas son las de la bandera: rojo, amarillo (el doble de alto) y rojo.
+function hispanidad2(t, c) {
+  const ROJO = '#c60b1e', AMAR = '#ffc400', ROJO2 = '#8a0a16', AMAR2 = '#b08800', x = 64;
+  const F = [{ d0: 1.0, p0: 2.2, p1: 4.2, mano: -1, col: ROJO, fila: 9, h: 3 }, { d0: 4.2, p0: 5.2, p1: 7.6, mano: 1, col: AMAR, fila: 3, h: 6 }, { d0: 7.6, p0: 8.5, p1: 9.8, mano: -1, col: ROJO, fila: 0, h: 3 }];
+  const prog = F.map(f => clamp((t - f.p0) / (f.p1 - f.p0)));
+  let o = { giro: 0, ojos: 'a' }, dy = 0, dx = 0;
+  const act = F.find(f => t >= f.d0 && t < f.p1);
+  if (t < 1.0) { o = { giro: 0, ojos: 'a', mx: Math.round(Math.sin(t * 5)), bI: 'frente', bD: 'frente', lean: Math.round(Math.sin(t * 8) * 0.6) }; }                      // se frota las manos
+  else if (act) {
+    const dip = t < act.p0, lado = act.mano;
+    if (dip) { const k = (t - act.d0) / (act.p0 - act.d0); o = { giro: 0, ojos: 'm', mx: lado, [lado < 0 ? 'bI' : 'bD']: 'largoBajo', [lado < 0 ? 'bD' : 'bI']: 'cadera', lean: Math.round(Math.sin(k * 9) * lado * -1), sq: k > 0.4 && k < 0.8 ? 1 : 0 }; }
+    else { o = { giro: 0, ojos: 'a', mx: -lado, [lado < 0 ? 'bI' : 'bD']: 'abajo', [lado < 0 ? 'bD' : 'bI']: 'cadera', lean: Math.round(Math.sin(t * 6)) }; dx = Math.round(Math.sin(t * 6) * 0.5) * 2; }
+  }
+  else if (t < 11.2) { const u = t - 9.8; o = { giro: u < 0.5 ? 1 : 0, ojos: 'f', bI: 'cadera', bD: 'cadera', lean: Math.round(Math.sin(u * 4)) }; if (u > 0.7) { o.bI = o.bD = 'arriba'; o.ojos = 'f'; } }       // se admira y saca músculo
+  else if (t < 14.4) {
+    const u = t - 11.2;
+    if (u < 0.5) o = { giro: 0, ojos: 'c', sq: 3, bI: 'abajo', bD: 'abajo' };
+    else if (u < 1.6) { const k = (u - 0.5) / 1.1; dy = salto(k, 28); o = { giro: 0, ojos: 'f', sq: -2, bI: 'arriba', bD: 'arriba', rot: Math.floor(k * 4) % 4 }; }
+    else if (u < 1.9) o = { giro: 0, ojos: 'f', sq: 3, bI: 'medio', bD: 'medio' };
+    else o = { giro: 0, ojos: 'f', sq: 0, bI: 'arriba', bD: Math.floor(u * 4) % 2 ? 'arriba' : 'medio' };
+  }
+  else o = { giro: 0, ojos: 'f', bI: 'arriba', bD: Math.floor(t * 4) % 2 ? 'arriba' : 'medio' };
+  const c0 = fino(x + dx, GY + dy, { ...o, ropaAntes: true, ropa: top => {
+    F.forEach((f, i) => {
+      const w = Math.round(16 * prog[i]); if (!w) return;
+      if (f.mano < 0) { R(-8, top + f.fila, w, f.h, f.col); } else { R(8 - w, top + f.fila, w, f.h, f.col); }
+    });
+    if (act && t >= act.p0) {                                                                    // el brazo que pinta, del color de la pintura, llega hasta donde va la franja
+      const i = F.indexOf(act), w = Math.round(16 * prog[i]), fila = act.fila + Math.round((Math.sin(t * 9) * 0.5 + 0.5) * (act.h - 1)), oscuro = act.col === ROJO ? ROJO2 : AMAR2;
+      if (act.mano < 0) { R(-12, top + fila, 4 + w, 2, act.col); R(-8 + w - 1, top + fila, 3, 3, oscuro); R(-12, top + 4, 4, 4, act.col); }
+      else { R(8 - w, top + fila, 4 + w, 2, act.col); R(8 - w - 2, top + fila, 3, 3, oscuro); R(8, top + 4, 4, 4, act.col); }
+    }
+    if (!(act && t >= act.p0 && act.mano < 0) && t >= F[0].p1) R(-12, top + 4, 4, 4, ROJO);                         // las manos ya llevan el color de la última pintura
+    if (!(act && t >= act.p0 && act.mano > 0) && t >= F[1].p1) R(8, top + 4, 4, 4, AMAR);
+  } });
+  // los dos botes, con una salpicadura al meter la mano
+  const bote = (bx, col, osc) => { R(bx, 42, 14, 14, col); R(bx, 42, 14, 2, osc); R(bx, 48, 14, 2, osc); R(bx + 14, 44, 1, 4, '#d9d9d9'); R(bx - 1, 41, 16, 1, '#d9d9d9'); };
+  bote(18, ROJO, ROJO2); bote(98, AMAR, AMAR2);
+  if (act && t < act.p0) { const k = (t - act.d0) / (act.p0 - act.d0); for (let i = 0; i < 4; i++) P((act.mano < 0 ? 24 : 104) + (i - 1.5) * 3, 38 - ((k * 3 + i / 4) % 1) * 8, act.col); }
+  if (t >= 11.2) for (let i = 0; i < 26; i++) { const f = ((t - 11.2) * 0.7 + rnd(i)) % 1; P(x - 40 + rnd(i + 3) * 80 + Math.sin(t * 4 + i) * 3, 12 + f * 44, i % 2 ? ROJO : AMAR); }
+  if (t >= 12.2) bocadillo(x + 26, c0.top - 6, 'OLE!', -1);
+}
+ANIM2.hispanidad = [hispanidad2, 15];
