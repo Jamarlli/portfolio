@@ -357,48 +357,47 @@ function pascua2(t, c) {
 }
 ANIM2.pascua = [pascua2, 18];
 
-// ---------------------------------------------------------------- 12 de octubre (v2)
-// Mira los botes frotándose las manos, mete una mano en el de rojo y se barre la barriga con ella, luego el de amarillo con la otra y el rojo de arriba, retrocede a admirarse con las
-// manos en la cintura, saca músculo, salta con voltereta y lo celebra. Las franjas son las de la bandera: rojo, amarillo (el doble de alto) y rojo.
+// ---------------------------------------------------------------- 12 de octubre
+// Una bandera de España ondea en su asta. Clawd llega andando de perfil, se emociona al verla, se acerca y le da un beso largo. Al retirarse se gira hacia quien mira
+// (de perfil a tres cuartos y de frente) y se ve que lleva la cara pintada con los colores de la bandera: rojo, amarillo (el doble de alto) y rojo. Salta con voltereta y lo celebra.
 function hispanidad2(t, c) {
-  const ROJO = '#c60b1e', AMAR = '#ffc400', ROJO2 = '#8a0a16', AMAR2 = '#b08800', x = 64;
-  const F = [{ d0: 1.0, p0: 2.2, p1: 4.2, mano: -1, col: ROJO, fila: 9, h: 3 }, { d0: 4.2, p0: 5.2, p1: 7.6, mano: 1, col: AMAR, fila: 3, h: 6 }, { d0: 7.6, p0: 8.5, p1: 9.8, mano: -1, col: ROJO, fila: 0, h: 3 }];
-  const prog = F.map(f => clamp((t - f.p0) / (f.p1 - f.p0)));
-  let o = { giro: 0, ojos: 'a' }, dy = 0, dx = 0;
-  const act = F.find(f => t >= f.d0 && t < f.p1);
-  if (t < 1.0) { o = { giro: 0, ojos: 'a', mx: Math.round(Math.sin(t * 5)), bI: 'frente', bD: 'frente', lean: Math.round(Math.sin(t * 8) * 0.6) }; }                      // se frota las manos
-  else if (act) {
-    const dip = t < act.p0, lado = act.mano;
-    if (dip) { const k = (t - act.d0) / (act.p0 - act.d0); o = { giro: 0, ojos: 'm', mx: lado, [lado < 0 ? 'bI' : 'bD']: 'largoBajo', [lado < 0 ? 'bD' : 'bI']: 'cadera', lean: Math.round(Math.sin(k * 9) * lado * -1), sq: k > 0.4 && k < 0.8 ? 1 : 0 }; }
-    else { o = { giro: 0, ojos: 'a', mx: -lado, [lado < 0 ? 'bI' : 'bD']: 'abajo', [lado < 0 ? 'bD' : 'bI']: 'cadera', lean: Math.round(Math.sin(t * 6)) }; dx = Math.round(Math.sin(t * 6) * 0.5) * 2; }
+  const ROJO = '#c60b1e', AMAR = '#ffc400', X0 = 62, X1 = 96, Y0 = 24;
+  const contacto = t >= 3.4 && t < 5.6;
+  const amp = contacto ? 2.2 + Math.sin(t * 14) * 0.6 : 1;
+  // la bandera, con el borde libre ondeando más que el lado del asta
+  for (let i = 0; i < X1 - X0; i++) {
+    const k = i / (X1 - X0), off = Math.round(Math.sin(t * 5 + i * 0.35) * (0.5 + amp * (1 - k) * 2.2));
+    R(X0 + i, Y0 + off, 1, 5, ROJO); R(X0 + i, Y0 + off + 5, 1, 10, AMAR); R(X0 + i, Y0 + off + 15, 1, 5, ROJO);
+    if (i >= 10 && i <= 16) { R(X0 + i, Y0 + off + 7, 1, 7, '#a06a2a'); if (i >= 12 && i <= 14) { R(X0 + i, Y0 + off + 8, 1, 2, ROJO); R(X0 + i, Y0 + off + 11, 1, 2, '#2a5aa8'); } }   // el escudo
   }
-  else if (t < 11.2) { const u = t - 9.8; o = { giro: u < 0.5 ? 1 : 0, ojos: 'f', bI: 'cadera', bD: 'cadera', lean: Math.round(Math.sin(u * 4)) }; if (u > 0.7) { o.bI = o.bD = 'arriba'; o.ojos = 'f'; } }       // se admira y saca músculo
-  else if (t < 14.4) {
-    const u = t - 11.2;
+  R(96, 20, 2, 36, '#b8bcc4'); R(95, 17, 4, 4, '#e0b020');
+  // Clawd: llega, se emociona, se acerca, besa, se retira, se gira y se enseña
+  let x = 4, o = { giro: 2, ojos: 'a' }, dy = 0, pintado = t >= 5.0;
+  if (t < 2.4) { x = mezcla(4, 34, suave(t / 2.4)); o = { giro: 2, ojos: 'a', paso: t < 2.4 ? (t * 1.5) % 1 : -1 }; }
+  else if (t < 3.4) { const u = t - 2.4; x = mezcla(34, 38, suave(u)); o = { giro: 2, ojos: u < 0.5 ? 'g' : 'f', lean: Math.round(u * 2), sq: u > 0.6 ? 1 : 0, mano: { x: 0, y: -1 } }; dy = u < 0.5 ? salto(u / 0.5, 5) : 0; }
+  else if (t < 5.6) { const u = t - 3.4; x = 40 + (Math.sin(u * 9) > 0.4 ? 1 : 0); o = { giro: 2, ojos: 'c', lean: 3, sq: 1, mano: { x: 0, y: -1 } }; }
+  else if (t < 6.6) { const u = (t - 5.6) / 1.0; x = mezcla(40, 34, suave(u)); o = { giro: 2, ojos: 'g', lean: Math.round(2 * (1 - u)), mano: { x: 0, y: 0 } }; }
+  else if (t < 7.4) { const u = t - 6.6; x = 34; o = { giro: u < 0.4 ? 1 : 0, ojos: 'g' }; }
+  else if (t < 9.4) { const u = t - 7.4; x = 34; o = { giro: 0, ojos: u > 0.7 ? 'f' : 'g', bI: 'arriba', bD: 'arriba', sq: u < 0.15 ? 2 : 0, lean: Math.round(Math.sin(u * 5)) }; }
+  else if (t < 12.2) {
+    const u = t - 9.4; x = 34;
     if (u < 0.5) o = { giro: 0, ojos: 'c', sq: 3, bI: 'abajo', bD: 'abajo' };
-    else if (u < 1.6) { const k = (u - 0.5) / 1.1; dy = salto(k, 28); o = { giro: 0, ojos: 'f', sq: -2, bI: 'arriba', bD: 'arriba', rot: Math.floor(k * 4) % 4 }; }
+    else if (u < 1.6) { const k = (u - 0.5) / 1.1; dy = salto(k, 26); o = { giro: 0, ojos: 'f', sq: -2, bI: 'arriba', bD: 'arriba', rot: Math.floor(k * 4) % 4 }; }
     else if (u < 1.9) o = { giro: 0, ojos: 'f', sq: 3, bI: 'medio', bD: 'medio' };
-    else o = { giro: 0, ojos: 'f', sq: 0, bI: 'arriba', bD: Math.floor(u * 4) % 2 ? 'arriba' : 'medio' };
+    else o = { giro: 0, ojos: 'f', bI: 'cadera', bD: 'cadera', lean: Math.round(Math.sin((u - 1.9) * 4)) };
   }
-  else o = { giro: 0, ojos: 'f', bI: 'arriba', bD: Math.floor(t * 4) % 2 ? 'arriba' : 'medio' };
-  const c0 = fino(x + dx, GY + dy, { ...o, ropaAntes: true, ropa: top => {
-    F.forEach((f, i) => {
-      const w = Math.round(16 * prog[i]); if (!w) return;
-      if (f.mano < 0) { R(-8, top + f.fila, w, f.h, f.col); } else { R(8 - w, top + f.fila, w, f.h, f.col); }
-    });
-    if (act && t >= act.p0) {                                                                    // el brazo que pinta, del color de la pintura, llega hasta donde va la franja
-      const i = F.indexOf(act), w = Math.round(16 * prog[i]), fila = act.fila + Math.round((Math.sin(t * 9) * 0.5 + 0.5) * (act.h - 1)), oscuro = act.col === ROJO ? ROJO2 : AMAR2;
-      if (act.mano < 0) { R(-12, top + fila, 4 + w, 2, act.col); R(-8 + w - 1, top + fila, 3, 3, oscuro); R(-12, top + 4, 4, 4, act.col); }
-      else { R(8 - w, top + fila, 4 + w, 2, act.col); R(8 - w - 2, top + fila, 3, 3, oscuro); R(8, top + 4, 4, 4, act.col); }
+  else { x = 34; o = { giro: 0, ojos: ojoParpadeo(t, 2.4) ? 'c' : 'f', bI: 'cadera', bD: 'cadera', lean: Math.round(Math.sin(t * 3)) }; }
+  const c0 = fino(x, GY + dy, { ...o, ropaAntes: true, ropa: top => {
+    if (pintado && o.giro !== 2) {                                                                // la cara pintada: 3 franjas, 3 : 6 : 3
+      const x0 = o.giro === 1 ? -6 : -8, w = o.giro === 1 ? 14 : 16;
+      R(x0, top, w, 3, ROJO); R(x0, top + 3, w, 6, AMAR); R(x0, top + 9, w, 3, ROJO);
     }
-    if (!(act && t >= act.p0 && act.mano < 0) && t >= F[0].p1) R(-12, top + 4, 4, 4, ROJO);                         // las manos ya llevan el color de la última pintura
-    if (!(act && t >= act.p0 && act.mano > 0) && t >= F[1].p1) R(8, top + 4, 4, 4, AMAR);
   } });
-  // los dos botes, con una salpicadura al meter la mano
-  const bote = (bx, col, osc) => { R(bx, 42, 14, 14, col); R(bx, 42, 14, 2, osc); R(bx, 48, 14, 2, osc); R(bx + 14, 44, 1, 4, '#d9d9d9'); R(bx - 1, 41, 16, 1, '#d9d9d9'); };
-  bote(18, ROJO, ROJO2); bote(98, AMAR, AMAR2);
-  if (act && t < act.p0) { const k = (t - act.d0) / (act.p0 - act.d0); for (let i = 0; i < 4; i++) P((act.mano < 0 ? 24 : 104) + (i - 1.5) * 3, 38 - ((k * 3 + i / 4) % 1) * 8, act.col); }
-  if (t >= 11.2) for (let i = 0; i < 26; i++) { const f = ((t - 11.2) * 0.7 + rnd(i)) % 1; P(x - 40 + rnd(i + 3) * 80 + Math.sin(t * 4 + i) * 3, 12 + f * 44, i % 2 ? ROJO : AMAR); }
-  if (t >= 12.2) bocadillo(x + 26, c0.top - 6, 'OLE!', -1);
+  // besos: corazones que suben, el «¡muac!» y un destello al quedar pintado
+  if (contacto) { for (let i = 0; i < 4; i++) { const f = ((t - 3.4) * 0.9 + i / 4) % 1; alfa(Math.sin(f * Math.PI)); corazon(40 + Math.sin(f * 6 + i) * 5 + i * 3, 18 - f * 6 + (i % 2) * 6, '#e8505b'); } alfa(1); }
+  if (t >= 3.8 && t < 5.4) bocadillo(24, 8, c.en ? 'MWAH!' : 'MUAH!', 1);
+  if (t >= 6.6 && t < 7.6) for (let i = 0; i < 8; i++) chispa(x - 14 + i * 4, GY - 26 + Math.sin(i * 2) * 6, ['#ffd479', '#ffffff', ROJO][i % 3]);
+  if (t >= 9.4) for (let i = 0; i < 26; i++) { const f = ((t - 9.4) * 0.7 + rnd(i)) % 1; P(10 + rnd(i + 3) * 70 + Math.sin(t * 4 + i) * 3, 12 + f * 44, i % 2 ? ROJO : AMAR); }
+  if (t >= 10.4 && t < 14.5) bocadillo(x + 30, c0.top - 8, 'OLE!', -1);
 }
-ANIM2.hispanidad = [hispanidad2, 15];
+ANIM2.hispanidad = [hispanidad2, 14];

@@ -97,13 +97,8 @@ const gorroLana = (top, t = 0) => {
   for (let i = 0; i < 11; i += 2) P(-5 + i, top, '#7ea0e0');
   R(-1, top - 7 + Math.round(Math.sin(t * 4) * 0.5), 3, 3, BLANCO);
 };
-const orejasConejo = (top, t = 0, atento = 0) => {
-  const m = Math.round(Math.sin(t * 6) * atento);
-  for (const s of [-1, 1]) {
-    const ex = s * 3 - 1;
-    R(ex, top - 8, 3, 8, BLANCO); R(ex + 1, top - 7, 1, 6, '#f2a3b8');
-    const q = s > 0 ? m : -m; R(ex + q, top - 11, 3, 3, BLANCO); P(ex + 1 + q, top - 10, '#f2a3b8');
-  }
+const orejasConejo = (top) => {                                                  // orejas cortas y quietas
+  for (const s of [-1, 1]) { const ex = s * 3 - 1; R(ex, top - 5, 3, 5, BLANCO); R(ex + 1, top - 4, 1, 3, '#f2a3b8'); R(ex, top - 7, 3, 2, BLANCO); P(ex + 1, top - 6, '#f2a3b8'); }
   R(-1, top + 4, 3, 1, '#e58aa0'); P(0, top + 5, '#e58aa0');
   for (const s of [-1, 1]) { R(s * 4, top + 4, s * 3, 1, '#e6d9c8'); R(s * 4, top + 6, s * 3, 1, '#e6d9c8'); }
 };
@@ -379,68 +374,34 @@ function musica(t) {
 const mixC = (a, b, k) => { const f = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = f(a), B = f(b); return '#' + A.map((v, i) => Math.round(mezcla(v, B[i], clamp(k))).toString(16).padStart(2, '0')).join(''); };
 const murcielago = (x, y, t, c = '#2a1f3a') => { const a = Math.floor(t * 8) % 2; R(x - 1, y, 3, 2, c); R(x - 4, y - a, 3, 1, c); R(x + 2, y - a, 3, 1, c); R(x - 5, y + 1 - a, 1, 1, c); R(x + 5, y + 1 - a, 1, 1, c); };
 
-// Halloween: Clawd se pinta una cara de calabaza (se la pintan con un pincel), le sale el rabito y las costillas, y se enciende por dentro
+// Halloween: tiembla y se envuelve en humo morado; al disiparse es una calabaza (con su cara tallada, rabito y costillas) que se enciende por dentro y da saltos
 function halloween(t, c) {
-  const x = 64, p1 = clamp((t - 1.5) / 2.2), p2 = suave((t - 4.0) / 0.9), luz = t > 5 ? 0.8 + 0.2 * Math.sin(t * 9) : 0;
+  const x = 64, T1 = 3.9, calabaza = t >= T1, luz = calabaza ? clamp((t - T1) / 0.8) * (0.8 + 0.2 * Math.sin(t * 9)) : 0;
   disco(106, 18, 7, '#f6c15a'); disco(109, 16, 6, FONDO);
   for (let i = 0; i < 12; i++) { const sx = rnd(i) * W, sy = rnd(i + 5) * 40 + 10; if (Math.sin(t * 2 + i) > -0.3) P(sx, sy, '#6a5a8a'); }
   murcielago(mezcla(-10, 140, (t * 0.12) % 1), 22 + Math.sin(t * 2) * 6, t); murcielago(mezcla(140, -10, ((t + 4) * 0.1) % 1), 34 + Math.cos(t * 2) * 5, t + 1);
-  const naranja = mixC(NARANJA, '#f08a1c', p2), sombra = mixC(SOMBRA, '#b8600c', p2);
+  const naranja = calabaza ? '#f08a1c' : NARANJA, sombra = calabaza ? '#b8600c' : SOMBRA;
   if (luz) { alfa(0.10 * luz); disco(x, GY - 12, 26, '#ffa21f'); alfa(1); }
-  let dy = 0, agacha = 0, ojos = t < 1.5 ? 'a' : 'n';
+  let dy = 0, agacha = 0, dx = 0, ojos = calabaza ? 'n' : 'a';
+  if (!calabaza && t > 1.2) { const k = clamp((t - 1.2) / (T1 - 1.2)); dx = Math.round(Math.sin(t * 45) * (0.5 + 2 * k)); ojos = 'g'; }               // tiembla cada vez más
   if (t >= 7 && t < 12) { const u = (t - 7) % 2.5, s = Math.sin(clamp(u / 0.7) * Math.PI); dy = -s * 9; agacha = s < 0.1 && u < 0.9 ? 1 : 0; }
   const cav = luz ? mixC('#2a1405', '#ffd34a', luz) : '#2a1405';
-  const c0 = clawd(x, GY + dy, { ojos, color: naranja, sombra, agacha, ropa: top => {
-    if (p2 > 0) { for (const rx of [-3, 0, 3]) R(rx, top + 6 - Math.round(6 * p2), 1, Math.round(6 * p2) + 1, '#c46410'); R(-1, top - 3 * p2, 3, Math.round(3 * p2), '#3f7a2c'); if (p2 > 0.8) { R(2, top - 3, 2, 1, '#3f7a2c'); R(-3, top - 2, 2, 1, '#5aa83a'); } }
-    // la cara: ojos triangulares y boca con dientes, pintados poco a poco
-    if (p1 > 0.0) { R(-3, top + 2, 1, 1, cav); R(-4, top + 3, 3, 1, cav); }
-    if (p1 > 0.3) { R(2, top + 2, 1, 1, cav); R(1, top + 3, 3, 1, cav); }
-    if (p1 > 0.55) R(-3, top + 5, 7, 1, cav);
-    if (p1 > 0.8) { R(-2, top + 6, 1, 1, cav); R(0, top + 6, 1, 1, cav); R(2, top + 6, 1, 1, cav); }
-  } });
-  if (t > 1.5 && t < 4.0) {                                                  // el pincel que pinta (suelto, con gotas)
-    const u = (t - 1.5) / 2.5, bx = 96 - u * 28 + Math.sin(t * 9) * 3, by = c0.top + 8 + Math.sin(u * 14) * 5;
-    linea(bx, by, bx + 14, by - 12, '#8a5a3a'); R(bx - 2, by - 1, 4, 3, '#2a1405'); if (Math.floor(t * 6) % 2) P(bx - 1, by + 4, '#2a1405');
+  const c0 = clawd(x + dx, GY + dy, { ojos, color: naranja, sombra, agacha, ropa: calabaza ? top => {
+    for (const rx of [-3, 0, 3]) R(rx, top, 1, 7, '#c46410'); R(-1, top - 3, 3, 3, '#3f7a2c'); R(2, top - 3, 2, 1, '#3f7a2c'); R(-3, top - 2, 2, 1, '#5aa83a');
+    R(-3, top + 2, 1, 1, cav); R(-4, top + 3, 3, 1, cav); R(2, top + 2, 1, 1, cav); R(1, top + 3, 3, 1, cav); R(-3, top + 5, 7, 1, cav);
+    R(-2, top + 6, 1, 1, cav); R(0, top + 6, 1, 1, cav); R(2, top + 6, 1, 1, cav);
+  } : null });
+  // el humo morado: se va juntando alrededor y al llegar T1 estalla y se disipa
+  if (t > 1.6 && t < T1 + 1.6) {
+    const k = t < T1 ? clamp((t - 1.6) / (T1 - 1.6)) : 1, fade = t < T1 ? 1 : 1 - (t - T1) / 1.6, esp = t < T1 ? 0 : (t - T1) / 1.6;
+    for (let i = 0; i < 22; i++) {
+      const f = ((t - 1.6) * 0.9 + rnd(i)) % 1, a = rnd(i + 4) * 6.28, r = (8 + 12 * esp * 2) * (0.4 + rnd(i + 8)), px = x + Math.cos(a) * r + Math.sin(f * 6 + i) * 3, py = GY - 14 + Math.sin(a) * r * 0.7 - f * 10 * (1 - esp);
+      alfa(Math.max(0, k * (0.35 + 0.45 * (1 - f)) * fade)); disco(px, py, 3 + k * 4 + esp * 6, i % 2 ? '#7a4aa8' : '#a06ad0');
+    }
+    alfa(1);
+    if (t >= T1 && t < T1 + 0.2) { alfa(0.5); R(x - 24, GY - 36, 48, 36, '#ffffff'); alfa(1); }                     // el destello de la transformación
   }
   if (t >= 6.2 && t < 8.6 || t >= 9.7 && t < 12) bocadillo(x + 18, c0.top - 15, c.en ? 'BOO!' : 'BU!', -1);
-}
-
-// Día de la Hispanidad: se pinta él solo con las manos, de rojo, amarillo y rojo (como la bandera): moja una mano en el bote y se la pasa por el cuerpo
-function hispanidad(t, c) {
-  const rojo = '#c60b1e', amar = '#ffc400', x = 70;
-  // fases: [empieza a mojar, empieza a pintar, termina]; mano: -1 izquierda (bote rojo), 1 derecha (bote amarillo)
-  const F = [{ m0: 0.8, p0: 1.6, p1: 3.1, mano: -1, col: rojo, fila: 5, h: 2 }, { m0: 3.2, p0: 4.0, p1: 5.6, mano: 1, col: amar, fila: 2, h: 3 }, { m0: 5.7, p0: 6.5, p1: 7.7, mano: -1, col: rojo, fila: 0, h: 2 }];
-  let dy = 0, ojos = 'a', bI = 'abajo', bD = 'abajo', agacha = 0, alc = 8, mira = 0;
-  const act = F.find(f => t >= f.m0 && t < f.p1);
-  if (act) {
-    const mojando = t < act.p0, u = clamp((t - act.m0) / 0.8);
-    mira = act.mano;
-    if (mojando) { const e = act.mano < 0 ? 'bI' : 'bD'; if (e === 'bI') bI = 'largo'; else bD = 'largo'; alc = Math.round(2 + 6 * Math.sin(u * Math.PI)); }
-    else { agacha = 0; ojos = 'a'; }
-  }
-  if (t >= 7.7) { const u = (t - 7.7) % 1.0, s = Math.sin(u * Math.PI); dy = -s * 12; agacha = u < 0.1 || u > 0.9 ? 1 : 0; ojos = 'f'; bI = bD = s > 0.1 ? 'arriba' : 'medio'; }
-  const hecho = F.map(f => clamp((t - f.p0) / (f.p1 - f.p0)));
-  const c0 = clawd(x, GY + dy, { ojos, mira, bI, bD, agacha, alcance: alc, ropaAntes: true, ropa: top => {
-    F.forEach((f, i) => {
-      const w = Math.round(11 * hecho[i]); if (!w) return;
-      if (f.mano < 0) R(-5, top + f.fila, w, f.h, f.col); else R(6 - w, top + f.fila, w, f.h, f.col);
-    });
-    const act2 = F.find(f => t >= f.p0 && t < f.p1);
-    if (act2) {                                                                // la mano pintando: un bloque del color de la pintura al final de la franja
-      const i = F.indexOf(act2), w = Math.round(11 * hecho[i]), hx = act2.mano < 0 ? -5 + w - 1 : 6 - w;
-      R(hx, top + act2.fila, 2, act2.h, act2.col === rojo ? '#8a0a16' : '#b08800');
-      if (act2.mano < 0) R(-7, top + 4, 2, 2, act2.col); else R(6, top + 4, 2, 2, act2.col);
-    }
-    if (t >= 3.1 && !(act2 && act2.mano < 0)) R(-7, top + 4, 2, 2, rojo);
-    if (t >= 5.6 && !(act2 && act2.mano > 0)) R(6, top + 4, 2, 2, amar);
-  } });
-  // los dos botes (con la pintura salpicando al meter la mano)
-  celdas(34, GY, () => { R(0, -6, 6, 6, rojo); R(0, -6, 6, 1, '#8a0a16'); R(0, -3, 6, 1, '#8a0a16'); });
-  celdas(100, GY, () => { R(0, -6, 6, 6, amar); R(0, -6, 6, 1, '#b08800'); R(0, -3, 6, 1, '#b08800'); });
-  const gotas = F.find(f => t >= f.m0 + 0.3 && t < f.m0 + 0.9);
-  if (gotas) for (let i = 0; i < 4; i++) P((gotas.mano < 0 ? 40 : 106) + (i - 1.5) * 3, GY - 14 - ((t * 5 + i) % 1) * 6, gotas.col);
-  if (t >= 7.7) { for (let i = 0; i < 26; i++) { const f = ((t - 7.7) * 0.7 + rnd(i)) % 1; P(x - 36 + rnd(i + 3) * 72 + Math.sin(t * 4 + i) * 3, 12 + f * 44, i % 2 ? rojo : amar); } }
-  if (t >= 8.6) bocadillo(x + 18, c0.top - 15, 'OLE!', -1);
 }
 
 // Rugby: unos palos a un lado, Clawd coge carrerilla, patea el balón y lo mete entre los palos
@@ -485,34 +446,37 @@ function alas(top, f, c1 = '#f6f4ee', c2 = '#a9bbdc') {
 }
 // Belén (el nacimiento): la Virgen, San José, el niño, la mula y el buey; Clawd es el ángel, centrado sobre el tejado del portal
 function belen(t, c) {
-  const MARRON = '#6b4426', PAJA = '#d9b24a', PIEL = '#f0c9a0', brilla = 0.6 + 0.4 * Math.sin(t * 4);
-  // estrellas y la estrella de Belén
-  for (let i = 0; i < 12; i++) { const sx = rnd(i) * W, sy = 8 + rnd(i + 5) * 22; if (Math.sin(t * 2 + i) > -0.3) P(sx, sy, '#7a7ab0'); }
-  alfa(0.10); R(60, 14, 8, 42, '#ffe58a'); alfa(1);
-  // el portal (centrado): tejado escalonado, postes y suelo de paja
-  R(24, 44, 80, 3, MARRON); R(30, 41, 68, 3, '#7d5232'); R(38, 38, 52, 3, MARRON); R(48, 35, 32, 3, '#7d5232'); R(56, 33, 16, 2, MARRON);
-  for (let i = 0; i < 80; i += 4) R(24 + i, 45, 2, 1, PAJA);
-  R(27, 47, 3, 9, MARRON); R(98, 47, 3, 9, MARRON); R(24, 54, 80, 2, PAJA);
-  alfa(0.16 + 0.06 * Math.sin(t * 3)); disco(64, 50, 20, '#ffe58a'); alfa(1);
-  // el buey (izquierda) y la mula (derecha), que respiran
-  const resp = Math.round(Math.sin(t * 2) * 0.6);
-  R(32, 46 + resp, 14, 8, '#6a4a32'); R(30, 44 + resp, 6, 6, '#6a4a32'); R(29, 43 + resp, 2, 2, '#e8dcc0'); R(35, 43 + resp, 2, 2, '#e8dcc0'); P(31, 46 + resp, NEGRO); R(33, 54, 2, 2, '#4a3220'); R(43, 54, 2, 2, '#4a3220');
-  R(84, 46 - resp, 12, 8, '#8d8d94'); R(94, 43 - resp, 5, 6, '#8d8d94'); R(94, 40 - resp, 2, 4, '#8d8d94'); R(97, 40 - resp, 2, 4, '#8d8d94'); P(97, 46 - resp, NEGRO); R(85, 54, 2, 2, '#5a5a62'); R(93, 54, 2, 2, '#5a5a62');
-  // la cuna con el niño y su halo
-  R(58, 50, 12, 2, '#8a5a3a'); R(59, 52, 2, 4, '#8a5a3a'); R(67, 52, 2, 4, '#8a5a3a'); R(60, 46, 8, 4, '#f4f1ea'); R(58, 45, 4, 4, PIEL); R(57, 43, 6, 1, '#ffe58a'); alfa(brilla); chispa(60, 44, '#ffffff'); alfa(1);
-  // la Virgen, de rodillas (a la izquierda de la cuna) y San José, de pie con su lámpara (a la derecha)
+  const MARRON = '#6b4426', PAJA = '#d9b24a', PIEL = '#f0c9a0', brilla = 0.6 + 0.4 * Math.sin(t * 4), resp = Math.round(Math.sin(t * 2) * 0.6);
+  for (let i = 0; i < 12; i++) { const sx = rnd(i) * W, sy = 8 + rnd(i + 5) * 22; if (Math.sin(t * 2 + i) > -0.3 && (sx < 18 || sx > 112)) P(sx, sy, '#7a7ab0'); }
+  // la estrella de Belén, arriba a la derecha
+  R(112, 12, 3, 9, '#ffe58a'); R(109, 15, 9, 3, '#ffe58a'); R(111, 13, 5, 7, '#fff3b0'); alfa(brilla); chispa(113, 16, '#ffffff'); chispa(106, 18, '#ffe58a'); chispa(120, 14, '#ffe58a'); alfa(1);
+  // el portal: tejado bajo y escalonado para dejar mucho interior; fondo de madera oscura y postes
+  R(23, 33, 82, 23, '#2a1a10'); for (let i = 0; i < 82; i += 5) R(23 + i, 33, 1, 23, '#3a2616');
+  R(19, 30, 90, 3, MARRON); R(27, 27, 74, 3, '#7d5232'); R(37, 24, 54, 3, MARRON); R(49, 22, 30, 2, '#7d5232');
+  for (let i = 0; i < 90; i += 4) R(19 + i, 31, 2, 1, PAJA);
+  R(21, 33, 3, 23, MARRON); R(104, 33, 3, 23, MARRON); R(21, 54, 86, 2, PAJA);
+  alfa(0.18 + 0.06 * Math.sin(t * 3)); disco(70, 48, 22, '#ffe58a'); alfa(1);
+  // el buey (a la izquierda)
+  R(27, 43 + resp, 18, 12, '#6a4a32'); R(22, 39 + resp, 9, 9, '#6a4a32'); R(21, 35 + resp, 2, 5, '#e8dcc0'); R(29, 35 + resp, 2, 5, '#e8dcc0'); R(22, 45 + resp, 5, 3, '#3a2616'); P(25, 42 + resp, NEGRO); R(29, 54, 3, 2, '#4a3220'); R(40, 54, 3, 2, '#4a3220'); R(45, 44 + resp, 2, 5, '#6a4a32');
+  // la Virgen, de rodillas
   const rez = Math.round(Math.sin(t * 1.2) * 0.7);
-  R(48, 44 + rez, 8, 12, '#2a56b0'); R(49, 40 + rez, 6, 5, PIEL); R(48, 39 + rez, 8, 2, '#e8e8f0'); R(47, 41 + rez, 2, 8, '#e8e8f0'); R(54, 47 + rez, 3, 2, PIEL);
-  R(72, 41, 8, 15, '#7a4a2a'); R(73, 36, 6, 5, PIEL); R(73, 35, 6, 2, '#3a2418'); R(81, 42, 1, 14, '#8a5a3a');
-  const f = 0.7 + 0.3 * Math.sin(t * 9); alfa(0.25 * f); disco(84, 46, 8, '#ffd479'); alfa(1); R(83, 44, 3, 4, '#e0b020'); P(84, 45, '#fff3b0');                                    // la lámpara
+  R(49, 40 + rez, 12, 15, '#2a56b0'); R(51, 33 + rez, 8, 8, PIEL); R(49, 31 + rez, 12, 4, '#e8e8f0'); R(48, 34 + rez, 3, 13, '#e8e8f0'); R(59, 34 + rez, 3, 10, '#e8e8f0'); R(58, 45 + rez, 7, 4, PIEL); P(53, 37 + rez, NEGRO); P(56, 37 + rez, NEGRO);
+  // la cuna con el niño y su halo
+  R(64, 50, 16, 2, '#8a5a3a'); R(65, 52, 2, 4, '#8a5a3a'); R(77, 52, 2, 4, '#8a5a3a'); R(64, 48, 16, 2, PAJA); R(66, 43, 11, 5, '#f4f1ea'); R(65, 40, 6, 6, PIEL); R(64, 38, 8, 1, '#ffe58a'); alfa(brilla); chispa(67, 39, '#ffffff'); alfa(1);
+  for (let i = 0; i < 5; i++) { alfa(0.18 * brilla); R(61 + i * 4, 27 + (i % 2) * 3, 1, 12, '#ffe58a'); } alfa(1);
+  // San José, de pie con su báculo y su lámpara
+  R(82, 37, 12, 18, '#7a4a2a'); R(84, 30, 8, 8, PIEL); R(84, 28, 8, 3, '#3a2418'); R(83, 33, 1, 6, '#3a2418'); R(92, 33, 1, 6, '#3a2418'); R(96, 30, 1, 26, '#8a5a3a'); P(86, 33, NEGRO); P(90, 33, NEGRO);
+  const f = 0.7 + 0.3 * Math.sin(t * 9); alfa(0.25 * f); disco(100, 46, 7, '#ffd479'); alfa(1); R(98, 43, 4, 6, '#e0b020'); R(99, 44, 2, 4, '#fff3b0'); R(99, 41, 2, 2, '#8a5a3a');
+  // la mula (a la derecha, junto al poste)
+  R(95, 45 - resp, 8, 10, '#8d8d94'); R(98, 39 - resp, 5, 8, '#8d8d94'); R(98, 34 - resp, 2, 6, '#8d8d94'); R(101, 34 - resp, 2, 6, '#8d8d94'); P(101, 42 - resp, NEGRO); R(96, 54, 2, 2, '#5a5a62'); R(100, 54, 2, 2, '#5a5a62');
   // Clawd, el ángel: baja volando, aterriza en el centro del tejado, abre los brazos y aparece el «Gloria»
-  const aterr = clamp((t - 1.5) / 2.0), cy = mezcla(-14, 33, suave(aterr)) + (aterr < 1 ? Math.sin(t * 3) * 2 : 0), vuela = aterr < 1;
+  const aterr = clamp((t - 1.5) / 2.0), cy = mezcla(-14, 22, suave(aterr)) + (aterr < 1 ? Math.sin(t * 3) * 2 : 0), vuela = aterr < 1;
   const flap = vuela ? Math.floor(t * 8) % 2 : (Math.floor(t * 2) % 2);
-  const c0 = clawd(64, cy, { k: 1, ojos: aterr < 1 ? 'a' : 'f', bI: aterr >= 1 ? 'arriba' : 'medio', bD: aterr >= 1 ? 'arriba' : 'medio', ropaAntes: true, ropa: top => {
-    alfa(1); alas(top, flap); R(-3, top - 4, 7, 1, '#ffe58a'); R(-2, top - 5, 5, 1, '#ffe58a');                      // alas por detrás y el halo
+  clawd(64, cy, { k: 1, ojos: aterr < 1 ? 'a' : 'f', bI: aterr >= 1 ? 'arriba' : 'medio', bD: aterr >= 1 ? 'arriba' : 'medio', ropaAntes: true, ropa: top => {
+    alfa(1); alas(top, flap); R(-3, top - 4, 7, 1, '#ffe58a'); R(-2, top - 5, 5, 1, '#ffe58a');
   } });
-  if (t > 4.2) { alfa(Math.min(1, (t - 4.2) / 0.6)); const gx = 64 - 12; texto('GLORIA', 84, 22, '#ffe58a'); alfa(1); }
-  if (t > 3.6) for (let i = 0; i < 8; i++) { const ff = ((t - 3.6) * 0.5 + i / 8) % 1; alfa(Math.sin(ff * Math.PI)); chispa(64 + Math.cos(i * 0.8) * (10 + ff * 18), 24 + Math.sin(i * 0.8) * (6 + ff * 6), '#ffe58a'); } alfa(1);
+  if (t > 4.2) { alfa(Math.min(1, (t - 4.2) / 0.6)); texto('GLORIA', 80, 12, '#ffe58a'); alfa(1); }
+  if (t > 3.6) for (let i = 0; i < 8; i++) { const ff = ((t - 3.6) * 0.5 + i / 8) % 1; alfa(Math.sin(ff * Math.PI)); chispa(64 + Math.cos(i * 0.8) * (10 + ff * 18), 14 + Math.sin(i * 0.8) * (4 + ff * 5), '#ffe58a'); } alfa(1);
 }
 
 // Camello (de perfil, mirando a la derecha). `pasos`: fase del paso; `sentado` (0..1): se arrodilla bajando el cuerpo
@@ -559,13 +523,12 @@ function cupido(t, c) {
   const tirando = tiros.find(q => t >= q.t0 - 1.0 && t < q.t0 + 0.4);
   const tensa = tirando ? clamp((t - (tirando.t0 - 1.0)) / 0.9) : 0;
   const ORO = '#f0c040', ORO2 = '#c89a20', ORO3 = '#ffe070';
+  celdas(x, GY, () => alas(-10, flap ? 1 : 0));                                                                      // las alas, por detrás del personaje
   const c0 = clawd(x, GY, { ojos: t > 4.6 && t < 6 || t > 8.6 ? 'f' : 'a', mira: 1, bD: tirando ? 'frente' : 'abajo', ropaAntes: false, ropa: top => {
     if (t > 3.4) { R(-4, top + 4, 2, 1, '#f2a3b8'); R(3, top + 4, 2, 1, '#f2a3b8'); }
     R(-5, top - 1, 11, 2, ORO); for (const i of [-5, -2, 1, 4]) { R(i, top - 2, 2, 1, ORO); P(i, top - 1, ORO3); }                // los rizos de arriba
     R(-5, top + 1, 11, 1, ORO); P(-3, top + 1, ORO2); P(0, top + 1, ORO2); P(3, top + 1, ORO2);
-    for (const s of [-1, 1]) { const xa = s < 0 ? -9 : 7; for (let k = 0; k < 3; k++) { R(xa, top + k * 3, 3, 3, ORO); P(xa + 1, top + k * 3 + 1, ORO2); P(xa + (s < 0 ? 0 : 2), top + k * 3, ORO3); } }   // los tirabuzones de los lados
   } });
-  celdas(x, GY, () => alas(-10, flap ? 1 : 0));                                                                      // las alas (encima del dibujo, pero a los lados del cuerpo)
   // el arco, con la cuerda más o menos tensa
   if (tirando) {
     const bx = x + 18, by = c0.top + 12, estira = tensa * 6;
@@ -608,8 +571,8 @@ function cumple(t, c) {
   if (t >= 6) bocadillo(c.en ? 84 : 80, 16, c.en ? 'HAPPY BIRTHDAY' : 'FELIZ CUMPLE', 0);
 }
 
-// Fallas: con peinado de fallera (moños y peineta) mira una falla. Con petardos antes de la cremà; el fuego prende en una esquina, se va extendiendo al resto
-// (cada trocito de la falla se enciende cuando le llega el fuego, arde y cae) y al final queda un montículo en llamas.
+// Fallas: con peinado de fallera (moños y peineta) mira una falla. Con petardos antes de la cremà; el fuego prende en una esquina y se va extendiendo al resto
+// (cada trocito de la falla se enciende cuando le llega el fuego) hasta que todo lo que era falla es fuego.
 let bloquesFallaCache = null;
 function dibujoFalla() {
   R(64, 50, 62, 6, '#8a5a3a'); R(66, 48, 58, 2, '#a87a4a');
@@ -627,24 +590,25 @@ function bloquesFalla() {                                                       
   for (let y = 8; y < 56; y += 2) for (let x = 64; x < 126; x += 2) { const i = (y * W + x) * 4; if (d[i + 3] > 200) b.push({ x, y, c: '#' + [d[i], d[i + 1], d[i + 2]].map(v => v.toString(16).padStart(2, '0')).join(''), d: Math.hypot(x - 66, (y - 54) * 1.3), r: rnd(x * 7 + y * 3) }); }
   return bloquesFallaCache = b;
 }
-const alturaMonticulo = x => 15 * Math.sqrt(Math.max(0, 1 - ((x - 95) / 33) ** 2));
 function fallas(t, c) {
-  const x = 28, T0 = 3.6;
-  for (const b of bloquesFalla()) {
-    const ti = T0 + b.d / 7 + b.r * 0.5, u = t - ti, yF = 53 - b.r * alturaMonticulo(b.x);
+  const x = 28, T0 = 3.6, bl = bloquesFalla();
+  if (!bl.tope) { bl.tope = {}; for (const b of bl) if (bl.tope[b.x] == null || b.y < bl.tope[b.x]) bl.tope[b.x] = b.y; }
+  const fuego = ['#e83a14', '#ff6a1c', '#ff9a1c', '#ffb020', '#ffe45a'];
+  for (const b of bl) {                                                          // cada trocito arde cuando le llega el fuego (desde la esquina) y se queda ardiendo
+    const ti = T0 + b.d / 6.5 + b.r * 0.5, u = t - ti;
     if (u < 0) R(b.x, b.y, 2, 2, b.c);
-    else if (u < 1.0) { const k = u / 1.0, fl = Math.floor(t * 14 + b.x) % 2; R(b.x, b.y, 2, 2, mixC(b.c, '#2a1810', k)); R(b.x, b.y - 2 - fl, 2, 2, k < 0.5 ? '#ffd45a' : '#ff8a1c'); if (k < 0.7) R(b.x, b.y - 4 - fl * 2, 2, 2, '#e83a14'); }
-    else if (u < 2.2) { const k = (u - 1.0) / 1.2; R(b.x, mezcla(b.y, yF, k * k), 2, 2, (Math.floor(t * 10 + b.x + b.y) % 3) ? '#2a1810' : '#ff6a1c'); }
-    else R(b.x, yF, 2, 2, (Math.floor(t * 6 + b.x * 3 + b.y) % 4) ? '#2a1810' : (Math.floor(t * 8 + b.x) % 2 ? '#ff6a1c' : '#ffb020'));
+    else if (u < 0.9) R(b.x, b.y, 2, 2, mixC(b.c, '#2a1810', u / 0.9));
+    else { const k = Math.floor(t * 9 + b.x * 3 + b.y * 5) % 5; R(b.x, b.y, 2, 2, k === 0 ? '#2a1810' : fuego[(k + Math.floor(b.r * 4)) % 4]); }
   }
-  const total = T0 + 62 / 7 + 2.7;
-  if (t > T0 + 2) { const k = clamp((t - (T0 + 4)) / 5);                         // las llamas del montículo
-    for (let xx = 64; xx < 126; xx += 2) { const h0 = alturaMonticulo(xx); if (h0 < 1) continue; const h = Math.round((3 + (Math.sin(t * 11 + xx * 0.9) * 0.5 + 0.5) * 7) * (0.4 + 0.6 * k)), y0 = 53 - h0 - h + 2;
-      R(xx, y0 + h * 0.55, 2, h * 0.45, '#e83a14'); R(xx, y0 + h * 0.25, 2, h * 0.35, '#ff9a1c'); R(xx, y0, 2, h * 0.25, '#ffe45a'); } }
-  alfa(clamp((t - T0) * 0.05, 0, 0.10)); R(0, 8, W, 50, '#ff7a1c'); alfa(1);
+  for (const b of bl) {                                                          // las llamas suben por encima de lo que ya arde
+    const u = t - (T0 + b.d / 6.5 + b.r * 0.5); if (u < 0) continue;
+    const arriba = b.y <= bl.tope[b.x] + 2, k = clamp(u / 1.5), fl = Math.floor(t * 12 + b.x) % 2;
+    if (u < 0.9 || arriba || b.r > 0.6) { const h = Math.round((arriba ? 8 : 3) * k + fl * 2); R(b.x, b.y - h, 2, h, fuego[Math.min(3, Math.floor(b.r * 3) + (fl ? 1 : 0))]); if (arriba) R(b.x, b.y - h - 2, 2, 2, '#ffe45a'); }
+  }
+  alfa(clamp((t - T0) * 0.05, 0, 0.12)); R(0, 8, W, 50, '#ff7a1c'); alfa(1);
   if (t < T0) for (let i = 0; i < 3; i++) { const q = (t * 1.4 + i * 0.33) % 1, bx = 70 + i * 22 + Math.sin(i * 5) * 5; if (q < 0.25) { alfa(1 - q * 4); chispa(bx, GY - 2, '#ffffff'); chispa(bx + 2, GY - 6, '#ffd479'); alfa(1); } else { alfa(0.5 - q * 0.4); disco(bx, GY - 6 - q * 12, 2 + q * 5, '#8d8d8d'); alfa(1); } }
   if (t > T0 + 3) for (let i = 0; i < 3; i++) { const f = (t * 0.5 + i / 3) % 1, fx = 30 + i * 36, fy = 22 + (i % 2) * 8; if (f < 0.6) for (let k = 0; k < 8; k++) { const a = k * 0.785, r = f * 14; chispa(fx + Math.cos(a) * r, fy + Math.sin(a) * r, ['#ffd479', '#f2a3b8', '#6fd0c0'][i]); } }
-  if (t > T0 + 1) for (let i = 0; i < 6; i++) { const f = (t * 0.6 + i / 6) % 1; alfa(0.5 * (1 - f)); disco(70 + i * 9 + Math.sin(f * 5 + i) * 3, 40 - f * 30, 3 + f * 6, '#7a7a82'); } alfa(1);
+  if (t > T0 + 1) for (let i = 0; i < 6; i++) { const f = (t * 0.6 + i / 6) % 1; alfa(0.5 * (1 - f)); disco(70 + i * 9 + Math.sin(f * 5 + i) * 3, 30 - f * 24, 3 + f * 6, '#7a7a82'); } alfa(1);
   const c0 = clawd(x, GY, { ojos: t > 12.8 ? 'f' : 'a', mira: 1, bD: t > 12.8 ? 'arriba' : 'abajo', ropa: top => {
     R(-9, top + 1, 4, 4, '#3a2418'); R(-8, top, 2, 1, '#3a2418'); R(5, top + 1, 4, 4, '#3a2418'); R(6, top, 2, 1, '#3a2418'); R(-9, top + 4, 2, 1, '#d02030'); P(-8, top + 3, '#d02030');
     R(-3, top - 2, 7, 1, '#e0b020'); R(-2, top - 5, 5, 3, '#e0b020'); P(-2, top - 6, '#e0b020'); P(0, top - 6, '#e0b020'); P(2, top - 6, '#e0b020'); R(-1, top - 4, 3, 1, '#a87a1a');
@@ -656,9 +620,10 @@ function fallas(t, c) {
 const PROMPTS = { poses: ['POSES', 'POSES'], saludo: ['HOLA CLAUDE', 'HI CLAUDE'], dormir: ['BUENAS NOCHES', 'GOOD NIGHT'], trabajar: ['ARREGLA EL BUG', 'FIX THE BUG'], cafe: ['HORA DEL CAFE', 'COFFEE TIME'],
   nieve: ['HAZ UN MUNECO DE NIEVE', 'BUILD A SNOWMAN'], musica: ['PON MUSICA', 'PLAY SOME MUSIC'], halloween: ['TRUCO O TRATO', 'TRICK OR TREAT'], hispanidad: ['DIA DE LA HISPANIDAD', 'SPANISH NATIONAL DAY'], rugby: ['TRANSFORMA EL ENSAYO', 'CONVERT THE TRY'],
   belen: ['MONTA EL BELEN', 'BUILD THE NATIVITY'], reyes: ['LLEGAN LOS REYES MAGOS', 'THE THREE KINGS ARRIVE'], cupido: ['FELIZ SAN VALENTIN', 'HAPPY VALENTINES'], cumple: ['FELIZ CUMPLE', 'HAPPY BIRTHDAY'], fallas: ['JA ESTEM EN FALLES', 'JA ESTEM EN FALLES'], pascua: ['BUSCA LOS HUEVOS', 'FIND THE EGGS'], noel: ['FELIZ NAVIDAD', 'MERRY CHRISTMAS'] };
-const ANIM = { saludo: [saludo, 9], musica: [musica, 12], halloween: [halloween, 12], hispanidad: [hispanidad, 10], rugby: [rugby, 12], belen: [belen, 16], reyes: [reyes, 16], cupido: [cupido, 11], cumple: [cumple, 12], fallas: [fallas, 19], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 20], pascua: [pascua, 16], noel: [noel, 19] };
+const ANIM = { saludo: [saludo, 9], musica: [musica, 12], halloween: [halloween, 12], hispanidad: ANIM2.hispanidad, rugby: [rugby, 12], belen: [belen, 16], reyes: [reyes, 16], cupido: [cupido, 11], cumple: [cumple, 12], fallas: [fallas, 19], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 20], pascua: [pascua, 16], noel: [noel, 19] };
 const INICIO = { poses: 64, halloween: 64, hispanidad: 64, rugby: 30, belen: 64, reyes: 12, cupido: 40, cumple: 40, fallas: 28, musica: 64, saludo: 64, dormir: 28, trabajar: 46, cafe: 60, nieve: 22, pascua: 12, noel: 40 };
 Object.assign(ANIM, Object.fromEntries(Object.entries(ANIM2).map(([k, v]) => [k + '2', v])));
+delete ANIM.hispanidad2;                                                          // la Hispanidad es una sola (necesita girarse, y usa el Clawd de la versión 2)
 ANIM.trabajar2 = ANIM.trabajar;                                                  // el «trabajando» ya es el GIF celda a celda: es la misma en las dos versiones
 export const ESCENAS = Object.fromEntries(Object.entries(ANIM).map(([k, [fn, d]]) => [k, { dur: INTRO + d, dibujar: (t, c) => {
   const base = k.replace(/2$/, '');
