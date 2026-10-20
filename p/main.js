@@ -266,7 +266,7 @@ async function loadRoom() {
   if (Horas.hayLamparas()) { lamparas.listas = true; construirResplandor(); }
   // Clawd en la segunda pantalla: al hacer clic sale una escena en píxeles según la fecha, la hora y el tiempo (#clawd=nombre fuerza una; #fecha=AAAA-MM-DD la fecha)
   if (objects.pantalla2) {
-    objects.clawd = crearClawd(THREE, objects.pantalla2, { version: +(hash.get('clawdv') || 1), forzada: hash.get('clawd'), contexto: () => {
+    objects.clawd = crearClawd(THREE, objects.pantalla2, { forzada: hash.get('clawd'), contexto: () => {
       const f = hash.get('fecha') ? new Date(hash.get('fecha') + 'T12:00:00') : new Date(), t = Clima.clima.temp;
       return { fecha: f, hora: horaManual ?? Horas.horaValencia(), temp: t == null ? null : t, llueve: Clima.clima.lluvia > 0.3, nieva: !!Clima.clima.nieva || hash.get('nieva') === '1', en: LANG === 'en' };
     } });
