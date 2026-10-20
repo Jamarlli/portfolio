@@ -336,37 +336,29 @@ function noel(t) {
   for (let i = 0; i < 22; i++) { const x = (rnd(i) * W + t * (2 + rnd(i + 5) * 3)) % W, y = (rnd(i + 2) * 58 + t * (7 + rnd(i + 7) * 8)) % 58; P(x, y, '#ffffff'); }
 }
 
-// Clawd con cascos (la imagen de referencia): el cuerpo fino del GIF (16 celdas de ancho, ojos de 2 x 2, patas de 2) con ojos felices en forma de ⌣
-// y auriculares azules (arco de 9 celdas y ventosas con escalones). Se los pone, asiente al ritmo (120 pulsos por minuto) y suelta notas.
+// Clawd con cascos (la imagen de referencia), del tamaño de siempre: ojos felices en forma de ⌣ y auriculares azules (arco con escalones y ventosas a los lados).
+// Se los pone, asiente al ritmo (120 pulsos por minuto) bajando y subiendo el cuerpo, mueve los brazos y suelta notas, con un ecualizador a los lados.
 function musica(t) {
-  const AZUL = '#14407a', LUZ = '#2a62b0', K2 = 2;
+  const AZUL = '#14407a', LUZ = '#2a62b0', x = 64;
   const pulso = (t * 2) % 1, compas = Math.floor(t * 2) % 4;
-  const baja = t < 1.0 ? Math.round((1 - suave(t / 1.0)) * 9) : 0;          // los cascos bajan desde arriba hasta ponerse
-  const dy = t < 1.2 ? 0 : (pulso < 0.22 ? (compas === 0 ? -2 : -1) : 0);
-  const sacude = t > 1.2 ? (Math.floor(t * 4) % 2) : 0;
-  const nota = (x, y, c) => { R(x, y + 3, 2, 2, c); R(x + 1, y, 1, 4, c); R(x + 2, y, 2, 1, c); };
-  for (const lado of [-1, 1]) for (let b = 0; b < 3; b++) {                 // ecualizador a los lados, al compás
+  const q = t < 1.0 ? Math.round((1 - suave(t / 1.0)) * 5) : 0;               // los cascos bajan desde arriba hasta ponerse
+  const golpe = t > 1.2 && pulso < 0.25;                                       // en cada pulso se agacha un poco
+  const nota = (nx, ny, c) => { R(nx, ny + 3, 2, 2, c); R(nx + 1, ny, 1, 4, c); R(nx + 2, ny, 2, 1, c); };
+  for (const lado of [-1, 1]) for (let b = 0; b < 3; b++) {                    // ecualizador a los lados, al compás
     const h = 4 + Math.round((Math.sin(t * 7 + b * 2 + lado) * 0.5 + 0.5) * 12) * (t > 1.2 ? 1 : 0);
     R(lado < 0 ? 8 + b * 5 : 105 + b * 5, GY - h, 4, h, ['#6fd0c0', '#ffd479', '#f2a3b8'][b]);
   }
-  celdas(64, GY, () => {
-    const piernas = 4 - dy;
-    for (const c of [-8, -4, 2, 6]) R(c, -piernas, 2, piernas, NARANJA);
-    const b = dy - 4;                                                       // la fila de arriba del cuerpo = b - 12 + ... (el suelo es 0)
-    const top = -4 - 12 + dy;
-    R(-8, top, 16, 12, NARANJA);
-    R(-12, top + 7 + (sacude ? 0 : -1), 4, 4, NARANJA); R(8, top + 7 + (sacude ? -1 : 0), 4, 4, NARANJA);
-    for (const x0 of [-8, 4]) { R(x0, top + 2, 1, 1, NEGRO); R(x0 + 3, top + 2, 1, 1, NEGRO); R(x0 + 1, top + 3, 2, 1, NEGRO); }   // ojos ⌣
-    const q = baja;                                                         // cascos: arco y ventosas (columnas relativas al cuerpo)
-    R(-4, top - 6 - q, 9, 1, AZUL); R(-6, top - 5 - q, 2, 1, AZUL); R(5, top - 5 - q, 2, 1, AZUL); R(-8, top - 4 - q, 1, 1, AZUL); R(7, top - 4 - q, 1, 1, AZUL);
-    for (const [c0, dir] of [[-9, -1], [8, 1]]) {
-      R(c0, top - 3 - q, 1, 10, AZUL); R(c0 + dir, top - q, 1, 7, AZUL); R(c0 + 2 * dir, top + 1 - q, 1, 5, AZUL);
-      R(c0 + (dir > 0 ? 0 : 0), top - 3 - q, 1, 1, LUZ);
+  const ba = t > 1.2 ? (Math.floor(t * 4) % 2 ? 'arriba' : 'medio') : 'abajo', bb = t > 1.2 ? (Math.floor(t * 4) % 2 ? 'medio' : 'arriba') : 'abajo';
+  clawd(x, GY, { ojos: 'n', agacha: golpe ? (compas === 0 ? 2 : 1) : 0, bI: ba, bD: bb, ropa: top => {
+    for (const ex of [-4, 2]) { P(ex, top + 2, NEGRO); P(ex + 2, top + 2, NEGRO); P(ex + 1, top + 3, NEGRO); }                    // ojos ⌣
+    R(-3, top - 5 - q, 7, 1, AZUL); R(-5, top - 4 - q, 2, 1, AZUL); R(4, top - 4 - q, 2, 1, AZUL); R(-6, top - 3 - q, 1, 1, AZUL); R(6, top - 3 - q, 1, 1, AZUL);   // el arco
+    for (const [c0, dir] of [[-6, -1], [6, 1]]) {                                                                                  // las ventosas, con escalones
+      R(c0, top - 2 - q, 1, 7, AZUL); R(c0 + dir, top - q, 1, 5, AZUL); R(c0 + 2 * dir, top + 1 - q, 1, 3, AZUL); P(c0, top - 2 - q, LUZ);
     }
-  });
-  if (t > 1.2) for (let i = 0; i < 5; i++) {                                // notas que suben de los cascos
+  } });
+  if (t > 1.2) for (let i = 0; i < 5; i++) {                                    // notas que suben de los cascos
     const f = (t * 0.45 + i / 5) % 1, lado = i % 2 ? 1 : -1;
-    alfa(Math.sin(f * Math.PI)); nota(64 + lado * (24 + Math.sin(f * 6 + i) * 4) - 1, 36 - f * 24, ['#ffd479', '#6fd0c0', '#f2a3b8', '#b79bff', '#ffffff'][i]);
+    alfa(Math.sin(f * Math.PI)); nota(x + lado * (22 + Math.sin(f * 6 + i) * 4) - 1, 36 - f * 24, ['#ffd479', '#6fd0c0', '#f2a3b8', '#b79bff', '#ffffff'][i]);
   }
   alfa(1);
 }
