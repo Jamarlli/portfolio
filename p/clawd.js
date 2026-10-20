@@ -1,5 +1,4 @@
 import { FRAMES_TRABAJO, COLS_TRABAJO, FILAS_TRABAJO, MS_TRABAJO, PALETA_TRABAJO } from './clawd_trabajo.js';
-import { ANIM2, fino } from './clawd_fino.js';          // Clawd «fino» (se gira): lo usa la escena del 12 de octubre
 // Clawd, la mascota de Claude Code, dibujado a mano en píxeles sobre un lienzo de 128 x 78 que se pone encima de la segunda pantalla.
 // Cada escena es una función dibujar(t) (t = segundos desde que empieza) que pinta el fotograma entero, sin imágenes: todo son rectángulos.
 // El cuerpo es el del sprite del terminal (naranja #d77757): un bloque ancho, brazos como tacos laterales, cuatro patas finas y ojos cuadrados.
@@ -150,7 +149,7 @@ export function pintarReposo(ctx2d, c = {}) {
   texto('>>', 2, GY + 14, AMARILLO); texto('AUTO MODE ON (SHIFT+TAB)', 12, GY + 14, AMARILLO);
 }
 // la sesión: Clawd sale de la cabecera de un salto, se limpia la pantalla, se teclea el mensaje y Enter
-function terminal(t, prompt, nevado, c, inicio, fina = false) {
+function terminal(t, prompt, nevado, c, inicio) {
   marco();
   const salto = 0.9, limpia = 1.5, entra = 3.0;
   g.save(); g.beginPath(); g.rect(0, 7, W, H); g.clip();
@@ -173,7 +172,6 @@ function terminal(t, prompt, nevado, c, inicio, fina = false) {
   // Clawd salta a su sitio y espera ahí hasta que empieza la animación (entonces la escena toma el relevo)
   if (t < INTRO - 0.15) {
     if (t < salto) { const u = t / salto; clawd(mezcla(12, inicio, suave(u)), mezcla(30, GY, suave(u)) - Math.sin(u * Math.PI) * 22, { k: 1, ojos: 'g', bI: 'arriba', bD: 'arriba' }); }
-    else if (fina) { const u = (t - salto) / (INTRO - salto); fino(inicio, GY, { ojos: (t % 1.7) > 1.55 ? 'c' : 'a', sq: t < salto + 0.15 ? 2 : 0, giro: u > 0.6 ? 1 : 0 }); }
     else { const u = (t - salto) / (INTRO - salto); clawd(inicio, GY, { ojos: u > 0.5 ? 'a' : 'f', mira: 1, agacha: t < salto + 0.15 ? 1 : 0 }); }
   } else if (t < INTRO) for (let i = 0; i < 6; i++) chispa(inicio - 14 + i * 6, GY - 14 - (i % 2) * 6, ['#ffd479', '#ffffff', '#f2a3b8'][i % 3]);
 }
@@ -407,6 +405,37 @@ function halloween(t, c) {
   if (t >= 6.2 && t < 8.6 || t >= 9.7 && t < 12) bocadillo(x + 18, c0.top - 15, c.en ? 'BOO!' : 'BU!', -1);
 }
 
+// Día de la Hispanidad: Clawd enseña las manos (una roja y otra amarilla), se frota la cara con las dos y la cara se le va pintando de rojo, amarillo y rojo (la bandera);
+// luego baja las manos, se sorprende al verse y lo celebra saltando.
+function hispanidad(t, c) {
+  const ROJO = '#c60b1e', AMAR = '#ffc400', x = 64, p = clamp((t - 2.6) / 3.8), frota = t >= 2.6 && t < 6.4;
+  let dy = 0, agacha = 0, ojos = 'a', bI = 'abajo', bD = 'abajo', mira = 0;
+  if (t < 2.6) { bI = bD = t < 0.5 ? 'medio' : 'arriba'; mira = t > 1.2 ? (Math.floor(t * 2) % 2 ? 1 : -1) : 0; ojos = ojoPar(t) ? 'c' : 'a'; }          // enseña las manos
+  else if (frota) { ojos = 'c'; }
+  else if (t < 7.4) { ojos = t < 7.0 ? 'g' : 'f'; bI = bD = 'medio'; }
+  else { const u = (t - 7.4) % 1.1, s = Math.sin(clamp(u / 0.75) * Math.PI); dy = -s * 12; agacha = u < 0.1 || u > 0.95 ? 1 : 0; ojos = 'f'; bI = bD = s > 0.1 ? 'arriba' : 'medio'; }
+  const w = Math.round(11 * p);
+  const c0 = clawd(x, GY + dy, { ojos, mira, bI, bD, agacha, ropaAntes: true, ropa: top => {
+    if (w > 0) { R(-5, top, w, 2, ROJO); R(6 - w, top + 2, w, 3, AMAR); R(-5, top + 5, w, 2, ROJO); }                // las franjas, a medida que se frota
+  } });
+  // las manos, del color de su pintura (la roja a la izquierda, la amarilla a la derecha)
+  celdas(x, GY + dy, () => {
+    const top = -10 + (agacha ? 1 : 0);
+    if (frota) {
+      const u = t - 2.6, hx = [ -2 + Math.sin(u * 9) * 2.2, 2 + Math.sin(u * 9 + Math.PI) * 2.2 ], hy = [ top + 3.5 + Math.cos(u * 7) * 1.5, top + 3.5 + Math.cos(u * 7 + Math.PI) * 1.5 ];
+      linea(-6, top + 4, hx[0], hy[0], NARANJA); linea(6, top + 4, hx[1], hy[1], NARANJA);
+      R(Math.round(hx[0]) - 1, Math.round(hy[0]) - 1, 2, 2, ROJO); R(Math.round(hx[1]) - 1, Math.round(hy[1]) - 1, 2, 2, AMAR);
+    } else if (bI === 'arriba' || bD === 'arriba') { R(-7, top - 2, 2, 2, ROJO); R(6, top - 2, 2, 2, AMAR); }
+    else if (bI === 'medio') { R(-7, top + 3, 2, 2, ROJO); R(6, top + 3, 2, 2, AMAR); }
+    else { R(-7, top + 4, 2, 2, ROJO); R(6, top + 4, 2, 2, AMAR); }
+  });
+  if (frota) for (let i = 0; i < 6; i++) { const f = ((t - 2.6) * 2.0 + i / 6) % 1; alfa(1 - f); P(x - 14 + rnd(i) * 28, GY - 28 - f * 6 + i, i % 2 ? ROJO : AMAR); } alfa(1);
+  if (t >= 6.4 && t < 7.6) for (let i = 0; i < 8; i++) chispa(x - 14 + i * 4, GY - 30 + Math.sin(i * 2) * 5, ['#ffd479', '#ffffff', ROJO][i % 3]);
+  if (t >= 7.4) for (let i = 0; i < 26; i++) { const f = ((t - 7.4) * 0.7 + rnd(i)) % 1; P(x - 36 + rnd(i + 3) * 72 + Math.sin(t * 4 + i) * 3, 12 + f * 44, i % 2 ? ROJO : AMAR); }
+  if (t >= 8.4) bocadillo(x + 18, c0.top - 15, 'OLE!', -1);
+}
+const ojoPar = t => (t % 2.2) > 2.05;
+
 // Rugby: unos palos a un lado, Clawd coge carrerilla, patea el balón y lo mete entre los palos
 function rugby(t, c) {
   const PX = [106, 122], tee = [46, GY - 3];
@@ -622,10 +651,10 @@ function fallas(t, c) {
 const PROMPTS = { saludo: ['HOLA CLAUDE', 'HI CLAUDE'], dormir: ['BUENAS NOCHES', 'GOOD NIGHT'], trabajar: ['ARREGLA EL BUG', 'FIX THE BUG'], cafe: ['HORA DEL CAFE', 'COFFEE TIME'],
   nieve: ['HAZ UN MUNECO DE NIEVE', 'BUILD A SNOWMAN'], musica: ['PON MUSICA', 'PLAY SOME MUSIC'], halloween: ['TRUCO O TRATO', 'TRICK OR TREAT'], hispanidad: ['DIA DE LA HISPANIDAD', 'SPANISH NATIONAL DAY'], rugby: ['TRANSFORMA EL ENSAYO', 'CONVERT THE TRY'],
   belen: ['MONTA EL BELEN', 'BUILD THE NATIVITY'], reyes: ['LLEGAN LOS REYES MAGOS', 'THE THREE KINGS ARRIVE'], cupido: ['FELIZ SAN VALENTIN', 'HAPPY VALENTINES'], cumple: ['FELIZ CUMPLE', 'HAPPY BIRTHDAY'], fallas: ['JA ESTEM EN FALLES', 'JA ESTEM EN FALLES'], pascua: ['BUSCA LOS HUEVOS', 'FIND THE EGGS'], noel: ['FELIZ NAVIDAD', 'MERRY CHRISTMAS'] };
-const ANIM = { saludo: [saludo, 9], musica: [musica, 12], halloween: [halloween, 12], hispanidad: ANIM2.hispanidad, rugby: [rugby, 12], belen: [belen, 16], reyes: [reyes, 16], cupido: [cupido, 11], cumple: [cumple, 12], fallas: [fallas, 19], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 20], pascua: [pascua, 16], noel: [noel, 19] };
+const ANIM = { saludo: [saludo, 9], musica: [musica, 12], halloween: [halloween, 12], hispanidad: [hispanidad, 13], rugby: [rugby, 12], belen: [belen, 16], reyes: [reyes, 16], cupido: [cupido, 11], cumple: [cumple, 12], fallas: [fallas, 19], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 20], pascua: [pascua, 16], noel: [noel, 19] };
 const INICIO = { halloween: 64, hispanidad: 64, rugby: 30, belen: 64, reyes: 12, cupido: 40, cumple: 40, fallas: 28, musica: 64, saludo: 64, dormir: 28, trabajar: 46, cafe: 60, nieve: 22, pascua: 12, noel: 40 };
 export const ESCENAS = Object.fromEntries(Object.entries(ANIM).map(([k, [fn, d]]) => [k, { dur: INTRO + d, dibujar: (t, c) => {
-  terminal(t, PROMPTS[k][c.en ? 1 : 0], k === 'nieve' || k === 'noel', c, INICIO[k], k === 'hispanidad');
+  terminal(t, PROMPTS[k][c.en ? 1 : 0], k === 'nieve' || k === 'noel', c, INICIO[k]);
   if (t >= INTRO) { g.save(); g.beginPath(); g.rect(0, 0, W, GY + 4); g.clip(); fn(t - INTRO, c); g.restore(); }
 } }]));
 export const contexto2d = () => g;
