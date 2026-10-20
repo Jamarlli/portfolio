@@ -9,7 +9,7 @@ const CONTENIDO = {
       name: 'Javier Martínez Llinares',
       role: 'Ingeniero de IA y científico de datos · cofundador de nódicus',
       bio: '23 años · Valencia. Me encanta aprender cosas nuevas y profundizar en las que ya sé. Busco problemas y encontrar soluciones con todas las herramientas a mi alcance.',
-      gustos: ['🏉 Rugby federado y deportista de élite de la UV', '🎭 Teatro', '⛰️ Montaña', '📚 Leer', '🏕️ Monitor de tiempo libre (MAT) y primeros auxilios'],
+      gustos: ['🏉 Rugby federado y deportista de élite de la UV', '🎭 Teatro', '⛰️ Montaña', '📚 Leer', '✈️ Viajar'],
       links: [
         { icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/javier-martinez-llinares/' },
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Jamarlli' },
@@ -72,6 +72,7 @@ const CONTENIDO = {
       { when: '2025 – 2026', what: 'Máster en IA, Reconocimiento de Formas e Imagen Digital · UPV', detail: 'Universitat Politècnica de València. Nota media: 9,21.' },
       { when: '2021 – 2025', what: 'Grado en Ciencia de Datos · Universitat de València', detail: 'Nota media: 9,01 con 6 matrículas de honor. Delegado de la promoción.', honores: { label: 'Matrículas de honor en', items: [{ t: 'Álgebra', href: 'https://www.uv.es/recursos/fatwirepub/guias/36408-CAS-2025-26.pdf' }, { t: 'Fundamentos de la programación', href: 'https://www.uv.es/recursos/fatwirepub/guias/36411-CAS-2025-26.pdf' }, { t: 'Estructuras de datos y algoritmos', href: 'https://www.uv.es/recursos/fatwirepub/guias/36413-CAS-2025-26.pdf' }, { t: 'Programación paralela', href: 'https://www.uv.es/recursos/fatwirepub/guias/36438-CAS-2025-26.pdf' }, { t: 'Internet de las cosas', href: 'https://www.uv.es/recursos/fatwirepub/guias/36422-CAS-2025-26.pdf' }, { t: 'Análisis y procesamiento de audio y voz', href: 'https://www.uv.es/recursos/fatwirepub/guias/36439-CAS-2025-26.pdf' }] } },
       { when: '2023 – 2024', what: 'Erasmus · Sapienza Università di Roma', detail: 'Ciencia de datos. 11 asignaturas con la misma carga en créditos y nota media de 8,95 (7,5 · 7,5 · 8,5 · 9 · 10 · 9,5 · 9,5 · 10 · 7 · 10 · 10).', honores: { label: '3 matrículas de honor en', items: [{ t: 'Bayesian Modelling', href: 'https://elearning.uniroma1.it/theme/continuum/infocourse.php?course=20123&popup=1' }, { t: 'Multilingual Natural Language Processing', href: 'https://sapienzanlp.github.io/' }, { t: 'Big Data Computing', href: 'https://www.diag.uniroma1.it/~becchett/big_data.html' }] } },
+      { what: 'Certificaciones', items: ['Monitor de tiempo libre (MAT)', 'Primeros auxilios'] },
       { what: 'Idiomas', items: ['Inglés: Cambridge English First (B2)', 'Valenciano: C1', 'Francés: A2', 'Italiano: nivel medio'] },
     ],
   },
@@ -80,7 +81,7 @@ const CONTENIDO = {
       name: 'Javier Martínez Llinares',
       role: 'AI engineer and data scientist · co-founder of nódicus',
       bio: '23 years old · Valencia, Spain. I love learning new things and going deeper into the ones I already know. I look for problems and find solutions with every tool within reach.',
-      gustos: ['🏉 Competitive rugby, UV elite athlete', '🎭 Theatre', '⛰️ Mountains', '📚 Reading', '🏕️ Youth leisure monitor (MAT) and first aid'],
+      gustos: ['🏉 Competitive rugby, UV elite athlete', '🎭 Theatre', '⛰️ Mountains', '📚 Reading', '✈️ Travelling'],
       links: [
         { icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/javier-martinez-llinares/' },
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Jamarlli' },
@@ -142,6 +143,7 @@ const CONTENIDO = {
       { when: '2025 – 2026', what: 'MSc in AI, Pattern Recognition and Digital Imaging · UPV', detail: 'Universitat Politècnica de València. GPA: 9.21.' },
       { when: '2021 – 2025', what: 'BSc in Data Science · Universitat de València', detail: 'GPA: 9.01 with 6 honours distinctions. Class representative.', honores: { label: 'Honours distinctions in', items: [{ t: 'Algebra', href: 'https://www.uv.es/recursos/fatwirepub/guias/36408-CAS-2025-26.pdf' }, { t: 'Fundamentals of programming', href: 'https://www.uv.es/recursos/fatwirepub/guias/36411-CAS-2025-26.pdf' }, { t: 'Data structures and algorithms', href: 'https://www.uv.es/recursos/fatwirepub/guias/36413-CAS-2025-26.pdf' }, { t: 'Parallel programming', href: 'https://www.uv.es/recursos/fatwirepub/guias/36438-CAS-2025-26.pdf' }, { t: 'Internet of things', href: 'https://www.uv.es/recursos/fatwirepub/guias/36422-CAS-2025-26.pdf' }, { t: 'Audio and speech analysis and processing', href: 'https://www.uv.es/recursos/fatwirepub/guias/36439-CAS-2025-26.pdf' }] } },
       { when: '2023 – 2024', what: 'Erasmus · Sapienza Università di Roma', detail: 'Data science. 11 courses with equal credit weight and an average grade of 8.95 (7.5 · 7.5 · 8.5 · 9 · 10 · 9.5 · 9.5 · 10 · 7 · 10 · 10).', honores: { label: '3 honours distinctions in', items: [{ t: 'Bayesian Modelling', href: 'https://elearning.uniroma1.it/theme/continuum/infocourse.php?course=20123&popup=1' }, { t: 'Multilingual Natural Language Processing', href: 'https://sapienzanlp.github.io/' }, { t: 'Big Data Computing', href: 'https://www.diag.uniroma1.it/~becchett/big_data.html' }] } },
+      { what: 'Certifications', items: ['Youth leisure monitor (MAT)', 'First aid'] },
       { what: 'Languages', items: ['English: Cambridge English First (B2)', 'Valencian: C1', 'French: A2', 'Italian: intermediate'] },
     ],
   },

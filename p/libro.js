@@ -1,17 +1,20 @@
 // Libro paginado de «Educación». Reparte las entradas en páginas del tamaño real (nada se corta) y se pasa de página con la esquina de abajo:
 // al acercar el ratón la esquina se dobla, y al pulsarla la página se vuelve. En el móvil (una sola columna) se ve todo seguido.
 // `entradas`: lista de entradas; cada una es una lista de bloques HTML que se prefiere no separar (si no caben juntos en una página, se parten).
+import { PAGINA } from './libro3d.js';
+
 export function montarLibro(book, titulo, entradas, T) {
   if (book.dataset.montado) return; book.dataset.montado = '1';             // el panel se guarda en caché: solo se monta una vez
   const izq = book.querySelector('.page.left'), der = book.querySelector('.page.right');
+  const es3d = book.classList.contains('book3d');                          // las hojas van sobre las del libro 3D: tamaño fijo de diseño, que se escala a pantalla
   let paginas = [], spread = 0, ocupado = false;
 
   const medidor = () => {
-    const m = izq.cloneNode(false); m.removeAttribute('id'); m.classList.add('medidor'); m.className = 'page medidor';
-    book.appendChild(m); m.style.width = izq.offsetWidth + 'px'; m.style.height = izq.offsetHeight + 'px'; return m;
+    const m = document.createElement('div'); m.className = 'page medidor'; book.appendChild(m);
+    m.style.width = (es3d ? PAGINA.w : izq.offsetWidth) + 'px'; m.style.height = (es3d ? PAGINA.h : izq.offsetHeight) + 'px'; return m;
   };
   function paginar() {
-    if (getComputedStyle(book).display !== 'grid') { paginas = [titulo + entradas.map(e => e.join('')).join('')]; return; }   // móvil: todo seguido
+    if (!es3d && getComputedStyle(book).display !== 'grid') { paginas = [titulo + entradas.map(e => e.join('')).join('')]; return; }   // móvil: todo seguido
     const m = medidor(), cabe = html => { m.innerHTML = html; return m.scrollHeight <= m.clientHeight + 1; };
     paginas = []; let cur = titulo;
     const nueva = () => { paginas.push(cur); cur = ''; };
@@ -32,7 +35,7 @@ export function montarLibro(book, titulo, entradas, T) {
     const num = i => (i < paginas.length && paginas.length > 1 ? `<span class="num">${i + 1}</span>` : '');
     izq.innerHTML = a + num(spread * 2) + (spread > 0 ? esquina('ant', T.paginaAnt) : '');
     der.innerHTML = b + num(spread * 2 + 1) + (spread < n - 1 ? esquina('sig', T.paginaSig) : '');
-    der.style.visibility = getComputedStyle(book).display === 'grid' ? '' : (paginas.length > 1 ? '' : 'hidden');
+    der.style.visibility = es3d || getComputedStyle(book).display === 'grid' ? '' : (paginas.length > 1 ? '' : 'hidden');
   }
   function pasar(d) {
     if (ocupado) return; const nuevo = spread + d; if (nuevo < 0 || nuevo >= total()) return;
@@ -49,6 +52,10 @@ export function montarLibro(book, titulo, entradas, T) {
   }
   book.addEventListener('click', e => { const c = e.target.closest('.curl'); if (c) pasar(c.classList.contains('sig') ? 1 : -1); });
   const reiniciar = () => { paginar(); spread = Math.min(spread, total() - 1); pintar(); };
+  // con el libro 3D: pone cada hoja de texto sobre su hoja del modelo (rectángulos en píxeles del viewport)
+  book.colocar = r => {
+    for (const [pag, q] of [[izq, r.izq], [der, r.der]]) { const k = q.w / PAGINA.w; pag.parentElement.style.transform = `translate(${q.x}px, ${q.y}px) scale(${k})`; }
+  };
   book.addEventListener('abrir', () => { spread = 0; ocupado = false; requestAnimationFrame(reiniciar); });          // cada vez que se abre, desde la primera página
   let ancho = 0; new ResizeObserver(() => { if (book.offsetWidth && book.offsetWidth !== ancho) { ancho = book.offsetWidth; reiniciar(); } }).observe(book);
 }

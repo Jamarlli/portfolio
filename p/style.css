@@ -186,3 +186,12 @@ html.movil #stage canvas { touch-action: none; }
 .mapa-svg .v:hover { fill: #f27a5e; }
 .mapa-svg .h { fill: transparent; }
 .mapa-tip { position: fixed; z-index: 60; padding: 2px 8px; background: var(--paper); color: var(--ink); border: 2px solid var(--ink); box-shadow: 2px 2px 0 var(--shadow); font-size: 18px; pointer-events: none; white-space: nowrap; }
+
+/* libro 3D (Educación): las hojas de texto van sobre las del modelo; cada una tiene un tamaño fijo de diseño y se escala a pantalla */
+#panel.libro3d { pointer-events: none; animation: none; }
+.book.book3d { position: fixed; inset: 0; width: auto; height: auto; aspect-ratio: auto; container-type: normal; background: none; border: 0; box-shadow: none; padding: 0; display: block; pointer-events: none; animation: fadein .45s both; }
+.book3d .hoja { position: absolute; left: 0; top: 0; width: 420px; height: 606px; transform-origin: 0 0; perspective: 1600px; pointer-events: auto; }
+.book.book3d .page { position: absolute; inset: 0; background: var(--paper); border: 1px solid #c9b48a; padding: 30px 32px 50px; box-sizing: border-box; }
+.book.book3d .page.right { box-shadow: inset 14px 0 14px -10px rgba(60, 40, 20, .28); }
+.book.book3d .page.left { box-shadow: inset -14px 0 14px -10px rgba(60, 40, 20, .28); }
+.book.book3d .page.medidor { visibility: hidden; pointer-events: none; inset: auto; left: 0; top: 0; }

@@ -20,6 +20,7 @@ import { cargarTextura } from './texturas.js';
 import { icono } from './iconos.js';
 import { MAPA } from './mapa.js';
 import { montarLibro } from './libro.js';
+import { crearLibro3D } from './libro3d.js';
 import { crearCadena, crearPresentador, crearReproyector } from './postpro.js';
 import { crearClawd, sobreIcono, sobreVentana } from './clawd.js';
 // el personaje está archivado en archivo/personaje (web/personaje.js + assets/javier.glb); se retomará más adelante
@@ -27,6 +28,7 @@ import { crearClawd, sobreIcono, sobreVentana } from './clawd.js';
 if (hash.get('noanim')) document.documentElement.classList.add('noanim');
 
 // ---------------------------------------------------------------- vistas (coordenadas = web/blender: x mesa->estantería, y altura, z ventana->puerta)
+const UP = new THREE.Vector3(0, 1, 0);
 const V = (pos, look, fov) => ({ pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look), fov });
 const VIEWS = {
   home: V([1.76, 1.85, 3.40], [0.92, 0.75, 1.00], 72),
@@ -258,6 +260,7 @@ async function loadRoom() {
     const paginas = new THREE.Mesh(new THREE.BoxGeometry(bb.max.x - bb.min.x - lomo + eps, bb.max.y - bb.min.y - 2 * tapa, bb.max.z - bb.min.z + 2 * eps), new THREE.MeshBasicMaterial({ map: tp, color: '#ffffff' }));
     paginas.position.set((bb.min.x + lomo + bb.max.x + eps) / 2, (bb.min.y + bb.max.y) / 2, c.z); lb.add(paginas); objects.libro.push(paginas); objects.paginas = paginas;
     lb.updateMatrixWorld(true);
+    objects.libro3d = crearLibro3D(THREE, lb, { portada, canto: tp, colorTapa: lb.material.color.clone() });
   } catch (e) { console.warn('sin portada', e); }
   // luz según la hora de Valencia (si existen los horneados de día y noche)
   const mallas = []; room.traverse(o => o.isMesh && mallas.push(o));
@@ -720,15 +723,23 @@ function irAlEspejo() {
   state = 'sobremi'; setHover(null); hint.style.opacity = 0; panel.hidden = true; backBtn.hidden = true;
   flyTo(VIEWS.sobremi, () => showPanel('sobremi'), 1.8);
 }
+let libro3dActivo = false, libroPanel = null;                           // libroPanel: el .book 3D mientras se ve (sus hojas siguen al libro del modelo)
+const EDU_PLANO = VIEWS.educacion;
 function openSection(key) {
   if (key === 'sobremi') return irAlEspejo();
   if (key === 'terminal') return abrirTerminal();
   const from = state; state = key; setHover(null); hint.style.opacity = 0; panel.hidden = true;
+  if (key === 'educacion') {                                          // el libro se abre de verdad (en pantallas apaisadas); en el móvil, el panel de siempre
+    libro3dActivo = !esMovil && innerWidth / innerHeight >= 1.25 && !!objects.libro3d;
+    VIEWS.educacion = libro3dActivo ? objects.libro3d.vista(innerWidth / innerHeight) : EDU_PLANO;
+    if (libro3dActivo) return flyTo(VIEWS.educacion, () => { const l = objects.libro3d; l.mostrar(true); l.mover(1, 1700, () => showPanel('educacion')); }, from === 'pizarra' ? 1.8 : 1.6);
+  }
   flyTo(VIEWS[key], () => requestAnimationFrame(() => showPanel(key)), from === 'pizarra' ? 1.8 : 1.6);   // el panel, un fotograma después del último del vuelo
 }
 function goHome() {
   if (state === 'sobremi' && objects.javier) objects.javier.volverSilla();
   if (state === 'terminal') cerrarTerminal();
+  if (state === 'educacion' && objects.libro3d?.visible) { libroPanel = null; const l = objects.libro3d; l.mover(0, 1000, () => l.mostrar(false)); }   // el libro se cierra mientras la cámara se aleja
   panel.hidden = true; backBtn.hidden = true; state = 'home'; setHover(null);
   flyTo(VIEWS.home, () => { hint.textContent = T.hintCuarto; hint.style.opacity = 1; }, 1.5);
 }
@@ -755,7 +766,7 @@ const panelNodos = {};
 function poner(key, html) {
   const n = panelNodos[key] ??= Object.assign(document.createElement('div'), { innerHTML: html() });
   n.style.display = 'contents'; panel.replaceChildren(n);
-  for (const b of n.querySelectorAll('.book')) { b.classList.remove('opening'); requestAnimationFrame(() => { b.classList.add('opening'); b.dispatchEvent(new Event('abrir')); }); }   // que el libro se vuelva a abrir
+  for (const b of n.querySelectorAll('.book')) { b.classList.remove('opening'); requestAnimationFrame(() => { if (!b.classList.contains('book3d')) b.classList.add('opening'); b.dispatchEvent(new Event('abrir')); }); }   // que el libro se vuelva a abrir
 }
 // bocadillo de una foto del espejo: sustituye al panel de "Sobre mí" (con un botón para volver)
 function fotoBajo(ev) {                                           // índice de la foto bajo el ratón (-1: ninguna); las fotos son transparentes y no entran en hitTest
@@ -790,6 +801,7 @@ function abrirMapa() {
   document.body.appendChild(velo);
 }
 function showPanel(key) {
+  libroPanel = null;
   // la animación de entrada arranca sola al dejar de estar oculto; solo si ya se veía hay que reiniciarla
   if (!panel.hidden) { panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = ''; }
   backBtn.hidden = false; panel.hidden = false; panel.className = ''; ponerPlegado(false);
@@ -807,11 +819,18 @@ function showPanel(key) {
       <ul>${(ABOUT.gustos || []).map(g => `<li>${g}</li>`).join('')}</ul>
       <h3>${T.contacto}</h3><div class="contactos">${ABOUT.links.map(l => `<a class="ico ico-${l.icon}" href="${l.href}" target="_blank" rel="noopener" aria-label="${l.label}">${icono(l.icon)}<span>${l.label}</span></a>`).join('')}</div></div>`);
   } else if (key === 'educacion') {
-    Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(94vw, 124vh)', height: '', right: '' });   // el libro abierto son dos A4 (420 x 297): ancho = 1,414 x alto
     const bloques = e => e.items ? [`<h3>${todo(e.what)}</h3><ul>${e.items.map(i => `<li>${todo(i)}</li>`).join('')}</ul>`]
       : [`<h3>${todo(e.what)}</h3><p>${todo(e.when)}</p><p>${todo(e.detail)}</p>`, ...(e.honores ? [`<p>${e.honores.label}:</p><ul>${e.honores.items.map(i => `<li><a href="${i.href}" target="_blank" rel="noopener">${i.t}</a></li>`).join('')}</ul>`] : [])];
-    poner(key, () => `<div class="book"><div class="page left"></div><div class="page right"></div></div>`);
-    montarLibro(panel.querySelector('.book'), `<h2>${SECTIONS.educacion}</h2>`, EDUCATION.map(bloques), T);
+    if (libro3dActivo) {                                              // las hojas de texto van encima de las del libro 3D, a pantalla completa y sin marco
+      Object.assign(panel.style, { left: '0', top: '0', width: '100%', height: '100%', transform: 'none', right: '' }); panel.classList.add('libro3d');
+      poner('educacion3d', () => `<div class="book book3d"><div class="hoja"><div class="page left"></div></div><div class="hoja"><div class="page right"></div></div></div>`);
+      libroPanel = panel.querySelector('.book'); montarLibro(libroPanel, `<h2>${SECTIONS.educacion}</h2>`, EDUCATION.map(bloques), T);
+    } else {
+      libroPanel = null;
+      Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(94vw, 124vh)', height: '', right: '' });   // el libro abierto son dos A4 (420 x 297): ancho = 1,414 x alto
+      poner(key, () => `<div class="book"><div class="page left"></div><div class="page right"></div></div>`);
+      montarLibro(panel.querySelector('.book'), `<h2>${SECTIONS.educacion}</h2>`, EDUCATION.map(bloques), T);
+    }
   }
 }
 
@@ -1003,7 +1022,8 @@ function seguir(actual, objetivo, dt, t = 0.2) {
   if (actual.distanceToSquared(objetivo) < 1e-9 && velSuave.lengthSq() < 1e-8) { actual.copy(objetivo); velSuave.set(0, 0, 0); }
 }
 const suave = new THREE.Vector3();
-function ponerCamara(pos, look, fov) {
+function ponerCamara(pos, look, fov, up) {
+  camera.up.copy(up || UP);
   camera.position.copy(pos);
   if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
   camera.lookAt(look);
@@ -1011,7 +1031,7 @@ function ponerCamara(pos, look, fov) {
 // orientación de una vista (para girar la cámara con slerp: velocidad de giro uniforme, sincronizada con el avance)
 const auxCam = new THREE.PerspectiveCamera();
 function orientacion(v) {
-  if (!v.q) { auxCam.position.copy(v.pos); auxCam.lookAt(v.look); v.q = auxCam.quaternion.clone(); v.dist = v.pos.distanceTo(v.look); }
+  if (!v.q) { auxCam.position.copy(v.pos); auxCam.up.copy(v.up || UP); auxCam.lookAt(v.look); v.q = auxCam.quaternion.clone(); v.dist = v.pos.distanceTo(v.look); }
   return v.q;
 }
 // pose a mitad de un vuelo (s = 0..1 ya suavizado): línea recta (o curva por `via`) con un arco de dron, giro esférico
@@ -1094,7 +1114,7 @@ function frame(now) {
     tmp.set(mouseN.x * (enIntro ? 0.05 : 0.06) * amp, -mouseN.y * (enIntro ? 0.03 : 0.04) * amp, 0).add(v.pos);
     seguir(suave, tmp, dt / 1000);
     const mira = esMovil && giro.activo && !enIntro ? mirada(v.pos, v.look, suave, miradaV) : v.look;
-    ponerCamara(suave, mira, v.fov); currentLook.copy(v.look);
+    ponerCamara(suave, mira, v.fov, v.up); currentLook.copy(v.look);
   }
   if (mesa.anim) {                                          // mesa regulable: sube o baja girando la manivela
     const a = mesa.anim; a.t0 ??= now;
@@ -1151,6 +1171,7 @@ function frame(now) {
       const q = frame.ambiente;
       if (objects.tomo) { const b = objects.tomo.material.userData.base; objects.tomo.material.color.setRGB(q * b.r * (0.95 * r.d + 0.85 * r.a + 0.32 * r.n), q * b.g * (0.93 * r.d + 0.72 * r.a + 0.30 * r.n), q * b.b * (0.90 * r.d + 0.68 * r.a + 0.42 * r.n)); }
       for (const m of [objects.alfombrilla, objects.portada, objects.paginas]) if (m) m.material.color.setRGB(q * (0.95 * r.d + 0.85 * r.a + 0.32 * r.n), q * (0.93 * r.d + 0.72 * r.a + 0.30 * r.n), q * (0.90 * r.d + 0.68 * r.a + 0.42 * r.n));
+      if (objects.libro3d) { const m = objects.libro3d.mats; m.tapa.color.copy(objects.tomo.material.color); m.canto.color.copy(objects.paginas.material.color); m.portada.color.copy(objects.portada.material.color); }   // el libro abierto, con la misma luz
     }
     const hh = Math.floor(r.h) % 24, mm = Math.round((r.h % 1) * 60) % 60, resumen = Clima.resumen();
     const txt = `${r.n > 0.5 ? '☾' : r.a > 0.5 ? '◐' : '☀'} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${horaManual != null ? ' *' : ''}${resumen.icono || resumen.temp ? ' · ' + resumen.icono + resumen.temp : ''}`;
@@ -1159,6 +1180,7 @@ function frame(now) {
   if (objects.lluvia && objects.lluvia.actualizar(Clima.clima, Clima.intensidadLluvia(Clima.clima.lluvia), now)) { const limpio = !estado.sucio; estado.sucio = true; estado.lluviaSola = limpio; }
   if (hash.get('debug')) hint.style.opacity = 1, hint.textContent = `${state} ${flight ? 'volando' : ''} cam ${camera.position.toArray().map(v => v.toFixed(2))} fov:${camera.fov.toFixed(0)} nivel ${calidad.nivel} gpu≈${calidad.equiv?.toFixed(1)} cpu ${calidad.cpu.toFixed(1)}`;
   if (objects.clawd && objects.clawd.actualizar(now)) estado.sucio = true;
+  if (objects.libro3d) { if (objects.libro3d.actualizar(now)) estado.sucio = true; if (state === 'educacion' && libroPanel) libroPanel.colocar(objects.libro3d.hojas(camera)); }
   seMovio = pintar(dt);
 }
 
