@@ -18,8 +18,9 @@ import { hash, estado, objects, espejos, renderer, scene, camera } from './escen
 import { crearEspejo } from './espejo.js';
 import { cargarTextura } from './texturas.js';
 import { icono } from './iconos.js';
+import { MAPA } from './mapa.js';
 import { crearCadena, crearPresentador, crearReproyector } from './postpro.js';
-import { crearClawd, sobreIcono } from './clawd.js';
+import { crearClawd, sobreIcono, sobreVentana } from './clawd.js';
 // el personaje está archivado en archivo/personaje (web/personaje.js + assets/javier.glb); se retomará más adelante
 
 if (hash.get('noanim')) document.documentElement.classList.add('noanim');
@@ -410,8 +411,8 @@ function hitTest(ev) {
   const o = hit.object;
   if (objects.monitor.includes(o)) return { key: 'proyectos' };
   if (objects.clawd && o === objects.clawd.malla && hash.get('debug')) window.__uv = hit.uv ? [hit.uv.x, hit.uv.y] : null;
-  if (objects.clawd && o === objects.clawd.malla) return hit.uv && !objects.clawd.activa && sobreIcono(hit.uv.x, hit.uv.y) ? { key: 'clawd' } : { key: 'terminal' };   // el iconito de Clawd despierta a Clawd; el resto de la terminal, zoom
-  if (objects.monitor2.includes(o)) return { key: 'terminal' };
+  if (objects.clawd && o === objects.clawd.malla) return hit.uv && !objects.clawd.activa && sobreIcono(hit.uv.x, hit.uv.y) ? { key: 'clawd' } : hit.uv && sobreVentana(hit.uv.x, hit.uv.y) ? { key: 'terminal' } : state === 'terminal' ? { key: 'escritorio' } : null;   // el iconito de Clawd lo despierta; la ventana de la terminal hace zoom; el resto del escritorio no hace nada
+  if (objects.monitor2.includes(o)) return null;                    // el cuerpo del monitor no es la terminal
   if (objects.libro.includes(o)) return { key: 'educacion' };
   if (objects.ventana.includes(o)) return { key: 'experiencia' };
   if (objects.espejo.includes(o) || objects.espejoFotos?.includes(o)) return { key: 'sobremi' };
@@ -429,11 +430,12 @@ function hitTest(ev) {
   return null;
 }
 // easter eggs: interacciones sin panel (no se iluminan ni llevan cartel; el cursor sí pasa a la manita)
-const HUEVOS = new Set(['mesa', 'balon', 'persiana0', 'persiana1', 'barra', 'flexo', 'clawd']);
+const HUEVOS = new Set(['mesa', 'balon', 'persiana0', 'persiana1', 'barra', 'flexo', 'clawd', 'terminal']);
 const grito = new Audio('./assets/cuarto/grito.mp3'); grito.preload = 'none';
 let gritoAnim = null;
 function huevoClic(k) {
   if (k === 'clawd') return objects.clawd?.clic(performance.now());
+  if (k === 'terminal') return abrirTerminal();
   if (k === 'mesa') return alternarMesa();
   if (k.startsWith('persiana')) return alternarPersiana(+k.slice(8));
   if (k === 'barra' || k === 'flexo') return alternarLampara(k);
@@ -656,7 +658,7 @@ renderer.domElement.addEventListener('click', ev => {
   } else if (state === 'terminal') {
     const h = hitTest(ev);
     if (h && h.key === 'clawd') { objects.clawd.clic(performance.now()); entradaTerminal.focus({ preventScroll: true }); }
-    else if (h && h.key === 'terminal') entradaTerminal.focus({ preventScroll: true });
+    else if (h && (h.key === 'terminal' || h.key === 'escritorio')) entradaTerminal.focus({ preventScroll: true });
     else goHome();                                                  // un clic fuera de la pantalla vuelve al cuarto
   } else if (state === 'sobremi' && fotoBajo(ev) >= 0 && !panel.contains(ev.target)) { mostrarFoto(fotoBajo(ev)); }
   else if (!panel.contains(ev.target) && !esMovil) goHome();          // en el móvil se sale con «Volver»: un toque en la escena con el panel minimizado no debe sacarte
@@ -767,8 +769,18 @@ function mostrarFoto(i) {
   panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = '';
   Object.assign(panel.style, { left: '', right: '4vw', top: '50%', transform: 'translateY(-50%)', width: 'min(470px, 36vw)', height: '' });
   panel.replaceChildren(Object.assign(document.createElement('div'), { className: 'card bocadillo',
-    innerHTML: `<button class="px-btn volver-sm" type="button">← ${SECTIONS.sobremi}</button><h2>${f.title}</h2>${f.paras.map(p => typeof p === 'string' ? `<p>${p}</p>` : `<h3>${p.h}</h3>${p.t ? `<p>${p.t}</p>` : ''}${p.list ? `<ul>${p.list.map(x => typeof x === 'string' ? `<li>${x}</li>` : `<li><a href="${x.href}" target="_blank" rel="noopener">${x.t}</a>${x.res ? ', ' + x.res : ''}</li>`).join('')}</ul>` : ''}`).join('')}` }));
+    innerHTML: `<button class="px-btn volver-sm" type="button">← ${SECTIONS.sobremi}</button><h2>${f.title}</h2>${f.paras.map(p => typeof p === 'string' ? `<p>${p}</p>` : p.mapa ? `<figure class="mapa" tabindex="0" role="button" aria-label="${T.ampliarMapa}">${MAPA}<figcaption>${T.ampliarMapa}</figcaption></figure>` : `<h3>${p.h}</h3>${p.t ? `<p>${p.t}</p>` : ''}${p.list ? `<ul>${p.list.map(x => typeof x === 'string' ? `<li>${x}</li>` : `<li><a href="${x.href}" target="_blank" rel="noopener">${x.t}</a>${x.res ? ', ' + x.res : ''}</li>`).join('')}</ul>` : ''}`).join('')}` }));
   panel.querySelector('.volver-sm').addEventListener('click', () => showPanel('sobremi'));
+  const mapa = panel.querySelector('.mapa'), paises = f.paras.find(p => p.mapa)?.mapa;
+  if (mapa) { mapa.addEventListener('click', () => abrirMapa(paises)); mapa.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirMapa(paises); } }); }
+}
+// el mapa del mundo a pantalla completa, con la lista de países visitados; se cierra con un clic o con Esc
+function abrirMapa(paises) {
+  const velo = Object.assign(document.createElement('div'), { className: 'mapa-grande', innerHTML: `<div class="mapa-caja">${MAPA}<ul>${paises.map(n => `<li>${n}</li>`).join('')}</ul></div>` });
+  const cerrar = () => { velo.remove(); removeEventListener('keydown', alTeclear, true); };
+  const alTeclear = e => { if (e.key === 'Escape') { e.stopImmediatePropagation(); cerrar(); } };
+  velo.addEventListener('click', cerrar); addEventListener('keydown', alTeclear, true);
+  document.body.appendChild(velo);
 }
 function showPanel(key) {
   // la animación de entrada arranca sola al dejar de estar oculto; solo si ya se veía hay que reiniciarla
@@ -786,7 +798,7 @@ function showPanel(key) {
     Object.assign(panel.style, { left: '', right: '5vw', top: '50%', transform: 'translateY(-50%)', width: 'min(380px, 32vw)', height: '' });
     poner(key, () => `<div class="card"><h2>${ABOUT.name}</h2><p><b>${ABOUT.role}</b></p><p>${todo(ABOUT.bio)}</p>
       <ul>${(ABOUT.gustos || []).map(g => `<li>${g}</li>`).join('')}</ul>
-      <h3>${T.contacto}</h3><div class="contactos">${ABOUT.links.map(l => `<a class="ico" href="${l.href}" target="_blank" rel="noopener" aria-label="${l.label}">${icono(l.icon)}<span>${l.label}</span></a>`).join('')}</div></div>`);
+      <h3>${T.contacto}</h3><div class="contactos">${ABOUT.links.map(l => `<a class="ico ico-${l.icon}" href="${l.href}" target="_blank" rel="noopener" aria-label="${l.label}">${icono(l.icon)}<span>${l.label}</span></a>`).join('')}</div></div>`);
   } else if (key === 'educacion') {
     Object.assign(panel.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(94vw, 124vh)', height: '', right: '' });   // el libro abierto son dos A4 (420 x 297): ancho = 1,414 x alto
     const half = Math.ceil(EDUCATION.length / 2);

@@ -114,11 +114,21 @@ const INTRO = 3.6, GY = 56;                                            // GY: el
 const FONDO = '#0c0c0c', BARRA = '#2b2b2b', GRIS = '#9a9a9a', TENUE = '#5a5a5a', BLANQ = '#ececec', AMARILLO = '#e0b020';
 // La pantalla del monitor es un escritorio (SW x SH) con la ventana de la terminal (W x H) en el centro, un pelín inclinada (INCLINACION, en radianes).
 export const SW = 192, SH = 117, INCLINACION = 0, CENTRO = [96, 54];
+// los iconos de la barra de tareas del escritorio (7 x 7): terminal, WhatsApp, Chrome, explorador de archivos y VS Code
+const ICONOS_BARRA = [
+  { c: { b: '#8a8a8a', k: '#161616', w: '#ececec' }, f: ['bbbbbbb', 'bkkkkkb', 'bkwkkkb', 'bkkwkkb', 'bkwkwwb', 'bkkkkkb', 'bbbbbbb'] },
+  { c: { g: '#25d366', w: '#ffffff' }, f: ['..ggg..', '.ggggg.', 'ggwwggg', 'ggwgggg', 'gggwwgg', '.ggggg.', 'gg.....'] },
+  { c: { r: '#ea4335', y: '#fbbc05', g: '#34a853', b: '#4285f4', w: '#ffffff' }, f: ['..rrr..', '.rrrrry', 'rrwwwyy', 'gwwbwwy', 'ggwwwyy', '.gggyy.', '..gyy..'] },
+  { c: { y: '#f5c542', l: '#ffe58a', o: '#d99a1e' }, f: ['.yyy...', 'yyyyyyy', 'yllllly', 'yllllly', 'yllllly', 'ooooooo', '.......'] },
+  { c: { b: '#2b8be0' }, f: ['....bbb', '...bbbb', 'b.bb.bb', 'bbb..bb', 'b.bb.bb', '...bbbb', '....bbb'] },
+];
+const pixelado = (m, x0, y0) => m.f.forEach((fila, y) => [...fila].forEach((ch, x) => { if (m.c[ch]) P(x0 + x, y0 + y, m.c[ch]); }));
 export function componer(sctx, ventana) {
   g = sctx; g.globalAlpha = 1;
-  const cols = ['#0b1f4a', '#0e2a5e', '#123674', '#174289', '#1c4e9c', '#2159ad']; cols.forEach((c, i) => R(0, i * (SH - 7) / 6, SW, Math.ceil((SH - 7) / 6) + 1, c));
+  const cols = ['#0b1f4a', '#0e2a5e', '#123674', '#174289', '#1c4e9c', '#2159ad']; cols.forEach((c, i) => R(0, i * (SH - 9) / 6, SW, Math.ceil((SH - 9) / 6) + 1, c));
   for (let i = 0; i < 40; i++) { const x = rnd(i) * SW, y = rnd(i + 3) * (SH - 8); alfa(0.25); P(x, y, '#9fc4ff'); } alfa(1);
-  R(0, SH - 7, SW, 7, '#12131a'); for (let i = 0; i < 5; i++) R(SW / 2 - 18 + i * 8, SH - 5, 5, 4, i === 2 ? '#2fd06a' : '#5a5f78');
+  R(0, SH - 9, SW, 9, '#12131a'); ICONOS_BARRA.forEach((m, i) => pixelado(m, SW / 2 - 23 + i * 10, SH - 8));
+  R(SW / 2 - 23 + 2, SH - 1, 3, 1, '#ececec');                                           // la terminal es la aplicación abierta
   R(SW - 30, SH - 5, 12, 1, '#7d829c'); R(SW - 30, SH - 3, 8, 1, '#7d829c');
   g.save(); g.translate(CENTRO[0], CENTRO[1]); g.rotate(INCLINACION);
   alfa(0.35); R(-W / 2 + 3, -H / 2 + 4, W, H, '#000'); alfa(1);                  // sombra de la ventana
@@ -130,6 +140,12 @@ export function sobreIcono(u, v) {
   const dx = u * SW - CENTRO[0], dy = v * SH - CENTRO[1], c = Math.cos(INCLINACION), sn = Math.sin(INCLINACION);
   const x = dx * c + dy * sn + W / 2, y = -dx * sn + dy * c + H / 2;
   return x > 1 && x < 27 && y > 10 && y < 36;
+}
+// ¿cae sobre la ventana de la terminal (no sobre el resto del escritorio)?
+export function sobreVentana(u, v) {
+  const dx = u * SW - CENTRO[0], dy = v * SH - CENTRO[1], c = Math.cos(INCLINACION), sn = Math.sin(INCLINACION);
+  const x = dx * c + dy * sn + W / 2, y = -dx * sn + dy * c + H / 2;
+  return x >= 0 && x <= W && y >= 0 && y <= H;
 }
 function marco() {
   R(0, 0, W, H, FONDO); R(0, 0, W, 7, BARRA); R(1, 1, 62, 6, FONDO);
@@ -706,7 +722,6 @@ export const ESCENAS = Object.fromEntries(Object.entries(ANIM).map(([k, [fn, d]]
   terminal(t, (c.prompt || PROMPTS[k][c.en ? 1 : 0]).toUpperCase(), k === 'nieve' || k === 'noel', c, INICIO[k]);
   if (t >= INTRO) { g.save(); g.beginPath(); g.rect(0, 0, W, GY + 4); g.clip(); fn(t - INTRO, c); g.restore(); }
 } }]));
-export const contexto2d = () => g;
 export { R, P, alfa, rnd, mezcla, clamp, suave, linea, disco, texto, bocadillo, corazon, chispa, celdas, mixC, GY, NARANJA, SOMBRA, NEGRO, BLANCO };
 export function pintar(ctx2d, nombre, t, c = {}) { g = ctx2d; g.globalAlpha = 1; ESCENAS[nombre].dibujar(t, c); g.globalAlpha = 1; }
 
@@ -716,7 +731,7 @@ const pascuaDe = a => { const b = a % 19, c = Math.floor(a / 100), d = a % 100, 
 // Hispanidad; 14 de febrero, Cupido; Fallas (15 a 19 de marzo); el cumpleaños de Javier (CUMPLE); el 24 de diciembre desde las 20:00, Papá Noel
 // (antes, y el 25, el belén; el 5 y el 6 de enero, los Reyes Magos); el Domingo de Pascua, el conejito. En un día normal: de 0 a 8 h durmiendo, de 8 a 9 el café, de 9 a 17
 // trabajando y el resto, el saludo. Sin programar (solo con #clawd=nombre o en la galería): música y rugby.
-export const CUMPLE = null;                                            // [mes, día] del cumpleaños de Javier (sin decidir)
+export const CUMPLE = [6, 21];                                            // [mes, día] del cumpleaños de Javier
 export function elegir({ fecha = new Date(), hora = 12, nieva = false } = {}) {
   if (nieva) return 'nieve';
   const mes = fecha.getMonth() + 1, dia = fecha.getDate();

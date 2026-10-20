@@ -26,7 +26,12 @@ const email = cuadricula(14, 14, (x, y) => {
   return borde || solapa;
 });
 
-const ICONOS = { linkedin, github, email };
+const x = cuadricula(14, 14, (px, y) => {                                               // el logo de X: trazo grueso en una diagonal y fino en la otra
+  const grueso = Math.abs(px - y) <= 1 && !(y < 1 && px > 1) && !(y > 12 && px < 12), fino = px + y === 13;
+  return grueso || fino;
+});
+
+const ICONOS = { linkedin, github, x, email };
 
 export function icono(nombre) {
   if (nombre === 'nodicus') return '<img class="ico-svg" src="./assets/cuarto/nodicus_logo.webp" alt="" aria-hidden="true">';   // el logo real (favicon de nodicus.com)
