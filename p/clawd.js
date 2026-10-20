@@ -141,11 +141,11 @@ export function sobreIcono(u, v) {
   const x = dx * c + dy * sn + W / 2, y = -dx * sn + dy * c + H / 2;
   return x > 1 && x < 27 && y > 10 && y < 36;
 }
-// ¿cae sobre la ventana de la terminal (no sobre el resto del escritorio)?
-export function sobreVentana(u, v) {
+// ¿cae sobre la ventana de la terminal (no sobre el resto del escritorio)? Con `soloCaja`, solo sobre la parte donde se escriben los comandos (la caja de entrada y la línea de estado de abajo)
+export function sobreVentana(u, v, soloCaja = false) {
   const dx = u * SW - CENTRO[0], dy = v * SH - CENTRO[1], c = Math.cos(INCLINACION), sn = Math.sin(INCLINACION);
   const x = dx * c + dy * sn + W / 2, y = -dx * sn + dy * c + H / 2;
-  return x >= 0 && x <= W && y >= 0 && y <= H;
+  return x >= 0 && x <= W && y >= (soloCaja ? GY : 0) && y <= H;
 }
 function marco() {
   R(0, 0, W, H, FONDO); R(0, 0, W, 7, BARRA); R(1, 1, 62, 6, FONDO);

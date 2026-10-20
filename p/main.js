@@ -412,7 +412,7 @@ function hitTest(ev) {
   const o = hit.object;
   if (objects.monitor.includes(o)) return { key: 'proyectos' };
   if (objects.clawd && o === objects.clawd.malla && hash.get('debug')) window.__uv = hit.uv ? [hit.uv.x, hit.uv.y] : null;
-  if (objects.clawd && o === objects.clawd.malla) return hit.uv && !objects.clawd.activa && sobreIcono(hit.uv.x, hit.uv.y) ? { key: 'clawd' } : hit.uv && sobreVentana(hit.uv.x, hit.uv.y) ? { key: 'terminal' } : state === 'terminal' ? { key: 'escritorio' } : null;   // el iconito de Clawd lo despierta; la ventana de la terminal hace zoom; el resto del escritorio no hace nada
+  if (objects.clawd && o === objects.clawd.malla) return hit.uv && !objects.clawd.activa && sobreIcono(hit.uv.x, hit.uv.y) ? { key: 'clawd' } : hit.uv && sobreVentana(hit.uv.x, hit.uv.y, state !== 'terminal') ? { key: 'terminal' } : state === 'terminal' ? { key: 'escritorio' } : null;   // el iconito de Clawd lo despierta; la zona donde se escriben los comandos hace zoom; el resto no hace nada
   if (objects.monitor2.includes(o)) return null;                    // el cuerpo del monitor no es la terminal
   if (objects.libro.includes(o)) return { key: 'educacion' };
   if (objects.ventana.includes(o)) return { key: 'experiencia' };
