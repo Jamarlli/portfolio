@@ -135,8 +135,8 @@ function marco() {
 function cabecera(y, conIcono) {
   if (conIcono) clawd(12, y + 22, { k: 1, mira: 0 });
   texto('CLAUDE CODE', 28, y + 9, BLANQ); texto('V2.1.304', 74, y + 9, GRIS);
-  texto('SONNET 5.5 · CLAUDE MAX', 28, y + 15, GRIS); texto('C:\\USERS\\JAVIER', 28, y + 21, GRIS);
-  R(2, y + 28, 1, 5, GRIS); texto('USING SONNET 5.5 · /MODEL', 7, y + 28, GRIS);
+  texto('OPUS 5.5 · CLAUDE MAX', 28, y + 15, GRIS); texto('C:\\USERS\\JAVIER', 28, y + 21, GRIS);
+  R(2, y + 28, 1, 5, GRIS); texto('USING OPUS 5.5 · /MODEL', 7, y + 28, GRIS);
 }
 function caja(texto1, colorTexto) {
   R(0, GY + 2, W, 1, TENUE); R(0, GY + 12, W, 1, TENUE);
