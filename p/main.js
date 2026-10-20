@@ -19,7 +19,7 @@ import { crearEspejo } from './espejo.js';
 import { cargarTextura } from './texturas.js';
 import { icono } from './iconos.js';
 import { crearCadena, crearPresentador, crearReproyector } from './postpro.js';
-import { crearClawd } from './clawd.js';
+import { crearClawd, sobreIcono } from './clawd.js';
 // el personaje está archivado en archivo/personaje (web/personaje.js + assets/javier.glb); se retomará más adelante
 
 if (hash.get('noanim')) document.documentElement.classList.add('noanim');
@@ -409,7 +409,8 @@ function hitTest(ev) {
   if (!hit) return null;
   const o = hit.object;
   if (objects.monitor.includes(o)) return { key: 'proyectos' };
-  if (objects.monitor2.includes(o) || (objects.clawd && o === objects.clawd.malla)) return { key: 'clawd' };
+  if (objects.clawd && o === objects.clawd.malla && hash.get('debug')) window.__uv = hit.uv ? [hit.uv.x, hit.uv.y] : null;
+  if (objects.clawd && o === objects.clawd.malla) return hit.uv && !objects.clawd.activa && sobreIcono(hit.uv.x, hit.uv.y) ? { key: 'clawd' } : null;   // solo el iconito de Clawd de la terminal
   if (objects.libro.includes(o)) return { key: 'educacion' };
   if (objects.ventana.includes(o)) return { key: 'experiencia' };
   if (objects.espejo.includes(o) || objects.espejoFotos?.includes(o)) return { key: 'sobremi' };
