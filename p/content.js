@@ -9,7 +9,7 @@ const CONTENIDO = {
       name: 'Javier Martínez Llinares',
       role: 'Ingeniero de IA y científico de datos · cofundador de nódicus',
       bio: '23 años · Valencia. Me encanta aprender cosas nuevas y profundizar en las que ya sé. Busco problemas y encontrar soluciones con todas las herramientas a mi alcance.',
-      gustos: ['🏉 Rugby federado y deportista de élite de la UV', '🎭 Teatro', '⛰️ Montaña', '📚 Leer', '✈️ Viajar'],
+      gustos: ['🏉 Rugby', '🎭 Teatro', '⛰️ Montaña', '📚 Leer', '✈️ Viajar'],
       links: [
         { icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/javier-martinez-llinares/' },
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Jamarlli' },
@@ -29,7 +29,7 @@ const CONTENIDO = {
       ] },
       { title: 'Hackathones', paras: [
         'De entre mis muchos hobbies, uno que me encanta es asistir a hackathones.',
-        'Para los que no los conozcáis, los hackathones son eventos en los que, por equipos, se intenta resolver un problema en unas horas y se expone la solución a un jurado al final del evento.',
+        { h: '¿Qué son?', t: 'Para los que no los conozcáis, los hackathones son eventos en los que, por equipos, se intenta resolver un problema en unas horas y se expone la solución a un jurado al final del evento.' },
         { h: 'Lo que más me gusta', t: 'Lo que más me gusta de los hackathones es que conoces a mucha gente maja y buena. Me he encontrado con gente muy ambiciosa, con ganas de hacer y de experimentar, y eso a mí me da la vida. Además, me encanta enfrentarme a retos nuevos y desconocidos, pensar y retarme a mí mismo a la innovación cognitiva.' },
         { h: 'Lo profesional', t: 'En cuanto a lo profesional, está muy bien porque haces networking y conoces a muchas empresas que plantean problemáticas que tienen, lo que te permite ver mucho más allá de lo que conoces y entender qué es lo que pasa en otros sectores o nichos.' },
         { h: 'Mi papel en el equipo', t: 'Se me da muy bien liderar equipos, y también adaptarme y cumplir el rol que el equipo necesita de mí, ya sea llevar las riendas, delegar o impulsar las ideas de mis compañeros. Además soy muy buen orador, y suelo hacer los pitchs finales. Por mi experiencia en teatro, disfruto mucho hablando ante un público y buscando transmitir todo lo que hemos desarrollado en equipo durante las horas del hackathon.' },
@@ -81,7 +81,7 @@ const CONTENIDO = {
       name: 'Javier Martínez Llinares',
       role: 'AI engineer and data scientist · co-founder of nódicus',
       bio: '23 years old · Valencia, Spain. I love learning new things and going deeper into the ones I already know. I look for problems and find solutions with every tool within reach.',
-      gustos: ['🏉 Competitive rugby, UV elite athlete', '🎭 Theatre', '⛰️ Mountains', '📚 Reading', '✈️ Travelling'],
+      gustos: ['🏉 Rugby', '🎭 Theatre', '⛰️ Mountains', '📚 Reading', '✈️ Travelling'],
       links: [
         { icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/javier-martinez-llinares/' },
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Jamarlli' },
@@ -100,7 +100,7 @@ const CONTENIDO = {
       ] },
       { title: 'Hackathons', paras: [
         'Among my many hobbies, one I love is going to hackathons.',
-        'For those who do not know them, hackathons are events where teams try to solve a problem in a few hours and present the solution to a jury at the end of the event.',
+        { h: 'What are they?', t: 'For those who do not know them, hackathons are events where teams try to solve a problem in a few hours and present the solution to a jury at the end of the event.' },
         { h: 'What I like most', t: 'What I like most about hackathons is that you meet a lot of nice, good people. I have come across very ambitious people, eager to build and to experiment, and that makes my day. I also love facing new and unknown challenges, thinking and challenging myself towards cognitive innovation.' },
         { h: 'The professional side', t: 'On the professional side, it is great because you do networking and meet many companies that bring the problems they have, which lets you see far beyond what you know and understand what is going on in other sectors or niches.' },
         { h: 'My role in the team', t: 'I am very good at leading teams, and also at adapting and playing the role the team needs from me, whether that is taking the reins, delegating or pushing my teammates\' ideas. I am also a very good speaker, and I usually do the final pitches. Thanks to my theatre experience, I really enjoy speaking in front of an audience and trying to convey everything we have built as a team during the hours of the hackathon.' },

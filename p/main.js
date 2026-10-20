@@ -786,10 +786,10 @@ function mostrarFoto(i) {
   const mapa = panel.querySelector('.mapa');
   if (mapa) { mapa.addEventListener('click', abrirMapa); mapa.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirMapa(); } }); }
 }
-// el nombre de un país visitado al pasar el ratón por encima (solo los visitados llevan nombre)
+// el nombre de un país visitado al pasar el ratón por encima, solo con el mapa ampliado (solo los visitados llevan nombre)
 const mapaTip = Object.assign(document.createElement('div'), { className: 'mapa-tip', hidden: true }); document.body.appendChild(mapaTip);
 document.addEventListener('mousemove', e => {
-  const p = e.target.closest?.('.mapa-svg .v, .mapa-svg .h'), n = p?.dataset[LANG === 'en' ? 'en' : 'es'];
+  const p = e.target.closest?.('.mapa-grande .mapa-svg .v, .mapa-grande .mapa-svg .h'), n = p?.dataset[LANG === 'en' ? 'en' : 'es'];
   mapaTip.hidden = !n; if (n) { mapaTip.textContent = n; mapaTip.style.left = e.clientX + 14 + 'px'; mapaTip.style.top = e.clientY + 14 + 'px'; }
 });
 // el mapa del mundo ampliado; se cierra con un clic o con Esc
