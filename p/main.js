@@ -410,7 +410,8 @@ function hitTest(ev) {
   const o = hit.object;
   if (objects.monitor.includes(o)) return { key: 'proyectos' };
   if (objects.clawd && o === objects.clawd.malla && hash.get('debug')) window.__uv = hit.uv ? [hit.uv.x, hit.uv.y] : null;
-  if (objects.clawd && o === objects.clawd.malla) return hit.uv && !objects.clawd.activa && sobreIcono(hit.uv.x, hit.uv.y) ? { key: 'clawd' } : null;   // solo el iconito de Clawd de la terminal
+  if (objects.clawd && o === objects.clawd.malla) return hit.uv && !objects.clawd.activa && sobreIcono(hit.uv.x, hit.uv.y) ? { key: 'clawd' } : { key: 'terminal' };   // el iconito de Clawd despierta a Clawd; el resto de la terminal, zoom
+  if (objects.monitor2.includes(o)) return { key: 'terminal' };
   if (objects.libro.includes(o)) return { key: 'educacion' };
   if (objects.ventana.includes(o)) return { key: 'experiencia' };
   if (objects.espejo.includes(o) || objects.espejoFotos?.includes(o)) return { key: 'sobremi' };
@@ -593,7 +594,7 @@ function animarPersiana(now) {
 }
 function setHover(h, ev) {
   hoverKey = h ? h.key : null;
-  const sel = !h ? [] : { proyectos: objects.monitor, educacion: objects.libro, experiencia: objects.ventana.filter(o => !o.name.startsWith('paisaje')), sobremi: objects.espejo.filter(o => o.isMesh && o.name), pizarra: [objects.pizarra] }[h.key] || [];
+  const sel = !h ? [] : { proyectos: objects.monitor, terminal: objects.monitor2, educacion: objects.libro, experiencia: objects.ventana.filter(o => !o.name.startsWith('paisaje')), sobremi: objects.espejo.filter(o => o.isMesh && o.name), pizarra: [objects.pizarra] }[h.key] || [];
   // desde la pizarra: se ilumina el objeto real al que apunta cada línea, y también la pizarra
   const clave = h ? h.key + (h.viaBoard ? '+pizarra' : '') : '';
   if (clave !== setHover.clave) {                                     // solo si cambia; al quitarlo se apaga con un fundido
@@ -652,6 +653,11 @@ renderer.domElement.addEventListener('click', ev => {
     if (h.key === 'pizarra') { if (state !== 'pizarra') goBoard(); return; }
     if (HUEVOS.has(h.key)) { huevoClic(h.key); return; }
     openSection(h.key);
+  } else if (state === 'terminal') {
+    const h = hitTest(ev);
+    if (h && h.key === 'clawd') { objects.clawd.clic(performance.now()); entradaTerminal.focus({ preventScroll: true }); }
+    else if (h && h.key === 'terminal') entradaTerminal.focus({ preventScroll: true });
+    else goHome();                                                  // un clic fuera de la pantalla vuelve al cuarto
   } else if (state === 'sobremi' && fotoBajo(ev) >= 0 && !panel.contains(ev.target)) { mostrarFoto(fotoBajo(ev)); }
   else if (!panel.contains(ev.target) && !esMovil) goHome();          // en el móvil se sale con «Volver»: un toque en la escena con el panel minimizado no debe sacarte
 });
@@ -669,6 +675,35 @@ function flyTo(to, done, dur = 1.6, via = null) {
   reiniciarGiro();
   flight = { from: { pos: camera.position.clone(), look: currentLook.clone(), fov: camera.fov, q: camera.quaternion.clone(), dist: camera.position.distanceTo(currentLook) }, to, done, via, t0: null, dur: dur * 1000 };   // t0: el primer fotograma; via: punto de paso (curva)
 }
+// ---------------------------------------------------------------- terminal (la segunda pantalla): zoom y escritura
+// Al hacer clic en la pantalla de la izquierda la cámara se acerca de frente; lo que se teclea va a un campo invisible (también sirve para el teclado del móvil)
+// y se dibuja en la terminal. Solo se obedece a los comandos que se conocen (/help los lista); lo demás saca al Clawd dubitativo del «404».
+const entradaTerminal = Object.assign(document.createElement('input'), { id: 'termInput', type: 'text', autocomplete: 'off', spellcheck: false, maxLength: 26 });
+entradaTerminal.setAttribute('autocapitalize', 'off'); entradaTerminal.setAttribute('aria-label', 'terminal');
+entradaTerminal.style.cssText = 'position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px;pointer-events:none';
+document.body.append(entradaTerminal);
+entradaTerminal.addEventListener('input', () => objects.clawd?.escribir(entradaTerminal.value));
+entradaTerminal.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); objects.clawd?.ejecutar(entradaTerminal.value); entradaTerminal.value = ''; objects.clawd?.escribir(''); }
+  e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); if (!flight) goHome(); }
+});
+function vistaTerminal() {                                          // de frente a la pantalla, a 60 cm, para que quepa entera
+  const p = objects.pantalla2; p.updateWorldMatrix(true, false);
+  const c = new THREE.Vector3(), q = new THREE.Quaternion(); p.getWorldPosition(c); p.getWorldQuaternion(q);
+  const n = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+  return V(c.clone().addScaledVector(n, 0.62).toArray(), c.toArray(), 34);
+}
+function abrirTerminal() {
+  if (!objects.clawd || !objects.pantalla2) return;
+  const from = state; state = 'terminal'; setHover(null); hint.style.opacity = 0; panel.hidden = true; backBtn.hidden = false;
+  VIEWS.terminal = vistaTerminal();
+  objects.clawd.alSalir = () => { if (state === 'terminal' && !flight) goHome(); };
+  flyTo(VIEWS.terminal, () => {
+    objects.clawd.entrarTerminal(); entradaTerminal.value = ''; entradaTerminal.focus({ preventScroll: true });
+    hint.textContent = LANG === 'en' ? 'Type a command (try /help) · Esc to go back' : 'Escribe un comando (prueba /help) · Esc para volver'; hint.style.opacity = 1;
+  }, from === 'pizarra' ? 1.8 : 1.5);
+}
+function cerrarTerminal() { objects.clawd?.salirTerminal(); entradaTerminal.blur(); entradaTerminal.value = ''; }
 function goBoard() {
   state = 'pizarra'; setHover(null); hint.style.opacity = 0; panel.hidden = true; backBtn.hidden = false;
   flyTo(VIEWS.pizarra, () => { hint.textContent = T.hintPizarra; hint.style.opacity = 1; }, 1.4);
@@ -680,11 +715,13 @@ function irAlEspejo() {
 }
 function openSection(key) {
   if (key === 'sobremi') return irAlEspejo();
+  if (key === 'terminal') return abrirTerminal();
   const from = state; state = key; setHover(null); hint.style.opacity = 0; panel.hidden = true;
   flyTo(VIEWS[key], () => requestAnimationFrame(() => showPanel(key)), from === 'pizarra' ? 1.8 : 1.6);   // el panel, un fotograma después del último del vuelo
 }
 function goHome() {
   if (state === 'sobremi' && objects.javier) objects.javier.volverSilla();
+  if (state === 'terminal') cerrarTerminal();
   panel.hidden = true; backBtn.hidden = true; state = 'home'; setHover(null);
   flyTo(VIEWS.home, () => { hint.textContent = T.hintCuarto; hint.style.opacity = 1; }, 1.5);
 }

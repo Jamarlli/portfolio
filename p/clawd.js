@@ -144,8 +144,12 @@ function caja(texto1, colorTexto) {
 }
 export function pintarReposo(ctx2d, c = {}) {
   g = ctx2d; g.globalAlpha = 1; marco(); cabecera(8, true);
-  disco(66, GY - 3, 2.4, GRIS); R(63, GY - 6, 3, 7, FONDO); texto('MEDIUM · /EFFORT', 72, GY - 5, GRIS);
-  caja('TRY "HOW DO I LOG AN ERROR?"', TENUE);
+  disco(56, GY - 3, 2.4, GRIS); R(53, GY - 6, 3, 7, FONDO); texto('MEDIUM · /EFFORT', 62, GY - 5, GRIS);
+  if (c.terminal) {                                                       // zoom: lo que se va escribiendo (y el cursor)
+    const tx = (c.texto || '').toUpperCase();
+    if (tx) caja(tx, BLANQ); else { caja('', TENUE); texto(c.en ? 'TYPE /HELP' : 'ESCRIBE /HELP', 14, GY + 5, TENUE); }
+    if (c.cursor) R(9 + (tx ? anchoTexto(tx) + 2 : 0), GY + 4, 2, 7, '#d77757');
+  } else caja('TRY "HOW DO I LOG AN ERROR?"', TENUE);
   texto('>>', 2, GY + 14, AMARILLO); texto('AUTO MODE ON (SHIFT+TAB)', 12, GY + 14, AMARILLO);
 }
 // la sesión: Clawd sale de la cabecera de un salto, se limpia la pantalla, se teclea el mensaje y Enter
@@ -316,7 +320,7 @@ function noel(t) {
     if (t > 6.6) { const w = clamp((t - 6.6) / 3.4); cx = mezcla(40, CHX - 12, w); cy = LANE; dy = 0; anda = Math.floor(t * 7) % 2; bI = 'abajo'; bD = 'frente'; }
     if (t > 10) { const j = clamp((t - 10) / 1.1); cx = mezcla(CHX - 12, CHX + 14, suave(j)); cy = mezcla(LANE, TOPE - 4, suave(j)); dy = -Math.sin(j * Math.PI) * 14; bI = bD = 'arriba'; anda = -1; }
     if (t > 11.2) { cx = CHX + 14; cy = TOPE - 4; dy = 0; ojos = t > 12 ? 'm' : 'a'; bI = bD = 'abajo'; mira = 0; }
-    if (t > 12.6) { hundido = clamp((t - 12.6) / 1.2) * 30; bI = bD = 'arriba'; }
+    if (t > 12.4) { hundido = clamp((t - 12.4) / 1.8) * 50; bI = bD = 'arriba'; }
   }
   const dibujarClawd = () => {
     const ropa = top => { barbaNoel(top); gorro(top, '#c9373a', '#e04a4e', t, 1); };
@@ -330,8 +334,8 @@ function noel(t) {
     R(2, -5, 15, 4, '#b82a2e'); R(2, -2, 15, 1, '#8a1c20'); R(2, -5, 15, 1, '#e0b84a'); R(0, -7, 3, 6, '#b82a2e'); R(15, -6, 3, 2, '#b82a2e'); R(0, -7, 3, 1, '#e0b84a');
   });
   chimenea();
-  if (t > 13.2) { const f = clamp((t - 13.2) / 2); alfa(1 - f); disco(CHX + 14, TOPE - 6 - f * 14, 4 + f * 5, '#8a8f9c'); disco(CHX + 8, TOPE - 10 - f * 18, 3 + f * 4, '#aeb3c0'); alfa(1); }
-  if (t > 13.4) bocadillo(CHX - 8, 4, 'HO HO HO', 2);
+  if (t > 14.0) { const f = clamp((t - 14.0) / 2); alfa(1 - f); disco(CHX + 14, TOPE - 6 - f * 14, 4 + f * 5, '#8a8f9c'); disco(CHX + 8, TOPE - 10 - f * 18, 3 + f * 4, '#aeb3c0'); alfa(1); }
+  if (t > 14.4) bocadillo(CHX - 8, 4, 'HO HO HO', 2);
   if (t > 16) { alfa(0.5 + 0.4 * Math.sin(t * 4)); chispa(CHX + 14, TOPE - 8, '#ffe58a'); alfa(1); }
   for (let i = 0; i < 22; i++) { const x = (rnd(i) * W + t * (2 + rnd(i + 5) * 3)) % W, y = (rnd(i + 2) * 58 + t * (7 + rnd(i + 7) * 8)) % 58; P(x, y, '#ffffff'); }
 }
@@ -348,7 +352,7 @@ function musica(t) {
     const h = 4 + Math.round((Math.sin(t * 7 + b * 2 + lado) * 0.5 + 0.5) * 12) * (t > 1.2 ? 1 : 0);
     R(lado < 0 ? 8 + b * 5 : 105 + b * 5, GY - h, 4, h, ['#6fd0c0', '#ffd479', '#f2a3b8'][b]);
   }
-  const ba = t > 1.2 ? (Math.floor(t * 4) % 2 ? 'arriba' : 'medio') : 'abajo', bb = t > 1.2 ? (Math.floor(t * 4) % 2 ? 'medio' : 'arriba') : 'abajo';
+  const ba = t > 1.2 ? (Math.floor(t * 4) % 2 ? 'medio' : 'abajo') : 'abajo', bb = t > 1.2 ? (Math.floor(t * 4) % 2 ? 'abajo' : 'medio') : 'abajo';
   clawd(x, GY, { ojos: 'n', agacha: golpe ? (compas === 0 ? 2 : 1) : 0, bI: ba, bD: bb, ropa: top => {
     for (const ex of [-4, 2]) { P(ex, top + 2, NEGRO); P(ex + 2, top + 2, NEGRO); P(ex + 1, top + 3, NEGRO); }                    // ojos ⌣
     R(-3, top - 5 - q, 7, 1, AZUL); R(-5, top - 4 - q, 2, 1, AZUL); R(4, top - 4 - q, 2, 1, AZUL); R(-6, top - 3 - q, 1, 1, AZUL); R(6, top - 3 - q, 1, 1, AZUL);   // el arco
@@ -495,8 +499,9 @@ function belen(t, c) {
   // Clawd, el ángel: baja volando, aterriza en el centro del tejado, abre los brazos y aparece el «Gloria»
   const aterr = clamp((t - 1.5) / 2.0), cy = mezcla(-14, 22, suave(aterr)) + (aterr < 1 ? Math.sin(t * 3) * 2 : 0), vuela = aterr < 1;
   const flap = vuela ? Math.floor(t * 8) % 2 : (Math.floor(t * 2) % 2);
-  clawd(68, cy, { k: 1, ojos: aterr < 1 ? 'a' : 'f', bI: aterr >= 1 ? 'arriba' : 'medio', bD: aterr >= 1 ? 'arriba' : 'medio', ropaAntes: true, ropa: top => {
-    alfa(1); alas(top, flap); R(-3, top - 4, 7, 1, '#ffe58a'); R(-2, top - 5, 5, 1, '#ffe58a');
+  celdas(68, cy, () => alas(-10, flap), 1);                                                    // las alas, por detrás del ángel
+  clawd(68, cy, { k: 1, ojos: aterr < 1 ? 'a' : 'f', bI: aterr >= 1 ? 'arriba' : 'medio', bD: aterr >= 1 ? 'arriba' : 'medio', ropa: top => {
+    R(-3, top - 4, 7, 1, '#ffe58a'); R(-2, top - 5, 5, 1, '#ffe58a');                           // el halo
   } });
   if (t > 4.2) { alfa(Math.min(1, (t - 4.2) / 0.6)); texto('GLORIA', 80, 12, '#ffe58a'); alfa(1); }
   if (t > 3.6) for (let i = 0; i < 8; i++) { const ff = ((t - 3.6) * 0.5 + i / 8) % 1; alfa(Math.sin(ff * Math.PI)); chispa(68 + Math.cos(i * 0.8) * (10 + ff * 18), 14 + Math.sin(i * 0.8) * (4 + ff * 5), '#ffe58a'); } alfa(1);
@@ -640,13 +645,40 @@ function fallas(t, c) {
   if (t > 12.8) bocadillo(64, 17, 'JA ESTEM EN FALLES', 0);
 }
 
-const PROMPTS = { saludo: ['HOLA CLAUDE', 'HI CLAUDE'], dormir: ['BUENAS NOCHES', 'GOOD NIGHT'], trabajar: ['ARREGLA EL BUG', 'FIX THE BUG'], cafe: ['HORA DEL CAFE', 'COFFEE TIME'],
-  nieve: ['HAZ UN MUNECO DE NIEVE', 'BUILD A SNOWMAN'], musica: ['PON MUSICA', 'PLAY SOME MUSIC'], halloween: ['TRUCO O TRATO', 'TRICK OR TREAT'], hispanidad: ['DIA DE LA HISPANIDAD', 'SPANISH NATIONAL DAY'], rugby: ['TRANSFORMA EL ENSAYO', 'CONVERT THE TRY'],
-  belen: ['MONTA EL BELEN', 'BUILD THE NATIVITY'], reyes: ['LLEGAN LOS REYES MAGOS', 'THE THREE KINGS ARRIVE'], cupido: ['FELIZ SAN VALENTIN', 'HAPPY VALENTINES'], cumple: ['FELIZ CUMPLE', 'HAPPY BIRTHDAY'], fallas: ['JA ESTEM EN FALLES', 'JA ESTEM EN FALLES'], pascua: ['BUSCA LOS HUEVOS', 'FIND THE EGGS'], noel: ['FELIZ NAVIDAD', 'MERRY CHRISTMAS'] };
-const ANIM = { saludo: [saludo, 9], musica: [musica, 12], halloween: [halloween, 12], hispanidad: [hispanidad, 13], rugby: [rugby, 12], belen: [belen, 16], reyes: [reyes, 16], cupido: [cupido, 11], cumple: [cumple, 12], fallas: [fallas, 19], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 20], pascua: [pascua, 16], noel: [noel, 19] };
-const INICIO = { halloween: 64, hispanidad: 64, rugby: 30, belen: 64, reyes: 12, cupido: 40, cumple: 40, fallas: 28, musica: 64, saludo: 64, dormir: 28, trabajar: 46, cafe: 60, nieve: 22, pascua: 12, noel: 40 };
+// Comando desconocido («404»): Clawd dubitativo. Mira a un lado y a otro con un «?» sobre la cabeza, se rasca la cabeza (con una gota de sudor), se encoge de hombros y sugiere «/help?».
+function desconocido(t, c) {
+  const x = 64, ROJO = '#ff6b6b';
+  texto('404', 4, 17, ROJO, 2); texto(c.en ? 'COMMAND NOT FOUND' : 'COMANDO NO ENCONTRADO', 34, 21, ROJO);
+  let ojos = 'a', mira = 0, bI = 'abajo', bD = 'abajo', dy = 0, agacha = 0, rasca = false;
+  if (t < 2.2) { mira = Math.floor(t * 1.8) % 2 ? 1 : -1; ojos = (t % 1.1) > 1.0 ? 'c' : 'a'; }                              // mira a un lado y a otro
+  else if (t < 4.4) { rasca = true; ojos = Math.floor(t * 3) % 3 === 0 ? 'c' : 'a'; mira = 1; }                              // se rasca la cabeza
+  else if (t < 5.8) { const u = t - 4.4; bI = bD = 'medio'; ojos = 'g'; dy = u < 0.4 ? -Math.sin(u / 0.4 * Math.PI) * 3 : 0; agacha = u > 0.4 && u < 0.6 ? 1 : 0; }  // se encoge de hombros
+  else { ojos = 'c'; bI = bD = 'abajo'; mira = -1; }
+  const c0 = clawd(x, GY + dy, { ojos, mira, bI, bD, agacha, ropa: rasca ? top => { const k = Math.round(Math.sin(t * 14)); R(1 + k, top - 2, 3, 2, NARANJA); R(4, top, 2, 3, NARANJA); } : null });
+  if (t > 0.6 && t < 5.8) { const b = Math.sin(t * 4) * 1.5; texto('?', x + 20, c0.top - 3 + b, '#ffd479', 2); if (t > 1.6) texto('?', x - 26, c0.top + 2 - b, '#ffd479', 1); }
+  if (t > 2.4 && t < 5.8) { const f = ((t - 2.4) * 0.8) % 1; R(x + 13, c0.top + 3 + f * 12, 1, 3, '#6fb8ff'); P(x + 13, c0.top + 3 + f * 12, '#cfe8ff'); }                 // la gota de sudor
+  if (t >= 5.8) bocadillo(x + 32, c0.top - 4, '/HELP?', -1);
+}
+// Ayuda (/help): la lista de comandos que conoce, que va apareciendo una a una
+const LISTA_COMANDOS = ['/hola', '/dormir', '/trabajar', '/cafe', '/nieve', '/pascua', '/noel', '/halloween', '/hispanidad', '/rugby', '/belen', '/reyes', '/cupido', '/cumple', '/fallas', '/musica', '/help', '/exit'];
+function ayuda(t, c) {
+  texto(c.en ? 'COMMANDS:' : 'COMANDOS:', 3, 15, '#d77757');
+  LISTA_COMANDOS.forEach((s, i) => { if (t > 0.12 * i) texto(s.toUpperCase(), [3, 46, 92][Math.floor(i / 6)], 22 + (i % 6) * 6, i >= 16 ? GRIS : BLANQ); });
+}
+// los nombres que entiende (sin tildes ni mayúsculas), en español y en inglés, y los de salir
+const ALIAS = { hola: 'saludo', hello: 'saludo', hi: 'saludo', dormir: 'dormir', sleep: 'dormir', trabajar: 'trabajar', work: 'trabajar', cafe: 'cafe', coffee: 'cafe', nieve: 'nieve', snow: 'nieve', pascua: 'pascua', easter: 'pascua',
+  noel: 'noel', santa: 'noel', navidad: 'noel', halloween: 'halloween', hispanidad: 'hispanidad', espana: 'hispanidad', spain: 'hispanidad', rugby: 'rugby', belen: 'belen', nativity: 'belen', reyes: 'reyes', kings: 'reyes',
+  cupido: 'cupido', cupid: 'cupido', valentin: 'cupido', cumple: 'cumple', birthday: 'cumple', fallas: 'fallas', musica: 'musica', music: 'musica', help: 'ayuda', ayuda: 'ayuda' };
+const SALIR = new Set(['exit', 'salir', 'quit', 'volver', 'back']);
+
+// lo que se «teclea» al empezar cada escena: siempre un comando (empieza por «/» y no lleva espacios)
+const PROMPTS = { saludo: ['/hola', '/hello'], dormir: ['/dormir', '/sleep'], trabajar: ['/trabajar', '/work'], cafe: ['/cafe', '/coffee'], nieve: ['/nieve', '/snow'], musica: ['/musica', '/music'],
+  halloween: ['/halloween', '/halloween'], hispanidad: ['/hispanidad', '/spain'], rugby: ['/rugby', '/rugby'], belen: ['/belen', '/nativity'], reyes: ['/reyes', '/kings'], cupido: ['/cupido', '/cupid'],
+  cumple: ['/cumple', '/birthday'], fallas: ['/fallas', '/fallas'], pascua: ['/pascua', '/easter'], noel: ['/noel', '/santa'], desconocido: ['/?', '/?'], ayuda: ['/help', '/help'] };
+const ANIM = { saludo: [saludo, 9], musica: [musica, 12], halloween: [halloween, 12], hispanidad: [hispanidad, 13], rugby: [rugby, 12], belen: [belen, 16], reyes: [reyes, 16], cupido: [cupido, 11], cumple: [cumple, 12], fallas: [fallas, 19], dormir: [dormir, 12], trabajar: [trabajar, 10], cafe: [cafe, 10], nieve: [nieve, 20], pascua: [pascua, 16], noel: [noel, 19], desconocido: [desconocido, 7.5], ayuda: [ayuda, 7] };
+const INICIO = { halloween: 64, hispanidad: 64, rugby: 30, belen: 64, reyes: 12, cupido: 40, cumple: 40, fallas: 28, musica: 64, saludo: 64, dormir: 28, trabajar: 46, cafe: 60, nieve: 22, pascua: 12, noel: 40, desconocido: 64, ayuda: 64 };
 export const ESCENAS = Object.fromEntries(Object.entries(ANIM).map(([k, [fn, d]]) => [k, { dur: INTRO + d, dibujar: (t, c) => {
-  terminal(t, PROMPTS[k][c.en ? 1 : 0], k === 'nieve' || k === 'noel', c, INICIO[k]);
+  terminal(t, (c.prompt || PROMPTS[k][c.en ? 1 : 0]).toUpperCase(), k === 'nieve' || k === 'noel', c, INICIO[k]);
   if (t >= INTRO) { g.save(); g.beginPath(); g.rect(0, 0, W, GY + 4); g.clip(); fn(t - INTRO, c); g.restore(); }
 } }]));
 export const contexto2d = () => g;
@@ -688,8 +720,23 @@ export function crearClawd(THREE, pantalla, { contexto, forzada = null } = {}) {
   const malla = new THREE.Mesh(pantalla.geometry, new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
   malla.position.copy(pantalla.position); malla.position.x += 0.0004; malla.quaternion.copy(pantalla.quaternion); malla.scale.copy(pantalla.scale);
   pantalla.parent.add(malla);
-  const e = { malla, forzada, activa: null, ultima: null, veces: 0, ultimoDibujo: -1e9 };
-  e.reposo = () => { pintarReposo(ctx2d, contexto()); componer(sctx, vent); tex.needsUpdate = true; };
+  const e = { malla, forzada, activa: null, ultima: null, veces: 0, ultimoDibujo: -1e9, terminal: false, texto: '', cursor: 1, alSalir: null };
+  e.reposo = () => { pintarReposo(ctx2d, { ...contexto(), terminal: e.terminal, texto: e.texto, cursor: e.cursor }); componer(sctx, vent); tex.needsUpdate = true; };
+  // zoom a la terminal: se puede escribir; solo se obedece a los comandos que se conocen (el resto, el Clawd dubitativo del «404»)
+  e.entrarTerminal = () => { e.terminal = true; e.texto = ''; e.cursor = 1; if (!e.activa) e.reposo(); };
+  e.salirTerminal = () => { e.terminal = false; e.texto = ''; if (!e.activa) e.reposo(); };
+  e.escribir = txt => { e.texto = txt.slice(0, 26); e.cursor = 1; if (!e.activa) e.reposo(); };
+  const lanzar = (nombre, prompt, extra = {}) => { e.veces++; e.ultima = nombre; e.activa = { nombre, t0: performance.now() - 2900, c: { ...contexto(), prompt, ...extra } }; e.ultimoDibujo = -1e9; };   // empieza justo al pulsar Enter
+  e.ejecutar = txt => {
+    const crudo = txt.trim(); if (!crudo) return;
+    const n = crudo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); e.texto = '';
+    if (n.startsWith('/')) {
+      const nom = n.slice(1);
+      if (SALIR.has(nom)) { e.alSalir?.(); return; }
+      if (ALIAS[nom]) return lanzar(ALIAS[nom], crudo.toUpperCase());
+    }
+    lanzar('desconocido', crudo.toUpperCase(), { comando: crudo });
+  };
   e.reposo();
   e.clic = now => {
     if (e.activa) return;
@@ -697,9 +744,10 @@ export function crearClawd(THREE, pantalla, { contexto, forzada = null } = {}) {
     e.veces++; e.ultima = nombre; e.activa = { nombre, t0: now, c }; e.ultimoDibujo = -1e9;
   };
   e.actualizar = now => {                                            // devuelve true si hay que repintar la escena
-    const a = e.activa; if (!a) return false;
+    const a = e.activa;
+    if (!a) { if (e.terminal) { const b = Math.floor(now / 500) % 2; if (b !== e.cursor) { e.cursor = b; e.reposo(); return true; } } return false; }      // el cursor parpadea
     const t = (now - a.t0) / 1000;
-    if (t >= ESCENAS[a.nombre].dur) { e.activa = null; e.reposo(); return true; }
+    if (t >= ESCENAS[a.nombre].dur) { e.activa = null; e.cursor = 1; e.reposo(); return true; }
     if (now - e.ultimoDibujo < 80) return false;                       // 12 imágenes por segundo, como los GIF
     e.ultimoDibujo = now; pintar(ctx2d, a.nombre, t, a.c); componer(sctx, vent); tex.needsUpdate = true; return true;
   };
