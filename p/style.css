@@ -98,27 +98,21 @@ a { color: var(--accent-2); }
 .book.opening .page.right { transform-origin: left center; animation: flip .9s cubic-bezier(.3,.7,.2,1) both .1s; }
 .book.opening .page.left { animation: fadein .5s both; }
 @keyframes flip { from { transform: rotateY(-178deg); } to { transform: rotateY(0); } }
-/* pasar página: la esquina de abajo se dobla al acercar el ratón; al pulsarla, la hoja se vuelve (sale hasta el canto y entra la otra) */
+/* pasar página: la esquina de abajo se dobla al acercar el ratón; al pulsarla, la hoja se vuelve con texto por las dos caras (libro.js) */
 .book .num { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: 18px; color: #8a7a58; pointer-events: none; }
 .curl { position: absolute; bottom: 0; width: 34px; height: 34px; padding: 0; border: 0; cursor: pointer; transition: width .2s, height .2s; filter: drop-shadow(-2px -2px 3px rgba(60, 40, 20, .35)); }
 .curl.sig { right: 0; background: linear-gradient(to bottom right, #fffaf0 0%, #e2cf9f 49%, #bda880 50%, #bda880 100%); }
 .curl.ant { left: 0; background: linear-gradient(to bottom left, #fffaf0 0%, #e2cf9f 49%, #bda880 50%, #bda880 100%); }
 .curl:hover, .curl:focus-visible { width: 72px; height: 72px; outline: none; }
-.book .page.left { transform-origin: right center; }
-.book .page.right { transform-origin: left center; }
-.book .page.sale-der { animation: saleDer .26s ease-in both !important; }
-.book .page.sale-izq { animation: saleIzq .26s ease-in both !important; }
-.book .page.entra-izq { animation: entraIzq .3s ease-out both !important; }
-.book .page.entra-der { animation: entraDer .3s ease-out both !important; }
-@keyframes saleDer { to { transform: rotateY(-90deg); } }
-@keyframes saleIzq { to { transform: rotateY(90deg); } }
-@keyframes entraIzq { from { transform: rotateY(90deg); } to { transform: rotateY(0); } }
-@keyframes entraDer { from { transform: rotateY(-90deg); } to { transform: rotateY(0); } }
-.book .ch { opacity: 0; }
-.book .ch.v { opacity: 1; }
-.book li.nuevo::marker { color: transparent; }
+.book .hojagiro { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; z-index: 2; }
+.book .hojagiro.der { transform-origin: left center; animation: giroDer .8s cubic-bezier(.45, .05, .35, 1) forwards; }
+.book .hojagiro.izq { transform-origin: right center; animation: giroIzq .8s cubic-bezier(.45, .05, .35, 1) forwards; }
+.book .hojagiro .page { position: absolute; inset: 0; margin: 0; box-sizing: border-box; backface-visibility: hidden; -webkit-backface-visibility: hidden; animation: none; }
+.book .hojagiro .page.dorso { transform: rotateY(180deg); }
+@keyframes giroDer { to { transform: rotateY(-180deg); } }
+@keyframes giroIzq { to { transform: rotateY(180deg); } }
 @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
-.noanim .book .page, .noanim .book .page.sale-der, .noanim .book .page.sale-izq, .noanim .book .page.entra-izq, .noanim .book .page.entra-der { animation: none !important; }
+.noanim .book .page { animation: none !important; }
 #stage canvas { display: block; }
 
 /* reloj: cambiar la hora del día */

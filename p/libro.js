@@ -3,7 +3,6 @@
 // `entradas`: lista de entradas; cada una es una lista de bloques HTML que se prefiere no separar (si no caben juntos en una página, se parten).
 import { PAGINA } from './libro3d.js';
 
-const CPS = 450, TMAX = 1.5;                                                // velocidad de escritura (letras por segundo) y lo máximo que tarda una hoja doble
 const LLENA = 0.5;                                                          // una entrada no se pasa entera a la página siguiente si la actual está por debajo de esto
 
 export function montarLibro(book, titulo, entradas, T) {
@@ -34,56 +33,37 @@ export function montarLibro(book, titulo, entradas, T) {
   }
   const total = () => Math.max(1, Math.ceil(paginas.length / 2));
   const esquina = (tipo, texto) => `<button class="curl ${tipo}" type="button" aria-label="${texto}" title="${texto}"></button>`;
-  // máquina de escribir: cada letra del texto va en su propio span (el reparto de líneas no cambia) y se van mostrando de la primera hoja a la segunda
-  let escribiendo = 0;
-  function escribir(hojas) {
-    const id = ++escribiendo, letras = [], items = [];
-    for (const li of book.querySelectorAll('li')) li.classList.add('nuevo');                  // la viñeta sale con la primera letra
-    for (const h of hojas) {
-      const w = document.createTreeWalker(h, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement.closest('.num, .curl') || !n.data.trim() ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
-      const nodos = []; while (w.nextNode()) nodos.push(w.currentNode);
-      for (const n of nodos) {
-        const f = document.createDocumentFragment();
-        for (const c of n.data) { const sp = document.createElement('span'); sp.className = 'ch'; sp.textContent = c; f.appendChild(sp); letras.push(sp); items.push(n.parentElement.closest('li')); }
-        n.replaceWith(f);
-      }
-    }
-    const cps = Math.max(CPS, letras.length / TMAX), t0 = performance.now(); let hechas = 0;
-    (function paso(t) {
-      if (id !== escribiendo || !book.isConnected) return;
-      const n = Math.min(letras.length, Math.floor((t - t0) * cps / 1000));
-      for (; hechas < n; hechas++) { letras[hechas].classList.add('v'); items[hechas]?.classList.remove('nuevo'); }
-      if (hechas < letras.length) requestAnimationFrame(paso);
-    })(t0);
-  }
-  function pintar(animar = false) {
-    const n = total(), a = paginas[spread * 2] ?? '', b = paginas[spread * 2 + 1] ?? '';
-    const num = i => (i < paginas.length && paginas.length > 1 ? `<span class="num">${i + 1}</span>` : '');
-    izq.innerHTML = a + num(spread * 2) + (spread > 0 ? esquina('ant', T.paginaAnt) : '');
-    der.innerHTML = b + num(spread * 2 + 1) + (spread < n - 1 ? esquina('sig', T.paginaSig) : '');
+  const num = i => (i < paginas.length && paginas.length > 1 ? `<span class="num">${i + 1}</span>` : '');
+  const pagina = i => (paginas[i] ?? '') + num(i);
+  function pintar() {
+    const n = total();
+    izq.innerHTML = pagina(spread * 2) + (spread > 0 ? esquina('ant', T.paginaAnt) : '');
+    der.innerHTML = pagina(spread * 2 + 1) + (spread < n - 1 ? esquina('sig', T.paginaSig) : '');
     der.style.visibility = es3d || getComputedStyle(book).display === 'grid' ? '' : (paginas.length > 1 ? '' : 'hidden');
-    escribiendo++;                                                         // si había una escritura a medias, se cancela
-    if (animar && !book.closest('.noanim') && (es3d || getComputedStyle(book).display === 'grid')) escribir([izq, der]);
   }
+  // pasar página como en un libro de verdad: la hoja que se vuelve lleva su texto por las dos caras (delante, la página que se deja; detrás, la que viene)
+  // y debajo ya está escrita la página siguiente, así que en ningún momento se ve una hoja en blanco
   function pasar(d) {
     if (ocupado) return; const nuevo = spread + d; if (nuevo < 0 || nuevo >= total()) return;
-    ocupado = true; book.classList.remove('opening');                       // la animación de apertura volvería a dispararse al quitar la del giro: se movería dos veces
-    const sale = d > 0 ? der : izq, entra = d > 0 ? izq : der, clase = d > 0 ? 'der' : 'izq';
-    const fin = () => {
-      sale.classList.remove('sale-' + clase); spread = nuevo; pintar(true);
-      entra.classList.add('entra-' + (d > 0 ? 'izq' : 'der'));
-      entra.addEventListener('animationend', () => { entra.classList.remove('entra-izq', 'entra-der'); ocupado = false; }, { once: true });
-    };
-    sale.classList.add('sale-' + clase);
-    if (getComputedStyle(sale).animationName === 'none') { sale.classList.remove('sale-' + clase); spread = nuevo; pintar(); ocupado = false; return; }   // sin animaciones: se cambia de golpe
-    sale.addEventListener('animationend', fin, { once: true });
+    book.classList.remove('opening');                                       // la animación de apertura volvería a dispararse
+    if (book.closest('.noanim')) { spread = nuevo; pintar(); return; }       // sin animaciones: se cambia de golpe
+    ocupado = true;
+    const adelante = d > 0, sale = adelante ? der : izq;
+    const hoja = document.createElement('div'); hoja.className = 'hojagiro ' + (adelante ? 'der' : 'izq');
+    hoja.innerHTML = `<div class="page ${adelante ? 'right' : 'left'}">${pagina(spread * 2 + (adelante ? 1 : 0))}</div>`
+                   + `<div class="page dorso ${adelante ? 'left' : 'right'}">${pagina(nuevo * 2 + (adelante ? 0 : 1))}</div>`;
+    sale.innerHTML = pagina(nuevo * 2 + (adelante ? 1 : 0));               // lo que queda debajo de la hoja que se levanta
+    const caja = es3d ? sale.parentElement : book;                          // en 3D, cada hoja de texto tiene su propio marco (y la de la izquierda va antes: se sube encima)
+    if (!es3d) Object.assign(hoja.style, { left: sale.offsetLeft + 'px', top: sale.offsetTop + 'px', width: sale.offsetWidth + 'px', height: sale.offsetHeight + 'px' });
+    caja.style.zIndex = '2'; caja.appendChild(hoja);
+    hoja.addEventListener('animationend', () => { hoja.remove(); caja.style.zIndex = ''; spread = nuevo; pintar(); ocupado = false; }, { once: true });
   }
   book.addEventListener('click', e => { const c = e.target.closest('.curl'); if (c) pasar(c.classList.contains('sig') ? 1 : -1); });
-  const reiniciar = (animar = false) => { paginar(); spread = Math.min(spread, total() - 1); pintar(animar === true); };
+  const reiniciar = () => { paginar(); spread = Math.min(spread, total() - 1); pintar(); };
   // con el libro 3D: pone cada hoja de texto sobre su hoja del modelo (rectángulos en píxeles del viewport)
   book.colocar = r => {
     for (const [pag, q] of [[izq, r.izq], [der, r.der]]) { const k = q.w / PAGINA.w; pag.parentElement.style.transform = `translate(${q.x}px, ${q.y}px) scale(${k})`; }
   };
-  book.addEventListener('abrir', () => { spread = 0; ocupado = false; requestAnimationFrame(() => reiniciar(true)); });          // cada vez que se abre, desde la primera página
+  book.addEventListener('abrir', () => { spread = 0; ocupado = false; requestAnimationFrame(reiniciar); });          // cada vez que se abre, desde la primera página
   let ancho = 0; new ResizeObserver(() => { if (book.offsetWidth && book.offsetWidth !== ancho) { ancho = book.offsetWidth; reiniciar(); } }).observe(book);
 }

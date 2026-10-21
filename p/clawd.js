@@ -5,6 +5,11 @@ import { FRAMES_TRABAJO, COLS_TRABAJO, FILAS_TRABAJO, MS_TRABAJO, PALETA_TRABAJO
 export const W = 128, H = 78;
 const NARANJA = '#d77757', SOMBRA = '#b25a40', NEGRO = '#171210', BLANCO = '#f4f1ea';
 let g = null;                                                   // contexto del lienzo en el que se está pintando
+// El lienzo de la pantalla tiene FINO subpíxeles por cada píxel «gordo» del dibujo: los píxeles de Clawd y de las formas siguen siendo gordos (se pintan en coordenadas enteras),
+// pero el texto, el fondo y las estrellas se pintan con más detalle. La galería y las vistas previas usan un lienzo de 1 x 1: ahí todo sale como antes.
+export const FINO = 3;
+let fino = 1;                                                   // subpíxeles por píxel del lienzo en el que se pinta ahora
+const usar = (ctx, base = W) => { g = ctx; g.globalAlpha = 1; fino = ctx.canvas.width / base; g.setTransform(fino, 0, 0, fino, 0, 0); };
 const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
 const P = (x, y, c) => R(x, y, 1, 1, c);
 const alfa = a => { g.globalAlpha = a; };
@@ -29,7 +34,20 @@ const FUENTE = { A: '010101111101101', B: '110101110101110', C: '011100100100011
 export const VERBOS = ['Accomplishing','Actioning','Actualizing','Architecting','Baking','Beaming',"Beboppin'",'Befuddling','Billowing','Blanching','Bloviating','Boogieing','Boondoggling','Booping','Bootstrapping','Brewing','Bunning','Burrowing','Calculating','Canoodling','Caramelizing','Cascading','Catapulting','Cerebrating','Channeling','Channelling','Choreographing','Churning','Clauding','Coalescing','Cogitating','Combobulating','Composing','Computing','Concocting','Considering','Contemplating','Cooking','Crafting','Creating','Crunching','Crystallizing','Cultivating','Deciphering','Deliberating','Determining','Dilly-dallying','Discombobulating','Doing','Doodling','Drizzling','Ebbing','Effecting','Elucidating','Embellishing','Enchanting','Envisioning','Evaporating','Fermenting','Fiddle-faddling','Finagling','Flambéing','Flibbertigibbeting','Flowing','Flummoxing','Fluttering','Forging','Forming','Frolicking','Frosting','Gallivanting','Galloping','Garnishing','Generating','Gesticulating','Germinating','Gitifying','Grooving','Gusting','Harmonizing','Hashing','Hatching','Herding','Honking','Hullaballooing','Hyperspacing','Ideating','Imagining','Improvising','Incubating','Inferring','Infusing','Ionizing','Jitterbugging','Julienning','Kneading','Leavening','Levitating','Lollygagging','Manifesting','Marinating','Meandering','Metamorphosing','Misting','Moonwalking','Moseying','Mulling','Mustering','Musing','Nebulizing','Nesting','Newspapering','Noodling','Nucleating','Orbiting','Orchestrating','Osmosing','Perambulating','Percolating','Perusing','Philosophising','Photosynthesizing','Pollinating','Pondering','Pontificating','Pouncing','Precipitating','Prestidigitating','Processing','Proofing','Propagating','Puttering','Puzzling','Quantumizing','Razzle-dazzling','Razzmatazzing','Recombobulating','Reticulating','Roosting','Ruminating','Sautéing','Scampering','Schlepping','Scurrying','Seasoning','Shenaniganing','Shimmying','Simmering','Skedaddling','Sketching','Slithering','Smooshing','Sock-hopping','Spelunking','Spinning','Sprouting','Stewing','Sublimating','Swirling','Swooping','Symbioting','Synthesizing','Tempering','Thinking','Thundering','Tinkering','Tomfoolering','Topsy-turvying','Transfiguring','Transmuting','Twisting','Undulating','Unfurling','Unravelling','Vibing','Waddling','Wandering','Warping','Whatchamacalliting','Whirlpooling','Whirring','Whisking','Wibbling','Working','Wrangling','Zesting','Zigzagging'];
 const verboAlAzar = () => VERBOS[Math.floor(Math.random() * VERBOS.length)];
 const mayusculas = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+let altoMayuscula = 0;                                          // altura de las mayúsculas de VT323 en proporción al cuerpo (se mide al cargar la fuente); 0 = aún no está
+const cargarFuente = () => document.fonts?.load('20px VT323').then(() => {
+  const m = document.createElement('canvas').getContext('2d'); m.font = '100px VT323'; altoMayuscula = m.measureText('H').actualBoundingBoxAscent / 100;
+}).catch(() => {});
+function textoFino(s, x, y, c, k) {                             // cada letra en su casilla de siempre (3 x 5 píxeles gordos) pero con la fuente VT323, con trazo fino
+  g.fillStyle = c; g.font = `${5 * k / altoMayuscula}px VT323`; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  for (const ch of s) {
+    const f = FUENTE[ch]; if (!f) { x += 2 * k; continue; }
+    const w = f.length === 5 ? 1 : 3;
+    g.fillText(ch, x + w * k / 2, y + 5 * k); x += (w + 1) * k;
+  }
+}
 function texto(s, x, y, c, k = 1) {
+  if (fino > 1 && altoMayuscula) return textoFino(s, x, y, c, k);
   for (const ch of s) {
     const f = FUENTE[ch]; if (!f) { x += 2 * k; continue; }
     const w = f.length === 5 ? 1 : 3;
@@ -124,15 +142,21 @@ const ICONOS_BARRA = [
 ];
 const pixelado = (m, x0, y0) => m.f.forEach((fila, y) => [...fila].forEach((ch, x) => { if (m.c[ch]) P(x0 + x, y0 + y, m.c[ch]); }));
 export function componer(sctx, ventana) {
-  g = sctx; g.globalAlpha = 1;
-  const cols = ['#0b1f4a', '#0e2a5e', '#123674', '#174289', '#1c4e9c', '#2159ad']; cols.forEach((c, i) => R(0, i * (SH - 9) / 6, SW, Math.ceil((SH - 9) / 6) + 1, c));
-  for (let i = 0; i < 40; i++) { const x = rnd(i) * SW, y = rnd(i + 3) * (SH - 8); alfa(0.25); P(x, y, '#9fc4ff'); } alfa(1);
+  usar(sctx, SW);
+  const cols = ['#0b1f4a', '#0e2a5e', '#123674', '#174289', '#1c4e9c', '#2159ad'];
+  if (fino > 1) {                                                         // fondo en degradado suave y estrellas finas (un subpíxel)
+    const gr = g.createLinearGradient(0, 0, 0, SH - 9); cols.forEach((c, i) => gr.addColorStop(i / (cols.length - 1), c)); g.fillStyle = gr; g.fillRect(0, 0, SW, SH - 9);
+    for (let i = 0; i < 90; i++) { const x = Math.round(rnd(i) * SW * fino) / fino, y = Math.round(rnd(i + 3) * (SH - 9) * fino) / fino; alfa(0.2 + 0.4 * rnd(i + 9)); g.fillStyle = '#9fc4ff'; g.fillRect(x, y, 1 / fino, 1 / fino); } alfa(1);
+  } else {
+    cols.forEach((c, i) => R(0, i * (SH - 9) / 6, SW, Math.ceil((SH - 9) / 6) + 1, c));
+    for (let i = 0; i < 40; i++) { const x = rnd(i) * SW, y = rnd(i + 3) * (SH - 8); alfa(0.25); P(x, y, '#9fc4ff'); } alfa(1);
+  }
   R(0, SH - 9, SW, 9, '#12131a'); ICONOS_BARRA.forEach((m, i) => pixelado(m, SW / 2 - 23 + i * 10, SH - 8));
   R(SW / 2 - 23 + 2, SH - 1, 3, 1, '#ececec');                                           // la terminal es la aplicación abierta
   R(SW - 30, SH - 5, 12, 1, '#7d829c'); R(SW - 30, SH - 3, 8, 1, '#7d829c');
   g.save(); g.translate(CENTRO[0], CENTRO[1]); g.rotate(INCLINACION);
   alfa(0.35); R(-W / 2 + 3, -H / 2 + 4, W, H, '#000'); alfa(1);                  // sombra de la ventana
-  g.imageSmoothingEnabled = false; g.drawImage(ventana, -W / 2, -H / 2);
+  g.imageSmoothingEnabled = false; g.drawImage(ventana, -W / 2, -H / 2, W, H);
   g.restore();
 }
 // ¿el punto (u, v) de la textura de la pantalla cae sobre el iconito de Clawd de la ventana?
@@ -163,7 +187,7 @@ function caja(texto1, colorTexto) {
   texto('>', 2, GY + 5, BLANQ); if (texto1) texto(texto1, 9, GY + 5, colorTexto);
 }
 export function pintarReposo(ctx2d, c = {}) {
-  g = ctx2d; g.globalAlpha = 1; marco(); cabecera(8, true);
+  usar(ctx2d); marco(); cabecera(8, true);
   disco(56, GY - 3, 2.4, GRIS); R(53, GY - 6, 3, 7, FONDO); texto('MEDIUM · /EFFORT', 62, GY - 5, GRIS);
   if (c.terminal) {                                                       // zoom: lo que se va escribiendo (y el cursor)
     const tx = (c.texto || '').toUpperCase();
@@ -643,7 +667,7 @@ function dibujoFalla() {
 function bloquesFalla() {                                                        // la falla troceada en bloques de 2 x 2 con su color
   if (bloquesFallaCache) return bloquesFallaCache;
   const oc = document.createElement('canvas'); oc.width = W; oc.height = H; const o = oc.getContext('2d'), antes = g;
-  g = o; dibujoFalla(); g = antes;
+  const f0 = fino; g = o; fino = 1; dibujoFalla(); g = antes; fino = f0;
   const d = o.getImageData(0, 0, W, H).data, b = [];
   for (let y = 8; y < 56; y += 2) for (let x = 64; x < 126; x += 2) { const i = (y * W + x) * 4; if (d[i + 3] > 200) b.push({ x, y, c: '#' + [d[i], d[i + 1], d[i + 2]].map(v => v.toString(16).padStart(2, '0')).join(''), d: Math.hypot(x - 66, (y - 54) * 1.3), r: rnd(x * 7 + y * 3) }); }
   return bloquesFallaCache = b;
@@ -723,12 +747,12 @@ export const ESCENAS = Object.fromEntries(Object.entries(ANIM).map(([k, [fn, d]]
   if (t >= INTRO) { g.save(); g.beginPath(); g.rect(0, 0, W, GY + 4); g.clip(); fn(t - INTRO, c); g.restore(); }
 } }]));
 export { R, P, alfa, rnd, mezcla, clamp, suave, linea, disco, texto, bocadillo, corazon, chispa, celdas, mixC, GY, NARANJA, SOMBRA, NEGRO, BLANCO };
-export function pintar(ctx2d, nombre, t, c = {}) { g = ctx2d; g.globalAlpha = 1; ESCENAS[nombre].dibujar(t, c); g.globalAlpha = 1; }
+export function pintar(ctx2d, nombre, t, c = {}) { usar(ctx2d); ESCENAS[nombre].dibujar(t, c); g.globalAlpha = 1; }
 
 // ---------------------------------------------------------------- qué escena sale
 const pascuaDe = a => { const b = a % 19, c = Math.floor(a / 100), d = a % 100, e = Math.floor(c / 4), f = c % 4, h = Math.floor((c + 8) / 25), i = Math.floor((c - h + 1) / 3), k = (19 * b + c - e - i + 15) % 30, l = (32 + 2 * f + 2 * Math.floor(d / 4) - k - d % 4) % 7, m = Math.floor((b + 11 * k + 22 * l) / 451), mes = Math.floor((k + l - 7 * m + 114) / 31), dia = ((k + l - 7 * m + 114) % 31) + 1; return new Date(a, mes - 1, dia); };
 // Qué escena sale (horario fijo): si nieva, el muñeco de nieve; Halloween (todo el 31 de octubre y hasta las 9 h del 1 de noviembre); 12 de octubre,
-// Hispanidad; 14 de febrero, Cupido; Fallas (15 a 19 de marzo); el cumpleaños de Javier (CUMPLE); el 24 de diciembre desde las 20:00, Papá Noel
+// Hispanidad; 14 de febrero, Cupido; Fallas (del 15 de marzo hasta las 3 h del 20); el cumpleaños de Javier (CUMPLE); el 24 de diciembre desde las 20:00, Papá Noel
 // (antes, y el 25, el belén; el 5 y el 6 de enero, los Reyes Magos); el Domingo de Pascua, el conejito. En un día normal: de 0 a 8 h durmiendo, de 8 a 9 el café, de 9 a 17
 // trabajando y el resto, el saludo. Sin programar (solo con #clawd=nombre o en la galería): música y rugby.
 export const CUMPLE = [6, 21];                                            // [mes, día] del cumpleaños de Javier
@@ -738,7 +762,7 @@ export function elegir({ fecha = new Date(), hora = 12, nieva = false } = {}) {
   if ((mes === 10 && dia === 31) || (mes === 11 && dia === 1 && hora < 9)) return 'halloween';
   if (mes === 10 && dia === 12) return 'hispanidad';
   if (mes === 2 && dia === 14) return 'cupido';
-  if (mes === 3 && dia >= 15 && dia <= 19) return 'fallas';
+  if ((mes === 3 && dia >= 15 && dia <= 19) || (mes === 3 && dia === 20 && hora < 3)) return 'fallas';   // acaban a las 3 de la madrugada siguiente a la cremà
   if (CUMPLE && mes === CUMPLE[0] && dia === CUMPLE[1]) return 'cumple';
   if (mes === 12 && dia === 24) return hora >= 20 ? 'noel' : 'belen';
   if (mes === 12 && dia === 25) return 'belen';
@@ -754,10 +778,10 @@ export function elegir({ fecha = new Date(), hora = 12, nieva = false } = {}) {
 // ---------------------------------------------------------------- sobre la pantalla 3D
 // Pone un lienzo con textura de píxeles (sin suavizar) justo delante de la pantalla horneada y lo anima mientras dura la escena.
 export function crearClawd(THREE, pantalla, { contexto, forzada = null } = {}) {
-  const cv = document.createElement('canvas'); cv.width = SW; cv.height = SH;
-  const vent = document.createElement('canvas'); vent.width = W; vent.height = H;
+  const cv = document.createElement('canvas'); cv.width = SW * FINO; cv.height = SH * FINO;
+  const vent = document.createElement('canvas'); vent.width = W * FINO; vent.height = H * FINO;
   const sctx = cv.getContext('2d'), ctx2d = vent.getContext('2d'), tex = new THREE.CanvasTexture(cv);
-  tex.flipY = false; tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
+  tex.flipY = false; tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.anisotropy = 8;   // de cerca, píxeles nítidos; de lejos, promediados (si no, el texto fino brilla y parpadea)
   const malla = new THREE.Mesh(pantalla.geometry, new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
   malla.position.copy(pantalla.position); malla.position.x += 0.0004; malla.quaternion.copy(pantalla.quaternion); malla.scale.copy(pantalla.scale);
   pantalla.parent.add(malla);
@@ -782,6 +806,7 @@ export function crearClawd(THREE, pantalla, { contexto, forzada = null } = {}) {
     }
     lanzar('desconocido', crudo.toUpperCase(), { comando: crudo });
   };
+  cargarFuente()?.then(() => { if (!e.activa) e.reposo(); });
   e.reposo();
   e.clic = now => {
     if (e.activa) return;
