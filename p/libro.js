@@ -60,10 +60,28 @@ export function montarLibro(book, titulo, entradas, T) {
   }
   book.addEventListener('click', e => { const c = e.target.closest('.curl'); if (c) pasar(c.classList.contains('sig') ? 1 : -1); });
   const reiniciar = () => { paginar(); spread = Math.min(spread, total() - 1); pintar(); };
-  // con el libro 3D: pone cada hoja de texto sobre su hoja del modelo (rectángulos en píxeles del viewport)
+  // con el libro 3D: pone cada hoja de texto sobre su hoja del modelo. Mientras el libro se abre o se cierra, con perspectiva (la hoja de la izquierda va en la tapa,
+  // que gira) y la de la derecha recortada por donde aún la tapa la tapa; abierto del todo, un rectángulo
   book.colocar = r => {
-    for (const [pag, q] of [[izq, r.izq], [der, r.der]]) { const k = q.w / PAGINA.w; pag.parentElement.style.transform = `translate(${q.x}px, ${q.y}px) scale(${k})`; }
+    for (const [pag, s] of [[izq, r.izq], [der, r.der]]) {
+      const h = pag.parentElement;
+      h.style.visibility = s.ver ? '' : 'hidden'; if (!s.ver) continue;
+      if (r.quieto) {
+        const xs = s.q.map(p => p.x), ys = s.q.map(p => p.y), x0 = Math.min(...xs), y0 = Math.min(...ys);
+        h.style.transform = `translate(${x0}px, ${y0}px) scale(${(Math.max(...xs) - x0) / PAGINA.w})`;
+      } else h.style.transform = homografia(PAGINA.w, PAGINA.h, s.q);
+      h.style.clipPath = s.clip ? `polygon(${Math.max(0, s.clip[0])}px 0, ${PAGINA.w}px 0, ${PAGINA.w}px ${PAGINA.h}px, ${Math.max(0, s.clip[1])}px ${PAGINA.h}px)` : '';
+    }
   };
   book.addEventListener('abrir', () => { spread = 0; ocupado = false; requestAnimationFrame(reiniciar); });          // cada vez que se abre, desde la primera página
   let ancho = 0; new ResizeObserver(() => { if (book.offsetWidth && book.offsetWidth !== ancho) { ancho = book.offsetWidth; reiniciar(); } }).observe(book);
+}
+
+// matrix3d de CSS que lleva el rectángulo (0,0)-(w,h) a un cuadrilátero cualquiera (q: arriba izquierda, arriba derecha, abajo izquierda, abajo derecha): una homografía
+function homografia(w, h, q) {
+  const [p0, p1, p3, p2] = q;                                             // en orden: (0,0), (1,0), (1,1), (0,1)
+  const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, sx = p0.x - p1.x + p2.x - p3.x, sy = p0.y - p1.y + p2.y - p3.y;
+  const den = dx1 * dy2 - dx2 * dy1, g = (sx * dy2 - dx2 * sy) / den, k = (dx1 * sy - sx * dy1) / den;
+  const a = p1.x - p0.x + g * p1.x, b = p3.x - p0.x + k * p3.x, d = p1.y - p0.y + g * p1.y, e = p3.y - p0.y + k * p3.y;
+  return `matrix3d(${a / w},${d / w},0,${g / w},${b / h},${e / h},0,${k / h},0,0,1,0,${p0.x},${p0.y},0,1)`;
 }

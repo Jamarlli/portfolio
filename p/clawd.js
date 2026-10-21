@@ -140,6 +140,39 @@ const ICONOS_BARRA = [
   { c: { y: '#f5c542', l: '#ffe58a', o: '#d99a1e' }, f: ['.yyy...', 'yyyyyyy', 'yllllly', 'yllllly', 'yllllly', 'ooooooo', '.......'] },
   { c: { b: '#2b8be0' }, f: ['....bbb', '...bbbb', 'b.bb.bb', 'bbb..bb', 'b.bb.bb', '...bbbb', '....bbb'] },
 ];
+// los mismos iconos con detalle fino (en un lienzo con subpíxeles): formas de verdad dentro de la misma casilla de 7 x 7
+const rr = (x, y, w, h, r, c) => { g.fillStyle = c; g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); g.fill(); };
+const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI); g.fill(); };
+const ICONOS_FINOS = [
+  (x, y) => {                                                             // terminal
+    rr(x + 0.2, y + 0.4, 6.6, 6.2, 1, '#9a9a9a'); rr(x + 0.55, y + 0.75, 5.9, 5.5, 0.7, '#161616');
+    g.strokeStyle = '#ececec'; g.lineWidth = 0.55; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(x + 1.6, y + 2.3); g.lineTo(x + 2.9, y + 3.5); g.lineTo(x + 1.6, y + 4.7); g.stroke();
+    rr(x + 3.4, y + 4.3, 2, 0.55, 0.2, '#ececec');
+  },
+  (x, y) => {                                                             // WhatsApp
+    g.fillStyle = '#25d366'; g.beginPath(); g.moveTo(x + 0.3, y + 6.8); g.lineTo(x + 0.9, y + 4.6); g.lineTo(x + 2.5, y + 6.1); g.fill();
+    circ(x + 3.6, y + 3.4, 3.1, '#25d366'); circ(x + 3.6, y + 3.4, 2.35, '#ffffff'); circ(x + 3.6, y + 3.4, 1.9, '#25d366');
+    g.strokeStyle = '#ffffff'; g.lineWidth = 0.75; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x + 2.7, y + 2.4); g.quadraticCurveTo(x + 2.7, y + 4.3, x + 4.6, y + 4.4); g.stroke();
+  },
+  (x, y) => {                                                             // Chrome
+    const cx = x + 3.5, cy = y + 3.5, R = 3.2;
+    for (const [a0, a1, c] of [[210, 330, '#ea4335'], [-30, 90, '#fbbc05'], [90, 210, '#34a853']]) {
+      g.fillStyle = c; g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R, a0 * Math.PI / 180, a1 * Math.PI / 180); g.closePath(); g.fill();
+    }
+    circ(cx, cy, 1.6, '#ffffff'); circ(cx, cy, 1.2, '#4285f4');
+  },
+  (x, y) => {                                                             // explorador de archivos
+    rr(x + 0.3, y + 1, 2.8, 1.4, 0.35, '#d99a1e'); rr(x + 0.3, y + 1.7, 6.4, 4.7, 0.5, '#e0a52a');
+    rr(x + 0.3, y + 2.7, 6.4, 3.7, 0.5, '#f5c542'); rr(x + 0.7, y + 3.05, 5.6, 0.4, 0.2, '#ffe58a');
+  },
+  (x, y) => {                                                             // VS Code
+    g.strokeStyle = '#1f6fbf'; g.lineWidth = 1.1; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x + 5.2, y + 1.3); g.lineTo(x + 1, y + 4.8); g.moveTo(x + 5.2, y + 5.7); g.lineTo(x + 1, y + 2.2); g.stroke();
+    g.fillStyle = '#2b8be0'; g.beginPath(); g.moveTo(x + 4.8, y + 0.3); g.lineTo(x + 6.8, y + 1.2); g.lineTo(x + 6.8, y + 5.8); g.lineTo(x + 4.8, y + 6.7); g.fill();
+  },
+];
 const pixelado = (m, x0, y0) => m.f.forEach((fila, y) => [...fila].forEach((ch, x) => { if (m.c[ch]) P(x0 + x, y0 + y, m.c[ch]); }));
 export function componer(sctx, ventana) {
   usar(sctx, SW);
@@ -151,8 +184,8 @@ export function componer(sctx, ventana) {
     cols.forEach((c, i) => R(0, i * (SH - 9) / 6, SW, Math.ceil((SH - 9) / 6) + 1, c));
     for (let i = 0; i < 40; i++) { const x = rnd(i) * SW, y = rnd(i + 3) * (SH - 8); alfa(0.25); P(x, y, '#9fc4ff'); } alfa(1);
   }
-  R(0, SH - 9, SW, 9, '#12131a'); ICONOS_BARRA.forEach((m, i) => pixelado(m, SW / 2 - 23 + i * 10, SH - 8));
-  R(SW / 2 - 23 + 2, SH - 1, 3, 1, '#ececec');                                           // la terminal es la aplicación abierta
+  R(0, SH - 9, SW, 9, '#12131a'); ICONOS_BARRA.forEach((m, i) => fino > 1 ? ICONOS_FINOS[i](SW / 2 - 23 + i * 10, SH - 8) : pixelado(m, SW / 2 - 23 + i * 10, SH - 8));
+  if (fino > 1) rr(SW / 2 - 23 + 1.5, SH - 0.9, 4, 0.6, 0.3, '#ececec'); else R(SW / 2 - 23 + 2, SH - 1, 3, 1, '#ececec');                                           // la terminal es la aplicación abierta
   R(SW - 30, SH - 5, 12, 1, '#7d829c'); R(SW - 30, SH - 3, 8, 1, '#7d829c');
   g.save(); g.translate(CENTRO[0], CENTRO[1]); g.rotate(INCLINACION);
   alfa(0.35); R(-W / 2 + 3, -H / 2 + 4, W, H, '#000'); alfa(1);                  // sombra de la ventana

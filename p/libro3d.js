@@ -57,19 +57,41 @@ export function crearLibro3D(THREE, lb, { portada, canto, colorTapa }) {
     e.compensa = d / (d + (H - 2 * T) * lb.scale.y);                       // la hoja de la derecha (arriba del bloque) queda más cerca de la cámara que la de la izquierda (sobre la mesa)
     return { pos: centro.clone().add(new THREE.Vector3(0, d, 0)), look: centro, fov, up: arriba };
   };
-  // dónde caen en pantalla las dos hojas (con el libro abierto): rectángulos en píxeles del viewport
+  // dónde caen en pantalla las dos hojas en la pose de ahora (también mientras se abre o se cierra), para poner encima las hojas de texto:
+  // `q`: las cuatro esquinas en píxeles del viewport (arriba izquierda, arriba derecha, abajo izquierda, abajo derecha, tal como se lee la hoja);
+  // `ver`: si la hoja mira a la cámara; `corte` (la derecha): hasta dónde la tapa todavía la tapa, en píxeles de la hoja de texto (arriba y abajo)
+  const v = new THREE.Vector3(), cam = new THREE.Vector3();
+  const pantalla = (obj, x, y, z) => { v.set(x, y, z); obj.localToWorld(v).project(e.camara); return { x: (v.x * 0.5 + 0.5) * innerWidth, y: (-v.y * 0.5 + 0.5) * innerHeight }; };
+  const cruz = q => (q[1].x - q[0].x) * (q[2].y - q[0].y) - (q[1].y - q[0].y) * (q[2].x - q[0].x);   // > 0: la hoja se ve por delante
   e.hojas = camera => {
-    lb.updateMatrixWorld(true); camera.updateMatrixWorld(); const v = new THREE.Vector3();
-    const proyectar = (xa, xb, y, k = 1) => {
-      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-      for (const x of [xa, xb]) for (const z of [-D / 2 + BORDE, D / 2 - BORDE]) {
-        v.set(X0 + S * x * k, Y0 + y, z * k); lb.localToWorld(v); v.project(camera);
-        const px = (v.x * 0.5 + 0.5) * innerWidth, py = (-v.y * 0.5 + 0.5) * innerHeight;
-        x0 = Math.min(x0, px); y0 = Math.min(y0, py); x1 = Math.max(x1, px); y1 = Math.max(y1, py);
+    e.camara = camera; pivote.updateMatrixWorld(true); camera.updateMatrixWorld();
+    const zz = D / 2 - BORDE, xd = WC - BORDE, yd = H - T + 0.0005, wl = WC - LOMO - BORDE, yl = -T / 2 - 0.0007;
+    const der = [[LOMO, -zz], [xd, -zz], [LOMO, zz], [xd, zz]].map(([x, z]) => pantalla(hojas, x, yd, z));
+    const izq = [[wl, -zz], [0, -zz], [wl, zz], [0, zz]].map(([x, z]) => pantalla(bisagra, x, yl, z));
+    // la tapa, mientras está encima de la hoja derecha: el rayo de la cámara a su canto suelto corta el plano de la hoja (en coordenadas de las hojas, un espacio afín: las rectas siguen siendo rectas)
+    hojas.worldToLocal(camera.getWorldPosition(cam));
+    const corte = [-D / 2, D / 2].map(z => {
+      let mejor = null;
+      for (const y of [T / 2, -T / 2]) {
+        const p = hojas.worldToLocal(bisagra.localToWorld(v.set(WC, y, z))), t = (yd - cam.y) / (p.y - cam.y);
+        if (!(t > 0)) continue;
+        const X = (cam.x + t * (p.x - cam.x) - LOMO) / (xd - LOMO) * PAGINA.w, Y = (cam.z + t * (p.z - cam.z) + zz) / (2 * zz) * PAGINA.h;
+        if (!mejor || X > mejor.X) mejor = { X, Y };
       }
-      return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+      return mejor;
+    });
+    let clip = null;
+    if (corte[0] && corte[1] && Math.abs(corte[1].Y - corte[0].Y) > 1e-3) {
+      const xEn = Y => corte[0].X + (corte[1].X - corte[0].X) * (Y - corte[0].Y) / (corte[1].Y - corte[0].Y);
+      const xa = xEn(0), xb = xEn(PAGINA.h);
+      if (Math.max(xa, xb) > 0) clip = [xa, xb];
+    }
+    const area = Math.abs(cruz(der));
+    return {
+      izq: { q: izq, ver: cruz(izq) > 0.03 * area },
+      der: { q: der, ver: !clip || Math.min(clip[0], clip[1]) < PAGINA.w, clip },
+      quieto: !e.anim && e.u === 1,                                         // abierto del todo: basta un rectángulo (el texto se ve más nítido que con perspectiva)
     };
-    return { der: proyectar(LOMO, WC - BORDE, H - T + 0.0005, e.compensa), izq: proyectar(-(WC - BORDE - LOMO), 0, T + 0.0007) };   // las dos hojas con el mismo tamaño
   };
   return e;
 }

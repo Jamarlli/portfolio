@@ -186,7 +186,9 @@ html.movil #stage canvas { touch-action: none; }
 
 /* libro 3D (Educación): las hojas de texto van sobre las del modelo; cada una tiene un tamaño fijo de diseño y se escala a pantalla */
 #panel.libro3d { pointer-events: none; animation: none; }
-.book.book3d { position: fixed; inset: 0; width: auto; height: auto; aspect-ratio: auto; container-type: normal; background: none; border: 0; box-shadow: none; padding: 0; display: block; pointer-events: none; animation: fadein .45s both; }
+#panel.libro3d.cerrando .hoja { pointer-events: none; }
+#panel.libro3d.cerrando .curl { display: none; }
+.book.book3d { position: fixed; inset: 0; width: auto; height: auto; aspect-ratio: auto; container-type: normal; background: none; border: 0; box-shadow: none; padding: 0; display: block; pointer-events: none; }
 .book3d .hoja { position: absolute; left: 0; top: 0; width: 420px; height: 606px; transform-origin: 0 0; perspective: 1600px; pointer-events: auto; }
 .book.book3d .page { position: absolute; inset: 0; background: var(--paper); border: 1px solid #c9b48a; padding: 28px 32px 40px; box-sizing: border-box; }
 .book.book3d .page.right { box-shadow: inset 14px 0 14px -10px rgba(60, 40, 20, .28); }
