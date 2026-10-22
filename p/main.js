@@ -243,14 +243,9 @@ async function loadRoom() {
     if (mesa.grupo && hash.get('mesa') != null) { mesa.arriba = +hash.get('mesa') > 0.5; ponerMesa(+hash.get('mesa')); }   // solo para revisar
   }
   construirPersiana(room);
-  // libro (Educación): algo torcido sobre la mesa y con la portada del que estoy leyendo (Crónica del rey pasmado)
+  // libro (Educación): con la parte de arriba hacia -x (se lee derecho desde la silla; viene así del horneado) y la portada del que estoy leyendo (Crónica del rey pasmado)
   try {
     const lb = room.getObjectByName('libro'), portada = await cargarTextura(base + 'libro_portada.webp');
-    {   // el modelo trae el libro torcido ~17º con la parte de arriba hacia la ventana; se gira (sobre la mesa) para que la parte de arriba mire a -x, lejos de la silla, y la portada se lea derecha desde ella
-      lb.updateWorldMatrix(true, false); const qm = lb.getWorldQuaternion(new THREE.Quaternion()), qp = lb.parent.getWorldQuaternion(new THREE.Quaternion());
-      const arriba = new THREE.Vector3(0, 0, -1).applyQuaternion(qm), giro = -Math.PI / 2 - Math.atan2(arriba.x, arriba.z);   // de la dirección actual a -x
-      lb.quaternion.copy(qp.invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), giro)).multiply(qm)); lb.updateMatrix();   // el giro en el mundo, pasado al sistema del padre
-    }
     lb.geometry.computeBoundingBox(); const bb = lb.geometry.boundingBox, c = bb.getCenter(new THREE.Vector3());
     const mapa = new THREE.Mesh(new THREE.PlaneGeometry(bb.max.x - bb.min.x, bb.max.z - bb.min.z), new THREE.MeshBasicMaterial({ map: portada, color: '#ffffff' }));
     mapa.rotation.x = -Math.PI / 2;   // la portada se lee desde la puerta (el lado largo del libro va a lo largo de z, y su parte de arriba mira hacia la ventana)
